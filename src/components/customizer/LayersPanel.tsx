@@ -5,12 +5,20 @@ import { useUploads } from '@/contexts/UploadContext';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { ArrowUp, ArrowDown, Eye, EyeOff } from 'lucide-react'; // Assuming Eye/EyeOff for future visibility
+import { ArrowUp, ArrowDown, Layers, Copy, Trash2, Lock, Unlock } from 'lucide-react';
 
 export default function LayersPanel() {
-  const { canvasImages, selectedCanvasImageId, selectCanvasImage, bringLayerForward, sendLayerBackward } = useUploads();
+  const { 
+    canvasImages, 
+    selectedCanvasImageId, 
+    selectCanvasImage, 
+    bringLayerForward, 
+    sendLayerBackward,
+    duplicateCanvasImage,
+    removeCanvasImage,
+    toggleLockCanvasImage
+  } = useUploads();
 
-  // Sort images by zIndex for display (topmost layer first)
   const sortedCanvasImages = [...canvasImages].sort((a, b) => b.zIndex - a.zIndex);
 
   if (canvasImages.length === 0) {
@@ -37,10 +45,15 @@ export default function LayersPanel() {
             return (
               <div
                 key={image.id}
-                onClick={() => selectCanvasImage(image.id)}
-                className={`p-2 border rounded-md cursor-pointer hover:bg-muted/50 flex items-center gap-3 transition-all
-                            ${isSelected ? 'bg-muted ring-2 ring-primary' : 'border-border'}`}
-                title={`Select "${image.name}"`}
+                onClick={() => {
+                  if (!image.isLocked) {
+                    selectCanvasImage(image.id);
+                  }
+                }}
+                className={`p-2 border rounded-md flex items-center gap-3 transition-all
+                            ${image.isLocked ? 'opacity-70 cursor-not-allowed bg-muted/30' : 'cursor-pointer hover:bg-muted/50'}
+                            ${isSelected && !image.isLocked ? 'bg-muted ring-2 ring-primary' : 'border-border'}`}
+                title={image.isLocked ? `${image.name} (Locked)` : `Select "${image.name}"`}
               >
                 <Image
                   src={image.dataUrl}
@@ -50,13 +63,40 @@ export default function LayersPanel() {
                   className="rounded-sm object-cover aspect-square bg-muted-foreground/10"
                 />
                 <span className="text-sm truncate flex-grow">{image.name}</span>
-                <div className="flex gap-1">
+                <div className="flex gap-0.5">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7"
+                    onClick={(e) => { e.stopPropagation(); duplicateCanvasImage(image.id); }}
+                    title="Duplicate Layer"
+                  >
+                    <Copy className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7"
+                    onClick={(e) => { e.stopPropagation(); removeCanvasImage(image.id); }}
+                    title="Delete Layer"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                   <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7"
+                    onClick={(e) => { e.stopPropagation(); toggleLockCanvasImage(image.id); }}
+                    title={image.isLocked ? "Unlock Layer" : "Lock Layer"}
+                  >
+                    {image.isLocked ? <Lock className="h-4 w-4 text-primary" /> : <Unlock className="h-4 w-4" />}
+                  </Button>
                   <Button
                     variant="ghost"
                     size="icon"
                     className="h-7 w-7"
                     onClick={(e) => { e.stopPropagation(); bringLayerForward(image.id); }}
-                    disabled={isTopmost}
+                    disabled={isTopmost || image.isLocked}
                     title="Bring Forward"
                   >
                     <ArrowUp className="h-4 w-4" />
@@ -66,16 +106,11 @@ export default function LayersPanel() {
                     size="icon"
                     className="h-7 w-7"
                     onClick={(e) => { e.stopPropagation(); sendLayerBackward(image.id); }}
-                    disabled={isBottommost}
+                    disabled={isBottommost || image.isLocked}
                     title="Send Backward"
                   >
                     <ArrowDown className="h-4 w-4" />
                   </Button>
-                  {/* Placeholder for visibility toggle
-                  <Button variant="ghost" size="icon" className="h-7 w-7" title="Toggle Visibility">
-                    <Eye className="h-4 w-4" /> 
-                  </Button>
-                  */}
                 </div>
               </div>
             );
@@ -85,6 +120,3 @@ export default function LayersPanel() {
     </div>
   );
 }
-
-// Placeholder for Layers icon if not already imported/used in LeftPanel
-import { Layers } from "lucide-react";

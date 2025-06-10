@@ -23,6 +23,7 @@ export interface CanvasImage {
   x: number; // percentage for left
   y: number; // percentage for top
   zIndex: number;
+  isLocked: boolean; // Added for lock functionality
 }
 
 interface UploadContextType {
@@ -33,9 +34,11 @@ interface UploadContextType {
   removeCanvasImage: (canvasImageId: string) => void;
   selectedCanvasImageId: string | null;
   selectCanvasImage: (canvasImageId: string | null) => void;
-  updateCanvasImage: (canvasImageId: string, updates: Partial<Pick<CanvasImage, 'scale' | 'rotation' | 'x' | 'y' | 'zIndex'>>) => void;
+  updateCanvasImage: (canvasImageId: string, updates: Partial<Pick<CanvasImage, 'scale' | 'rotation' | 'x' | 'y' | 'zIndex' | 'isLocked'>>) => void;
   bringLayerForward: (canvasImageId: string) => void;
   sendLayerBackward: (canvasImageId: string) => void;
+  duplicateCanvasImage: (canvasImageId: string) => void; // New function
+  toggleLockCanvasImage: (canvasImageId: string) => void; // New function
 }
 
 const UploadContext = createContext<UploadContextType | undefined>(undefined);
@@ -70,33 +73,40 @@ export function UploadProvider({ children }: { children: ReactNode }) {
     if (!sourceImage) return;
 
     const newCanvasImage: CanvasImage = {
-      id: crypto.randomUUID(), // Unique ID for the canvas instance
+      id: crypto.randomUUID(),
       sourceImageId: sourceImage.id,
       name: sourceImage.name,
       dataUrl: sourceImage.dataUrl,
       type: sourceImage.type,
       scale: 1,
       rotation: 0,
-      x: 50, // Default to center (percentage)
-      y: 50, // Default to center (percentage)
-      zIndex: (Math.max(0, ...canvasImages.map(img => img.zIndex)) + 1), // New images on top
+      x: 50, 
+      y: 50, 
+      zIndex: (Math.max(0, ...canvasImages.map(img => img.zIndex), 0) + 1),
+      isLocked: false, // Default to not locked
     };
     setCanvasImages(prev => [...prev, newCanvasImage]);
     setSelectedCanvasImageId(newCanvasImage.id);
-  }, [uploadedImages, canvasImages, setCanvasImages, setSelectedCanvasImageId]);
+  }, [uploadedImages, canvasImages]);
 
   const removeCanvasImage = useCallback((canvasImageId: string) => {
     setCanvasImages(prev => prev.filter(img => img.id !== canvasImageId));
     if (selectedCanvasImageId === canvasImageId) {
       setSelectedCanvasImageId(null);
     }
-  }, [selectedCanvasImageId, setCanvasImages, setSelectedCanvasImageId]);
+  }, [selectedCanvasImageId]);
 
   const selectCanvasImage = useCallback((canvasImageId: string | null) => {
+    // Prevent selection if the target image is locked
+    const imageToSelect = canvasImages.find(img => img.id === canvasImageId);
+    if (imageToSelect?.isLocked) {
+      setSelectedCanvasImageId(null); // Or just do nothing: return;
+      return;
+    }
     setSelectedCanvasImageId(canvasImageId);
-  }, [setSelectedCanvasImageId]);
+  }, [canvasImages]);
 
-  const updateCanvasImage = useCallback((canvasImageId: string, updates: Partial<Pick<CanvasImage, 'scale' | 'rotation' | 'x' | 'y' | 'zIndex'>>) => {
+  const updateCanvasImage = useCallback((canvasImageId: string, updates: Partial<Pick<CanvasImage, 'scale' | 'rotation' | 'x' | 'y' | 'zIndex' | 'isLocked'>>) => {
     setCanvasImages(prevCanvasImages =>
       prevCanvasImages.map(img =>
         img.id === canvasImageId ? { ...img, ...updates } : img
@@ -110,13 +120,12 @@ export function UploadProvider({ children }: { children: ReactNode }) {
       const currentIndex = sortedImages.findIndex(img => img.id === canvasImageId);
 
       if (currentIndex === -1 || currentIndex === sortedImages.length - 1) {
-        return prevImages; // Not found or already at the top
+        return prevImages; 
       }
 
       const imageToMove = sortedImages[currentIndex];
       const imageAbove = sortedImages[currentIndex + 1];
 
-      // Swap zIndex
       const newZIndexOfImageToMove = imageAbove.zIndex;
       const newZIndexOfImageAbove = imageToMove.zIndex;
 
@@ -130,7 +139,7 @@ export function UploadProvider({ children }: { children: ReactNode }) {
         return img;
       });
     });
-  }, [setCanvasImages]);
+  }, []);
 
   const sendLayerBackward = useCallback((canvasImageId: string) => {
     setCanvasImages(prevImages => {
@@ -138,13 +147,12 @@ export function UploadProvider({ children }: { children: ReactNode }) {
       const currentIndex = sortedImages.findIndex(img => img.id === canvasImageId);
 
       if (currentIndex === -1 || currentIndex === 0) {
-        return prevImages; // Not found or already at the bottom
+        return prevImages; 
       }
 
       const imageToMove = sortedImages[currentIndex];
       const imageBelow = sortedImages[currentIndex - 1];
-
-      // Swap zIndex
+      
       const newZIndexOfImageToMove = imageBelow.zIndex;
       const newZIndexOfImageBelow = imageToMove.zIndex;
       
@@ -158,7 +166,39 @@ export function UploadProvider({ children }: { children: ReactNode }) {
         return img;
       });
     });
-  }, [setCanvasImages]);
+  }, []);
+
+  const duplicateCanvasImage = useCallback((canvasImageId: string) => {
+    const originalImage = canvasImages.find(img => img.id === canvasImageId);
+    if (!originalImage) return;
+
+    const newCanvasImage: CanvasImage = {
+      ...originalImage,
+      id: crypto.randomUUID(),
+      x: originalImage.x + 2, // Offset slightly (percentage)
+      y: originalImage.y + 2, // Offset slightly (percentage)
+      zIndex: (Math.max(0, ...canvasImages.map(img => img.zIndex), 0) + 1),
+      isLocked: false, // New duplicates are unlocked
+    };
+    setCanvasImages(prev => [...prev, newCanvasImage]);
+    setSelectedCanvasImageId(newCanvasImage.id); // Select the new duplicate
+  }, [canvasImages]);
+
+  const toggleLockCanvasImage = useCallback((canvasImageId: string) => {
+    setCanvasImages(prevImages =>
+      prevImages.map(img => {
+        if (img.id === canvasImageId) {
+          const isNowLocked = !img.isLocked;
+          // If locking the currently selected image, deselect it
+          if (isNowLocked && selectedCanvasImageId === canvasImageId) {
+            setSelectedCanvasImageId(null);
+          }
+          return { ...img, isLocked: isNowLocked };
+        }
+        return img;
+      })
+    );
+  }, [selectedCanvasImageId]);
 
 
   return (
@@ -174,6 +214,8 @@ export function UploadProvider({ children }: { children: ReactNode }) {
         updateCanvasImage,
         bringLayerForward,
         sendLayerBackward,
+        duplicateCanvasImage,
+        toggleLockCanvasImage,
       }}
     >
       {children}

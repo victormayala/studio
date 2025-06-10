@@ -17,7 +17,7 @@ const defaultProduct = {
   aiHint: 'white t-shirt mockup'
 };
 
-const BASE_IMAGE_DIMENSION = 200; // Base size of the interactive images in pixels
+const BASE_IMAGE_DIMENSION = 200; 
 
 export default function DesignCanvas() {
   const productToDisplay = defaultProduct;
@@ -32,16 +32,16 @@ export default function DesignCanvas() {
   const [activeDrag, setActiveDrag] = useState<{
     type: 'rotate' | 'resize' | 'move';
     imageId: string;
-    startX: number; // Mouse/touch start X (viewport)
-    startY: number; // Mouse/touch start Y (viewport)
-    initialRotation?: number; // Image's rotation at drag start
-    initialScale?: number;   // Image's scale at drag start
-    initialX?: number;       // Image's center X (percentage) at drag start
-    initialY?: number;       // Image's center Y (percentage) at drag start
-    imageCenterX?: number;   // Image's center X in canvas pixels at drag start (for rotate/resize)
-    imageCenterY?: number;   // Image's center Y in canvas pixels at drag start (for rotate/resize)
-    imageInitialWidth?: number; // Unscaled width of the image (should be BASE_IMAGE_DIMENSION)
-    imageInitialHeight?: number; // Unscaled height of the image (should be BASE_IMAGE_DIMENSION)
+    startX: number; 
+    startY: number; 
+    initialRotation?: number; 
+    initialScale?: number;  
+    initialX?: number;      
+    initialY?: number;      
+    imageCenterX?: number;  
+    imageCenterY?: number;  
+    imageInitialWidth?: number; 
+    imageInitialHeight?: number;
   } | null>(null);
 
   const canvasRef = useRef<HTMLDivElement>(null);
@@ -54,7 +54,6 @@ export default function DesignCanvas() {
   };
 
   const handleCanvasClick = (e: ReactMouseEvent<HTMLDivElement>) => {
-    // If the click target is the canvas itself (not an interactive child that stopped propagation)
     if (e.target === canvasRef.current) {
         selectCanvasImage(null);
     }
@@ -64,6 +63,7 @@ export default function DesignCanvas() {
     e: ReactMouseEvent<HTMLDivElement> | ReactTouchEvent<HTMLDivElement>,
     image: CanvasImage
   ) => {
+    if (image.isLocked) return; // Prevent interaction if locked
     handleDragStart(e, 'move', image);
   };
 
@@ -72,6 +72,10 @@ export default function DesignCanvas() {
     type: 'rotate' | 'resize' | 'move',
     image: CanvasImage
   ) => {
+    if (image.isLocked && type !== 'move') return; // Allow selecting locked from layer panel, but no canvas interaction. For move, check in handleImageSelectAndDragStart
+    if (image.isLocked && type === 'move') return;
+
+
     e.preventDefault();
     e.stopPropagation(); 
     selectCanvasImage(image.id);
@@ -81,7 +85,6 @@ export default function DesignCanvas() {
     const canvasRect = canvasRef.current.getBoundingClientRect();
     const coords = getMouseOrTouchCoords(e);
 
-    // Calculate image center relative to the canvas for rotate/resize
     const imageCenterXInCanvasPx = image.x/100 * canvasRect.width; 
     const imageCenterYInCanvasPx = image.y/100 * canvasRect.height;
 
@@ -103,6 +106,12 @@ export default function DesignCanvas() {
 
   const handleDragging = useCallback((e: MouseEvent | TouchEvent) => {
     if (!activeDrag || !canvasRef.current) return;
+    const activeImage = canvasImages.find(img => img.id === activeDrag.imageId);
+    if (activeImage?.isLocked) { // Double check lock status during drag
+      setActiveDrag(null); // Stop dragging if image becomes locked mid-drag
+      return;
+    }
+
 
     const coords = getMouseOrTouchCoords(e);
     const {
@@ -146,12 +155,9 @@ export default function DesignCanvas() {
         const halfWidthPercent = (scaledImageWidthPx / 2 / canvasRect.width) * 100;
         const halfHeightPercent = (scaledImageHeightPx / 2 / canvasRect.height) * 100;
         
-        // Clamp position so the image center cannot go too close to the edges,
-        // effectively keeping the entire image within bounds.
         newX = Math.max(halfWidthPercent, Math.min(newX, 100 - halfWidthPercent));
         newY = Math.max(halfHeightPercent, Math.min(newY, 100 - halfHeightPercent));
         
-        // Prevent NaN values if canvasRect dimensions are zero
         if (isNaN(newX) || isNaN(newY)) return;
 
         updateCanvasImage(imageId, { x: newX, y: newY });
@@ -165,7 +171,6 @@ export default function DesignCanvas() {
 
   useEffect(() => {
     if (activeDrag) {
-      // Add passive: false for touchmove if preventDefault might be called inside handleDragging (though not currently for 'move')
       window.addEventListener('mousemove', handleDragging);
       window.addEventListener('touchmove', handleDragging, { passive: false }); 
       window.addEventListener('mouseup', handleDragEnd);
@@ -193,8 +198,8 @@ export default function DesignCanvas() {
     <div
       ref={canvasRef}
       className="w-full h-full flex items-center justify-center bg-card border border-dashed border-border rounded-lg shadow-inner p-4 min-h-[500px] lg:min-h-[700px] relative overflow-hidden"
-      onClick={handleCanvasClick} // Deselect on canvas background click
-      onTouchStart={handleCanvasClick as any} // Also for touch, though less common for "background" taps
+      onClick={handleCanvasClick}
+      onTouchStart={handleCanvasClick as any} 
     >
       <div className="text-center product-image-container">
         <div
@@ -215,9 +220,9 @@ export default function DesignCanvas() {
             <InteractiveCanvasImage
               key={img.id}
               image={img}
-              isSelected={img.id === selectedCanvasImageId}
+              isSelected={img.id === selectedCanvasImageId && !img.isLocked}
               isBeingDragged={activeDrag?.imageId === img.id && activeDrag?.type === 'move'}
-              baseImageDimension={BASE_IMAGE_DIMENSION} // Pass base dimension
+              baseImageDimension={BASE_IMAGE_DIMENSION}
               onImageSelectAndDragStart={handleImageSelectAndDragStart}
               onRotateHandleMouseDown={(e, imageItem) => handleDragStart(e, 'rotate', imageItem)}
               onResizeHandleMouseDown={(e, imageItem) => handleDragStart(e, 'resize', imageItem)}
@@ -233,4 +238,3 @@ export default function DesignCanvas() {
     </div>
   );
 }
-

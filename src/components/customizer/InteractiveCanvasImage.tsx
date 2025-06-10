@@ -5,15 +5,15 @@ import Image from 'next/image';
 import type { CanvasImage } from '@/contexts/UploadContext';
 import { Trash2, RefreshCwIcon, MoveIcon } from 'lucide-react';
 import type { MouseEvent as ReactMouseEvent, TouchEvent as ReactTouchEvent } from 'react';
-import React from 'react'; // Import React for React.memo
+import React from 'react'; 
 
-const HANDLE_SIZE = 24; // Size of the control handles in pixels
+const HANDLE_SIZE = 24;
 
 interface InteractiveCanvasImageProps {
   image: CanvasImage;
-  isSelected: boolean;
+  isSelected: boolean; // This prop will be true only if image is selected AND not locked (logic handled in DesignCanvas)
   isBeingDragged: boolean;
-  baseImageDimension: number; // Receive the base dimension as a prop
+  baseImageDimension: number; 
   onImageSelectAndDragStart: (e: ReactMouseEvent<HTMLDivElement> | ReactTouchEvent<HTMLDivElement>, image: CanvasImage) => void;
   onRotateHandleMouseDown: (e: ReactMouseEvent<HTMLDivElement> | ReactTouchEvent<HTMLDivElement>, image: CanvasImage) => void;
   onResizeHandleMouseDown: (e: ReactMouseEvent<HTMLDivElement> | ReactTouchEvent<HTMLDivElement>, image: CanvasImage) => void;
@@ -22,7 +22,7 @@ interface InteractiveCanvasImageProps {
 
 function InteractiveCanvasImageComponent({
   image,
-  isSelected,
+  isSelected, // Already considers lock state from DesignCanvas
   isBeingDragged,
   baseImageDimension,
   onImageSelectAndDragStart,
@@ -30,37 +30,55 @@ function InteractiveCanvasImageComponent({
   onResizeHandleMouseDown,
   onRemoveHandleClick,
 }: InteractiveCanvasImageProps) {
+  const showHandles = isSelected && !image.isLocked;
+
   return (
     <div
       id={`canvas-image-${image.id}`}
-      className={`absolute cursor-grab group
-                  ${isSelected ? 'ring-2 ring-primary ring-offset-2 ring-offset-background z-50' : 'hover:ring-1 hover:ring-primary/50'}`}
+      className={`absolute group
+                  ${image.isLocked ? 'cursor-not-allowed' : 'cursor-grab'}
+                  ${isSelected && !image.isLocked ? 'ring-2 ring-primary ring-offset-2 ring-offset-background z-50' : ''}
+                  ${!image.isLocked ? 'hover:ring-1 hover:ring-primary/50' : ''}
+                  `}
       style={{
         top: `${image.y}%`,
         left: `${image.x}%`,
-        // Use baseImageDimension for width and height calculations
         width: `${baseImageDimension * image.scale}px`,
         height: `${baseImageDimension * image.scale}px`,
         transform: `translate(-50%, -50%) rotate(${image.rotation}deg)`,
-        zIndex: isSelected ? image.zIndex + 100 : image.zIndex,
+        zIndex: isSelected && !image.isLocked ? image.zIndex + 100 : image.zIndex, // Ensure selected unlocked is on top of others
         transition: isBeingDragged ? 'none' : 'transform 0.1s ease-out, border 0.1s ease-out, width 0.1s ease-out, height 0.1s ease-out',
       }}
       onClick={(e) => {
         e.stopPropagation(); 
-        // Selection is handled by onImageSelectAndDragStart on mousedown/touchstart
+        if (!image.isLocked) {
+          onImageSelectAndDragStart(e, image); // Propagate for selection only if not locked
+        }
       }}
-      onMouseDown={(e) => onImageSelectAndDragStart(e, image)}
-      onTouchStart={(e) => onImageSelectAndDragStart(e, image)}
+      onMouseDown={(e) => {
+        if (!image.isLocked) {
+          onImageSelectAndDragStart(e, image);
+        } else {
+          e.stopPropagation(); // Prevent canvas deselection if locked image is clicked
+        }
+      }}
+      onTouchStart={(e) => {
+         if (!image.isLocked) {
+          onImageSelectAndDragStart(e, image);
+        } else {
+          e.stopPropagation(); 
+        }
+      }}
     >
       <Image
         src={image.dataUrl}
         alt={image.name}
         fill
         style={{ objectFit: 'contain' }}
-        className="rounded-sm pointer-events-none"
+        className={`rounded-sm pointer-events-none ${image.isLocked ? 'opacity-75' : ''}`}
         priority 
       />
-      {isSelected && (
+      {showHandles && (
         <>
           {/* Remove Button */}
           <div
@@ -93,7 +111,7 @@ function InteractiveCanvasImageComponent({
             onTouchStart={(e) => onResizeHandleMouseDown(e, image)}
             title="Resize image"
           >
-            <MoveIcon size={HANDLE_SIZE * 0.6} /> {/* This icon is more for "move all directions" but commonly used for resize corner */}
+            <MoveIcon size={HANDLE_SIZE * 0.6} /> 
           </div>
         </>
       )}
