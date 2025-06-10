@@ -23,18 +23,17 @@ export default function MarketingHeader() {
   const isMobile = useIsMobile();
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-card">
+    <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-card flex justify-center">
       <div className="container flex h-16 max-w-screen-2xl items-center justify-center px-4 md:px-6">
         {/* Logo Section */}
-        <div className="flex items-center">
+        <div className="flex items-center"> {/* Wrapper for Logo */}
           <Link href="/" className="flex items-center space-x-2">
             <Logo />
           </Link>
         </div>
 
-        {/* Mobile Menu Trigger OR Desktop Navigation & Auth Buttons */}
         {isMobile ? (
-          <div className="ml-auto"> {/* This div ensures the SheetTrigger is pushed to the right */}
+          <div className="ml-auto"> {/* Mobile menu trigger, ml-auto to push to right */}
             <Sheet>
               <SheetTrigger asChild>
                 <Button variant="ghost" size="icon">
@@ -64,8 +63,8 @@ export default function MarketingHeader() {
             </Sheet>
           </div>
         ) : (
-          <> {/* Fragment for desktop items */}
-            {/* Desktop Navigation - flex-1 to take available space, justify-center for its items */}
+          <> {/* Desktop navigation and auth buttons */}
+            {/* Navigation Links - Centered */}
             <nav className="flex flex-1 items-center justify-center space-x-6 text-sm font-medium">
               {navLinks.map((link) => (
                 <Link
@@ -78,13 +77,13 @@ export default function MarketingHeader() {
               ))}
             </nav>
 
-            {/* Authentication Buttons */}
+            {/* Authentication Buttons - Pushed to the right */}
             <div className="flex items-center space-x-3">
-               {authLinks.map((link) => (
-                  <Button key={link.label} asChild variant={link.variant} size="sm">
-                    <Link href={link.href}>{link.label}</Link>
-                  </Button>
-                ))}
+              {authLinks.map((link) => (
+                <Button key={link.label} asChild variant={link.variant} size="sm">
+                  <Link href={link.href}>{link.label}</Link>
+                </Button>
+              ))}
             </div>
           </>
         )}
