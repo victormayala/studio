@@ -15,7 +15,7 @@ export interface UploadedImage {
 // Represents an instance of an image on the canvas
 export interface CanvasImage {
   id: string; // Unique ID for THIS INSTANCE on the canvas
-  sourceImageId: string; // ID of the original UploadedImage
+  sourceImageId: string; // ID of the original UploadedImage or a clipart ID
   name: string;
   dataUrl: string;
   type: string;
@@ -94,6 +94,7 @@ interface UploadContextType {
   
   canvasImages: CanvasImage[];
   addCanvasImage: (sourceImageId: string) => void;
+  addCanvasImageFromUrl: (name: string, dataUrl: string, type: string, sourceId?: string) => void; // Added sourceId
   removeCanvasImage: (canvasImageId: string) => void;
   selectedCanvasImageId: string | null;
   selectCanvasImage: (canvasImageId: string | null) => void;
@@ -185,6 +186,24 @@ export function UploadProvider({ children }: { children: ReactNode }) {
     setSelectedCanvasTextId(null);
     setSelectedCanvasShapeId(null);
   }, [uploadedImages, getMaxZIndex]);
+
+  const addCanvasImageFromUrl = useCallback((name: string, dataUrl: string, type: string, sourceId?: string) => {
+    const currentMaxZIndex = getMaxZIndex();
+    const newCanvasImage: CanvasImage = {
+      id: crypto.randomUUID(),
+      sourceImageId: sourceId || `url-${crypto.randomUUID()}`, // Use provided sourceId or generate one for URL-based images
+      name: name,
+      dataUrl: dataUrl,
+      type: type,
+      scale: 1, rotation: 0, x: 50, y: 50, 
+      zIndex: currentMaxZIndex + 1, isLocked: false, itemType: 'image',
+    };
+    setCanvasImages(prev => [...prev, newCanvasImage]);
+    setSelectedCanvasImageId(newCanvasImage.id);
+    setSelectedCanvasTextId(null);
+    setSelectedCanvasShapeId(null);
+  }, [getMaxZIndex]);
+
 
   const removeCanvasImage = useCallback((canvasImageId: string) => {
     setCanvasImages(prev => prev.filter(img => img.id !== canvasImageId));
@@ -387,16 +406,16 @@ export function UploadProvider({ children }: { children: ReactNode }) {
         for (let i = currentIndex + 1; i < allItems.length; i++) {
             if (!allItems[i].isLocked) { targetIndex = i; break; }
         }
-        if (targetIndex === -1 && currentIndex + 1 < allItems.length && !allItems[currentIndex + 1].isLocked) { // Fallback if all above are locked, try direct next if not locked
+        if (targetIndex === -1 && currentIndex + 1 < allItems.length && !allItems[currentIndex + 1].isLocked) { 
              targetIndex = currentIndex + 1;
-        } else if (targetIndex === -1) return; // All potential swap targets are locked or at the end
+        } else if (targetIndex === -1) return; 
       } else return;
-    } else { // backward
+    } else { 
       if (currentIndex > 0) {
         for (let i = currentIndex - 1; i >= 0; i--) {
             if (!allItems[i].isLocked) { targetIndex = i; break; }
         }
-         if (targetIndex === -1 && currentIndex -1  >= 0 && !allItems[currentIndex -1].isLocked) { // Fallback
+         if (targetIndex === -1 && currentIndex -1  >= 0 && !allItems[currentIndex -1].isLocked) { 
              targetIndex = currentIndex -1;
         } else if (targetIndex === -1) return;
       } else return;
@@ -432,7 +451,7 @@ export function UploadProvider({ children }: { children: ReactNode }) {
     <UploadContext.Provider
       value={{
         uploadedImages, addUploadedImage,
-        canvasImages, addCanvasImage, removeCanvasImage, selectedCanvasImageId, selectCanvasImage, updateCanvasImage,
+        canvasImages, addCanvasImage, addCanvasImageFromUrl, removeCanvasImage, selectedCanvasImageId, selectCanvasImage, updateCanvasImage,
         bringLayerForward, sendLayerBackward, duplicateCanvasImage, toggleLockCanvasImage,
         canvasTexts, addCanvasText, removeCanvasText, selectedCanvasTextId, selectCanvasText, updateCanvasText,
         bringTextLayerForward, sendTextLayerBackward, duplicateCanvasText, toggleLockCanvasText,
