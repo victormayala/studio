@@ -27,7 +27,8 @@ import UploadArea from "./UploadArea";
 import LayersPanel from "./LayersPanel";
 import TextToolPanel from "./TextToolPanel";
 import ShapesPanel from "./ShapesPanel";
-import ClipartPanel from "./ClipartPanel"; // Added import
+import ClipartPanel from "./ClipartPanel";
+import FreeDesignsPanel from "./FreeDesignsPanel"; // Added import
 import { useUploads } from "@/contexts/UploadContext";
 
 const menuItems = [
@@ -62,8 +63,10 @@ export default function LeftPanel() {
         return <TextToolPanel />;
       case "shapes":
         return <ShapesPanel />;
-      case "clipart": // Added case for Clipart Panel
+      case "clipart":
         return <ClipartPanel />;
+      case "free-designs": // Added case for Free Designs Panel
+        return <FreeDesignsPanel />;
       default:
         return (
           <div className="p-6 text-center text-muted-foreground h-full flex flex-col items-center justify-center">
