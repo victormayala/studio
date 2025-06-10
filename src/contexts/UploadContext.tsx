@@ -39,7 +39,6 @@ export interface CanvasText {
   fontFamily: string;
   zIndex: number;
   isLocked: boolean;
-  // width and height are not explicitly stored for text, scaling affects fontSize
 }
 
 interface UploadContextType {
@@ -63,7 +62,10 @@ interface UploadContextType {
   selectedCanvasTextId: string | null;
   selectCanvasText: (canvasTextId: string | null) => void;
   updateCanvasText: (canvasTextId: string, updates: Partial<Pick<CanvasText, 'scale' | 'rotation' | 'x' | 'y' | 'zIndex' | 'isLocked' | 'content' | 'color' | 'fontSize' | 'fontFamily'>>) => void;
-  // TODO: Add text-specific layer/lock/duplicate functions if they need separate management from images
+  bringTextLayerForward: (canvasTextId: string) => void;
+  sendTextLayerBackward: (canvasTextId: string) => void;
+  duplicateCanvasText: (canvasTextId: string) => void;
+  toggleLockCanvasText: (canvasTextId: string) => void;
 }
 
 const UploadContext = createContext<UploadContextType | undefined>(undefined);
@@ -96,15 +98,17 @@ export function UploadProvider({ children }: { children: ReactNode }) {
     reader.readAsDataURL(file);
   }, []);
 
+  const getMaxZIndex = useCallback(() => {
+    const imageZIndexes = canvasImages.map(img => img.zIndex);
+    const textZIndexes = canvasTexts.map(txt => txt.zIndex);
+    return Math.max(-1, ...imageZIndexes, ...textZIndexes);
+  }, [canvasImages, canvasTexts]);
+
   const addCanvasImage = useCallback((sourceImageId: string) => {
     const sourceImage = uploadedImages.find(img => img.id === sourceImageId);
     if (!sourceImage) return;
 
-    const currentMaxZIndex = Math.max(
-      -1, // Default if no items
-      ...canvasImages.map(img => img.zIndex), 
-      ...canvasTexts.map(txt => txt.zIndex)
-    );
+    const currentMaxZIndex = getMaxZIndex();
 
     const newCanvasImage: CanvasImage = {
       id: crypto.randomUUID(),
@@ -122,7 +126,7 @@ export function UploadProvider({ children }: { children: ReactNode }) {
     setCanvasImages(prev => [...prev, newCanvasImage]);
     setSelectedCanvasImageId(newCanvasImage.id);
     setSelectedCanvasTextId(null);
-  }, [uploadedImages, canvasImages, canvasTexts]);
+  }, [uploadedImages, getMaxZIndex]);
 
   const removeCanvasImage = useCallback((canvasImageId: string) => {
     setCanvasImages(prev => prev.filter(img => img.id !== canvasImageId));
@@ -146,94 +150,92 @@ export function UploadProvider({ children }: { children: ReactNode }) {
     );
   }, []); 
 
-  const bringLayerForward = useCallback((canvasImageId: string) => {
+const bringLayerForward = useCallback((canvasImageId: string) => {
     setCanvasImages(prevImages => {
-        const imagesCopy = [...prevImages];
-        const sortedImages = imagesCopy.sort((a, b) => a.zIndex - b.zIndex);
+        const imagesCopy = [...prevImages].map(img => ({ ...img })); // Create shallow copies
+        const sortedImages = [...imagesCopy].sort((a, b) => a.zIndex - b.zIndex);
         const imageIndex = sortedImages.findIndex(img => img.id === canvasImageId);
 
-        if (imageIndex === -1 || sortedImages[imageIndex].isLocked) return prevImages;
+        if (imageIndex === -1 || sortedImages[imageIndex].isLocked) return prevImages; // Original array if not found or locked
+
         if (imageIndex === sortedImages.length - 1) { // Already at the top visually
-            // If it's tied with others at the top, increment its zIndex to make it uniquely highest
             const topZ = sortedImages[imageIndex].zIndex;
             const isTiedAtTop = sortedImages.some((img, idx) => idx !== imageIndex && img.zIndex === topZ);
-            if (isTiedAtTop) {
-                 return prevImages.map(img => img.id === canvasImageId ? { ...img, zIndex: topZ + 1 } : img);
+            if (isTiedAtTop) { // If tied, increment this one's zIndex
+                const newImages = prevImages.map(img => 
+                    img.id === canvasImageId ? { ...img, zIndex: topZ + 1 } : img
+                );
+                return newImages;
             }
             return prevImages; // No change if uniquely at the top
         }
 
         const currentImage = sortedImages[imageIndex];
-        const nextImage = sortedImages[imageIndex + 1];
+        const nextImageInVisualOrder = sortedImages[imageIndex + 1];
         
-        const currentImageOriginalZ = currentImage.zIndex;
-        const nextImageOriginalZ = nextImage.zIndex;
+        // Find the original objects in imagesCopy to swap zIndex
+        const originalCurrentImage = imagesCopy.find(img => img.id === currentImage.id)!;
+        const originalNextImage = imagesCopy.find(img => img.id === nextImageInVisualOrder.id)!;
 
-        // Swap zIndex values
-        const updatedImages = prevImages.map(img => {
-            if (img.id === currentImage.id) return { ...img, zIndex: nextImageOriginalZ };
-            if (img.id === nextImage.id) return { ...img, zIndex: currentImageOriginalZ };
-            return img;
-        });
+        const currentImageOriginalZ = originalCurrentImage.zIndex;
+        const nextImageOriginalZ = originalNextImage.zIndex;
+
+        originalCurrentImage.zIndex = nextImageOriginalZ;
+        originalNextImage.zIndex = currentImageOriginalZ;
 
         // If they had the same zIndex initially, ensure the moved image is now higher
         if (currentImageOriginalZ === nextImageOriginalZ) {
-            return updatedImages.map(img => img.id === currentImage.id ? { ...img, zIndex: currentImageOriginalZ + 1 } : img);
+            originalCurrentImage.zIndex = currentImageOriginalZ + 1;
         }
         
-        return updatedImages;
+        return imagesCopy; // Return the modified copy
     });
-  }, []);
-  
-  const sendLayerBackward = useCallback((canvasImageId: string) => {
+}, []);
+
+const sendLayerBackward = useCallback((canvasImageId: string) => {
     setCanvasImages(prevImages => {
-        const imagesCopy = [...prevImages];
-        const sortedImages = imagesCopy.sort((a, b) => a.zIndex - b.zIndex);
+        const imagesCopy = [...prevImages].map(img => ({ ...img })); // Create shallow copies
+        const sortedImages = [...imagesCopy].sort((a, b) => a.zIndex - b.zIndex);
         const imageIndex = sortedImages.findIndex(img => img.id === canvasImageId);
 
         if (imageIndex === -1 || sortedImages[imageIndex].isLocked) return prevImages;
         if (imageIndex === 0) { // Already at the bottom visually
-             // If it's tied with others at the bottom and its zIndex > 0, decrement its zIndex
             const bottomZ = sortedImages[imageIndex].zIndex;
             const isTiedAtBottom = sortedImages.some((img, idx) => idx !== imageIndex && img.zIndex === bottomZ);
             if (isTiedAtBottom && bottomZ > 0) {
-                 return prevImages.map(img => img.id === canvasImageId ? { ...img, zIndex: Math.max(0, bottomZ - 1) } : img);
+                 const newImages = prevImages.map(img => 
+                    img.id === canvasImageId ? { ...img, zIndex: Math.max(0, bottomZ - 1) } : img
+                 );
+                 return newImages;
             }
-            return prevImages; // No change if uniquely at the bottom or at zIndex 0
+            return prevImages; // No change if uniquely at bottom or zIndex 0
         }
 
         const currentImage = sortedImages[imageIndex];
-        const prevImage = sortedImages[imageIndex - 1];
+        const prevImageInVisualOrder = sortedImages[imageIndex - 1];
 
-        const currentImageOriginalZ = currentImage.zIndex;
-        const prevImageOriginalZ = prevImage.zIndex;
+        const originalCurrentImage = imagesCopy.find(img => img.id === currentImage.id)!;
+        const originalPrevImage = imagesCopy.find(img => img.id === prevImageInVisualOrder.id)!;
 
-        const updatedImages = prevImages.map(img => {
-            if (img.id === currentImage.id) return { ...img, zIndex: prevImageOriginalZ };
-            if (img.id === prevImage.id) return { ...img, zIndex: currentImageOriginalZ };
-            return img;
-        });
+        const currentImageOriginalZ = originalCurrentImage.zIndex;
+        const prevImageOriginalZ = originalPrevImage.zIndex;
+
+        originalCurrentImage.zIndex = prevImageOriginalZ;
+        originalPrevImage.zIndex = currentImageOriginalZ;
         
-        // If they had the same zIndex initially, ensure the image being moved "behind" (prevImage) is now higher
         if (currentImageOriginalZ === prevImageOriginalZ && currentImageOriginalZ > 0) {
-             return updatedImages.map(img => img.id === prevImage.id ? { ...img, zIndex: currentImageOriginalZ + 1 } : img);
+            originalPrevImage.zIndex = currentImageOriginalZ + 1; // The one "behind" which it moved gets higher zIndex
         }
-
-
-        return updatedImages;
+        return imagesCopy;
     });
-  }, []);
+}, []);
 
 
   const duplicateCanvasImage = useCallback((canvasImageId: string) => {
     const originalImage = canvasImages.find(img => img.id === canvasImageId);
     if (!originalImage) return;
 
-    const currentMaxZIndex = Math.max(
-      -1, 
-      ...canvasImages.map(img => img.zIndex), 
-      ...canvasTexts.map(txt => txt.zIndex)
-    );
+    const currentMaxZIndex = getMaxZIndex();
 
     const newCanvasImage: CanvasImage = {
       ...originalImage,
@@ -246,7 +248,7 @@ export function UploadProvider({ children }: { children: ReactNode }) {
     setCanvasImages(prev => [...prev, newCanvasImage]);
     setSelectedCanvasImageId(newCanvasImage.id); 
     setSelectedCanvasTextId(null);
-  }, [canvasImages, canvasTexts]);
+  }, [canvasImages, getMaxZIndex]);
 
   const toggleLockCanvasImage = useCallback((canvasImageId: string) => {
     setCanvasImages(prevImages =>
@@ -265,11 +267,7 @@ export function UploadProvider({ children }: { children: ReactNode }) {
 
   // Text specific functions
   const addCanvasText = useCallback((content: string) => {
-    const currentMaxZIndex = Math.max(
-      -1, 
-      ...canvasImages.map(img => img.zIndex), 
-      ...canvasTexts.map(txt => txt.zIndex)
-    );
+    const currentMaxZIndex = getMaxZIndex();
     const newText: CanvasText = {
       id: crypto.randomUUID(),
       content,
@@ -277,16 +275,16 @@ export function UploadProvider({ children }: { children: ReactNode }) {
       y: 50,
       rotation: 0,
       scale: 1,
-      color: '#333333', // Dark grey, more visible on light backgrounds
+      color: '#333333', 
       fontSize: 24, 
-      fontFamily: 'Arial, sans-serif', // Common sans-serif
+      fontFamily: 'Arial, sans-serif', 
       zIndex: currentMaxZIndex + 1,
       isLocked: false,
     };
     setCanvasTexts(prev => [...prev, newText]);
     setSelectedCanvasTextId(newText.id);
     setSelectedCanvasImageId(null);
-  }, [canvasImages, canvasTexts]);
+  }, [getMaxZIndex]);
 
   const removeCanvasText = useCallback((canvasTextId: string) => {
     setCanvasTexts(prev => prev.filter(txt => txt.id !== canvasTextId));
@@ -310,6 +308,109 @@ export function UploadProvider({ children }: { children: ReactNode }) {
     );
   }, []);
 
+  const bringTextLayerForward = useCallback((canvasTextId: string) => {
+    setCanvasTexts(prevTexts => {
+        const textsCopy = [...prevTexts].map(txt => ({ ...txt }));
+        const sortedTexts = [...textsCopy].sort((a, b) => a.zIndex - b.zIndex);
+        const textIndex = sortedTexts.findIndex(txt => txt.id === canvasTextId);
+
+        if (textIndex === -1 || sortedTexts[textIndex].isLocked) return prevTexts;
+
+        if (textIndex === sortedTexts.length - 1) {
+            const topZ = sortedTexts[textIndex].zIndex;
+            const isTiedAtTop = sortedTexts.some((txt, idx) => idx !== textIndex && txt.zIndex === topZ);
+            if (isTiedAtTop) {
+                return prevTexts.map(txt => txt.id === canvasTextId ? { ...txt, zIndex: topZ + 1 } : txt);
+            }
+            return prevTexts;
+        }
+
+        const currentText = sortedTexts[textIndex];
+        const nextTextInVisualOrder = sortedTexts[textIndex + 1];
+        
+        const originalCurrentText = textsCopy.find(txt => txt.id === currentText.id)!;
+        const originalNextText = textsCopy.find(txt => txt.id === nextTextInVisualOrder.id)!;
+
+        const currentTextOriginalZ = originalCurrentText.zIndex;
+        const nextTextOriginalZ = originalNextText.zIndex;
+
+        originalCurrentText.zIndex = nextTextOriginalZ;
+        originalNextText.zIndex = currentTextOriginalZ;
+
+        if (currentTextOriginalZ === nextTextOriginalZ) {
+            originalCurrentText.zIndex = currentTextOriginalZ + 1;
+        }
+        return textsCopy;
+    });
+  }, []);
+
+  const sendTextLayerBackward = useCallback((canvasTextId: string) => {
+    setCanvasTexts(prevTexts => {
+        const textsCopy = [...prevTexts].map(txt => ({ ...txt }));
+        const sortedTexts = [...textsCopy].sort((a, b) => a.zIndex - b.zIndex);
+        const textIndex = sortedTexts.findIndex(txt => txt.id === canvasTextId);
+
+        if (textIndex === -1 || sortedTexts[textIndex].isLocked) return prevTexts;
+        if (textIndex === 0) {
+            const bottomZ = sortedTexts[textIndex].zIndex;
+            const isTiedAtBottom = sortedTexts.some((txt, idx) => idx !== textIndex && txt.zIndex === bottomZ);
+            if (isTiedAtBottom && bottomZ > 0) {
+                 return prevTexts.map(txt => txt.id === canvasTextId ? { ...txt, zIndex: Math.max(0, bottomZ - 1) } : txt);
+            }
+            return prevTexts;
+        }
+
+        const currentText = sortedTexts[textIndex];
+        const prevTextInVisualOrder = sortedTexts[textIndex - 1];
+
+        const originalCurrentText = textsCopy.find(txt => txt.id === currentText.id)!;
+        const originalPrevText = textsCopy.find(txt => txt.id === prevTextInVisualOrder.id)!;
+        
+        const currentTextOriginalZ = originalCurrentText.zIndex;
+        const prevTextOriginalZ = originalPrevText.zIndex;
+
+        originalCurrentText.zIndex = prevTextOriginalZ;
+        originalPrevText.zIndex = currentTextOriginalZ;
+        
+        if (currentTextOriginalZ === prevTextOriginalZ && currentTextOriginalZ > 0) {
+            originalPrevText.zIndex = currentTextOriginalZ + 1;
+        }
+        return textsCopy;
+    });
+  }, []);
+
+  const duplicateCanvasText = useCallback((canvasTextId: string) => {
+    const originalText = canvasTexts.find(txt => txt.id === canvasTextId);
+    if (!originalText) return;
+    const currentMaxZIndex = getMaxZIndex();
+    const newText: CanvasText = {
+      ...originalText,
+      id: crypto.randomUUID(),
+      x: originalText.x + 2,
+      y: originalText.y + 2,
+      zIndex: currentMaxZIndex + 1,
+      isLocked: false,
+    };
+    setCanvasTexts(prev => [...prev, newText]);
+    setSelectedCanvasTextId(newText.id);
+    setSelectedCanvasImageId(null);
+  }, [canvasTexts, getMaxZIndex]);
+
+  const toggleLockCanvasText = useCallback((canvasTextId: string) => {
+    setCanvasTexts(prevTexts =>
+      prevTexts.map(txt => {
+        if (txt.id === canvasTextId) {
+          const isNowLocked = !txt.isLocked;
+          if (isNowLocked && selectedCanvasTextId === canvasTextId) {
+            setSelectedCanvasTextId(null);
+          }
+          return { ...txt, isLocked: isNowLocked };
+        }
+        return txt;
+      })
+    );
+  }, [selectedCanvasTextId]);
+
 
   return (
     <UploadContext.Provider
@@ -332,6 +433,10 @@ export function UploadProvider({ children }: { children: ReactNode }) {
         selectedCanvasTextId,
         selectCanvasText,
         updateCanvasText,
+        bringTextLayerForward,
+        sendTextLayerBackward,
+        duplicateCanvasText,
+        toggleLockCanvasText,
       }}
     >
       {children}
