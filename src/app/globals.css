@@ -6,7 +6,7 @@
 
 @layer base {
   :root {
-    --background: 170 50% 92%; /* Very light cyan #E0F4F1 */
+    --background: 0 0% 100%; /* White */
     --foreground: 0 0% 3.9%; /* Default dark */
     --card: 0 0% 100%;
     --card-foreground: 0 0% 3.9%;
@@ -33,7 +33,7 @@
     --radius: 0.5rem;
 
     /* Sidebar variables mapped to the main theme */
-    --sidebar-background: 170 50% 92%; /* Same as app background for a seamless look, or slightly darker e.g. 170 45% 88% for distinction */
+    --sidebar-background: 0 0% 100%; /* Changed to white */
     --sidebar-foreground: 0 0% 3.9%; /* Same as app foreground */
     --sidebar-primary: 187 31% 40%; /* Mapped to primary */
     --sidebar-primary-foreground: 0 0% 98%; /* Mapped to primary-foreground */

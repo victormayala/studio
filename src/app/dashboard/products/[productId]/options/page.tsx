@@ -99,7 +99,7 @@ export default function ProductOptionsPage() {
   };
 
   return (
-    <div className="container mx-auto p-4 md:p-6 lg:p-8 max-w-5xl bg-card min-h-screen">
+    <div className="container mx-auto p-4 md:p-6 lg:p-8 bg-card min-h-screen">
       <div className="mb-6">
         <Button variant="outline" asChild className="hover:bg-accent hover:text-accent-foreground">
           <Link href="/dashboard">
