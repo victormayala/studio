@@ -23,7 +23,7 @@ export default function MarketingHeader() {
   const isMobile = useIsMobile();
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+    <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-card">
       <div className="container flex h-16 max-w-screen-2xl items-center justify-between">
         <Link href="/" className="mr-6 flex items-center space-x-2">
           <Logo />
@@ -37,7 +37,7 @@ export default function MarketingHeader() {
                 <span className="sr-only">Toggle menu</span>
               </Button>
             </SheetTrigger>
-            <SheetContent side="right" className="w-[280px] p-6">
+            <SheetContent side="right" className="w-[280px] p-6 bg-card">
               <nav className="flex flex-col space-y-4">
                 {navLinks.map((link) => (
                   <Link
