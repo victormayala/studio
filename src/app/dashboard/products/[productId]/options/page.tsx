@@ -1,10 +1,10 @@
 
 "use client";
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
-import NextImage from 'next/image'; // Renamed to avoid conflict with local Image
+import NextImage from 'next/image';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -12,20 +12,18 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { ArrowLeft, PlusCircle, Trash2, Image as ImageIcon } from 'lucide-react';
+import { ArrowLeft, PlusCircle, Trash2, Image as ImageIcon, Move, Maximize2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-// Define the BoundaryBox interface
 interface BoundaryBox {
   id: string;
   name: string;
-  x: number; // percentage from left
-  y: number; // percentage from top
+  x: number; // percentage from left (top-left corner)
+  y: number; // percentage from top (top-left corner)
   width: number; // percentage width
   height: number; // percentage height
 }
 
-// Mock data - replace with actual data fetching
 interface ProductDetails {
   id: string;
   name: string;
@@ -50,6 +48,21 @@ const mockProductDetails: ProductDetails = {
   boundaryBoxes: [],
 };
 
+interface ActiveDragState {
+  type: 'move' | 'resize_br'; // br for bottom-right
+  boxId: string;
+  pointerStartX: number; // Initial mouse/touch X relative to viewport
+  pointerStartY: number; // Initial mouse/touch Y relative to viewport
+  initialBoxX: number;    // Box's X at drag start (percentage)
+  initialBoxY: number;    // Box's Y at drag start (percentage)
+  initialBoxWidth: number; // Box's width at drag start (percentage)
+  initialBoxHeight: number;// Box's height at drag start (percentage)
+  containerWidthPx: number; // Pixel width of the image container
+  containerHeightPx: number;// Pixel height of the image container
+}
+
+const MIN_BOX_SIZE_PERCENT = 5; // Minimum 5% width/height
+
 export default function ProductOptionsPage() {
   const params = useParams();
   const productId = params.productId as string;
@@ -61,11 +74,11 @@ export default function ProductOptionsPage() {
   const [newSize, setNewSize] = useState<string>('');
   const [selectedBoundaryBoxId, setSelectedBoundaryBoxId] = useState<string | null>(null);
   const imageWrapperRef = useRef<HTMLDivElement>(null);
+  const [activeDrag, setActiveDrag] = useState<ActiveDragState | null>(null);
 
 
   useEffect(() => {
     if (productId) {
-      // Simulating fetching product details
       const foundProduct = mockProductDetails.id === productId ? mockProductDetails : { 
             ...mockProductDetails, 
             id: productId, 
@@ -74,17 +87,113 @@ export default function ProductOptionsPage() {
             boundaryBoxes: [], 
           };
       setProduct(foundProduct);
-      if (foundProduct.boundaryBoxes.length > 0) {
-        // setSelectedBoundaryBoxId(foundProduct.boundaryBoxes[0].id); // Optionally select the first box
-      } else {
-        setSelectedBoundaryBoxId(null);
-      }
+      setSelectedBoundaryBoxId(null);
     }
   }, [productId]);
 
+  const getPointerCoords = (e: MouseEvent | TouchEvent | React.MouseEvent | React.TouchEvent) => {
+    if ('touches' in e && e.touches.length > 0) {
+      return { x: e.touches[0].clientX, y: e.touches[0].clientY };
+    }
+    return { x: (e as MouseEvent).clientX, y: (e as MouseEvent).clientY };
+  };
+
+  const handleInteractionStart = useCallback((
+    e: React.MouseEvent<HTMLDivElement> | React.TouchEvent<HTMLDivElement>,
+    boxId: string,
+    type: 'move' | 'resize_br'
+  ) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    const currentBox = product?.boundaryBoxes.find(b => b.id === boxId);
+    if (!currentBox || !imageWrapperRef.current) return;
+
+    setSelectedBoundaryBoxId(boxId);
+    const pointerCoords = getPointerCoords(e);
+    const containerRect = imageWrapperRef.current.getBoundingClientRect();
+
+    setActiveDrag({
+      type,
+      boxId,
+      pointerStartX: pointerCoords.x,
+      pointerStartY: pointerCoords.y,
+      initialBoxX: currentBox.x,
+      initialBoxY: currentBox.y,
+      initialBoxWidth: currentBox.width,
+      initialBoxHeight: currentBox.height,
+      containerWidthPx: containerRect.width,
+      containerHeightPx: containerRect.height,
+    });
+  }, [product?.boundaryBoxes]);
+
+  const handleDragging = useCallback((e: MouseEvent | TouchEvent) => {
+    if (!activeDrag || !product) return;
+    e.preventDefault();
+
+    const pointerCoords = getPointerCoords(e);
+    const deltaXpx = pointerCoords.x - activeDrag.pointerStartX;
+    const deltaYpx = pointerCoords.y - activeDrag.pointerStartY;
+
+    const deltaXPercent = (deltaXpx / activeDrag.containerWidthPx) * 100;
+    const deltaYPercent = (deltaYpx / activeDrag.containerHeightPx) * 100;
+
+    let newX = activeDrag.initialBoxX;
+    let newY = activeDrag.initialBoxY;
+    let newWidth = activeDrag.initialBoxWidth;
+    let newHeight = activeDrag.initialBoxHeight;
+
+    if (activeDrag.type === 'move') {
+      newX = activeDrag.initialBoxX + deltaXPercent;
+      newY = activeDrag.initialBoxY + deltaYPercent;
+      // Clamp position
+      newX = Math.max(0, Math.min(newX, 100 - newWidth));
+      newY = Math.max(0, Math.min(newY, 100 - newHeight));
+    } else if (activeDrag.type === 'resize_br') {
+      newWidth = activeDrag.initialBoxWidth + deltaXPercent;
+      newHeight = activeDrag.initialBoxHeight + deltaYPercent;
+      // Clamp size (min size and max based on container boundaries)
+      newWidth = Math.max(MIN_BOX_SIZE_PERCENT, Math.min(newWidth, 100 - newX));
+      newHeight = Math.max(MIN_BOX_SIZE_PERCENT, Math.min(newHeight, 100 - newY));
+    }
+
+    setProduct(prev => prev ? {
+      ...prev,
+      boundaryBoxes: prev.boundaryBoxes.map(b => 
+        b.id === activeDrag.boxId ? { ...b, x: newX, y: newY, width: newWidth, height: newHeight } : b
+      )
+    } : null);
+
+  }, [activeDrag, product]);
+
+  const handleInteractionEnd = useCallback(() => {
+    setActiveDrag(null);
+  }, []);
+
+  useEffect(() => {
+    if (activeDrag) {
+      window.addEventListener('mousemove', handleDragging);
+      window.addEventListener('touchmove', handleDragging, { passive: false });
+      window.addEventListener('mouseup', handleInteractionEnd);
+      window.addEventListener('touchend', handleInteractionEnd);
+    } else {
+      window.removeEventListener('mousemove', handleDragging);
+      window.removeEventListener('touchmove', handleDragging);
+      window.removeEventListener('mouseup', handleInteractionEnd);
+      window.removeEventListener('touchend', handleInteractionEnd);
+    }
+    return () => {
+      window.removeEventListener('mousemove', handleDragging);
+      window.removeEventListener('touchmove', handleDragging);
+      window.removeEventListener('mouseup', handleInteractionEnd);
+      window.removeEventListener('touchend', handleInteractionEnd);
+    };
+  }, [activeDrag, handleDragging, handleInteractionEnd]);
+
+
   if (!product) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-card">
+      <div className="flex items-center justify-center min-h-screen bg-background">
         <p>Loading product details...</p>
       </div>
     );
@@ -133,7 +242,7 @@ export default function ProductOptionsPage() {
     };
     const updatedProduct = { ...product, boundaryBoxes: [...product.boundaryBoxes, newBox] };
     setProduct(updatedProduct);
-    setSelectedBoundaryBoxId(newBox.id); // Select the new box
+    setSelectedBoundaryBoxId(newBox.id);
   };
 
   const handleRemoveBoundaryBox = (boxId: string) => {
@@ -159,7 +268,7 @@ export default function ProductOptionsPage() {
 
 
   return (
-    <div className="container mx-auto p-4 md:p-6 lg:p-8 bg-card min-h-screen">
+    <div className="container mx-auto p-4 md:p-6 lg:p-8 bg-background min-h-screen">
       <div className="mb-6">
         <Button variant="outline" asChild className="hover:bg-accent hover:text-accent-foreground">
           <Link href="/dashboard">
@@ -183,49 +292,71 @@ export default function ProductOptionsPage() {
               <CardTitle className="font-headline text-lg">Product Image & Areas</CardTitle>
             </CardHeader>
             <CardContent>
-              <div ref={imageWrapperRef} className="relative w-full aspect-square border rounded-md overflow-hidden group bg-muted/20">
+              <div 
+                ref={imageWrapperRef} 
+                className="relative w-full aspect-square border rounded-md overflow-hidden group bg-muted/20 select-none"
+                onMouseDown={(e) => { // Deselect if clicking on background
+                  if (e.target === imageWrapperRef.current) {
+                    setSelectedBoundaryBoxId(null);
+                  }
+                }}
+              >
                 {product.imageUrl ? (
                   <NextImage
                     src={product.imageUrl}
                     alt={product.name}
-                    fill // Use fill for responsive sizing within the aspect-square container
-                    className="object-contain" // Use object-contain to ensure the whole image is visible
+                    fill
+                    className="object-contain pointer-events-none" 
                     data-ai-hint={product.aiHint || "product image"}
                     priority
                   />
                 ) : (
-                  <div className="absolute inset-0 flex flex-col items-center justify-center">
+                  <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
                       <ImageIcon className="w-16 h-16 text-muted-foreground" />
                       <p className="text-sm text-muted-foreground mt-2">No image available</p>
                   </div>
                 )}
 
-                {/* Render Boundary Boxes */}
                 {product.boundaryBoxes.map((box) => (
                   <div
                     key={box.id}
                     className={cn(
-                      "absolute transition-all duration-150 ease-in-out",
-                      "border-2 hover:border-primary/70",
-                      selectedBoundaryBoxId === box.id ? 'border-primary ring-2 ring-primary ring-offset-2 bg-primary/10' : 'border-dashed border-muted-foreground/70 hover:bg-foreground/5',
-                      "cursor-pointer" // Add cursor pointer to indicate interactivity
+                      "absolute transition-colors duration-100 ease-in-out group/box", // group/box for handle visibility
+                      selectedBoundaryBoxId === box.id 
+                        ? 'border-primary ring-2 ring-primary ring-offset-1 bg-primary/10' 
+                        : 'border-dashed border-muted-foreground/50 hover:border-primary/70 hover:bg-primary/5',
+                      activeDrag?.boxId === box.id && activeDrag.type === 'move' ? 'cursor-grabbing' : 'cursor-grab'
                     )}
                     style={{
                       left: `${box.x}%`,
                       top: `${box.y}%`,
                       width: `${box.width}%`,
                       height: `${box.height}%`,
-                      // zIndex needed if you want them above other things, or to control stacking if they overlap
+                      zIndex: selectedBoundaryBoxId === box.id ? 10 : 1, // Bring selected to front
                     }}
-                    onClick={() => setSelectedBoundaryBoxId(box.id)}
-                    title={`Select Area: ${box.name}`}
+                    onMouseDown={(e) => handleInteractionStart(e, box.id, 'move')}
+                    onTouchStart={(e) => handleInteractionStart(e, box.id, 'move')}
                   >
-                    {/* Future: Handles can go here */}
+                    {/* Resize Handle (Bottom-Right) */}
+                    {selectedBoundaryBoxId === box.id && (
+                      <div
+                        className="absolute -bottom-1.5 -right-1.5 w-4 h-4 bg-primary rounded-full border-2 border-background shadow-md cursor-nwse-resize hover:opacity-80 active:opacity-100"
+                        title="Resize Area"
+                        onMouseDown={(e) => handleInteractionStart(e, box.id, 'resize_br')}
+                        onTouchStart={(e) => handleInteractionStart(e, box.id, 'resize_br')}
+                      >
+                        <Maximize2 className="w-2.5 h-2.5 text-primary-foreground absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
+                      </div>
+                    )}
+                     {/* Display box name inside, useful for identification */}
+                    <div className="absolute top-0.5 left-0.5 text-[8px] text-primary-foreground bg-primary/70 px-1 py-0.5 rounded-br-sm opacity-0 group-hover/box:opacity-100 group-[.is-selected]/box:opacity-100 transition-opacity select-none pointer-events-none">
+                        {box.name}
+                    </div>
                   </div>
                 ))}
               </div>
               <p className="text-xs text-muted-foreground mt-2 text-center">
-                Click on an area on the image or in the list below to select it. Interactive editing coming soon.
+                Click & drag to move areas. Use handles to resize.
               </p>
             </CardContent>
           </Card>
@@ -253,7 +384,7 @@ export default function ProductOptionsPage() {
                           value={box.name}
                           onChange={(e) => handleBoundaryBoxNameChange(box.id, e.target.value)}
                           className="text-sm font-semibold text-foreground h-8 flex-grow mr-2 bg-transparent border-0 focus-visible:ring-1 focus-visible:ring-ring p-1"
-                          onClick={(e) => e.stopPropagation()} // Prevent card click when editing name
+                          onClick={(e) => e.stopPropagation()}
                         />
                         <Button 
                             variant="ghost" 
@@ -440,4 +571,3 @@ export default function ProductOptionsPage() {
     </div>
   );
 }
-
