@@ -8,10 +8,10 @@ import Image from 'next/image';
 const defaultProduct = {
   id: 'tshirt-white',
   name: 'Plain White T-shirt',
-  imageUrl: 'https://placehold.co/700x700.png', // Increased placeholder size
+  imageUrl: 'https://placehold.co/700x700.png',
   imageAlt: 'Plain white T-shirt ready for customization',
-  width: 700, // Increased width
-  height: 700, // Increased height
+  width: 700,
+  height: 700,
   aiHint: 'white t-shirt'
 };
 
@@ -21,7 +21,7 @@ export default function DesignCanvas() {
   const productToDisplay = defaultProduct;
 
   return (
-    <div className="flex-grow flex items-center justify-center bg-card border border-dashed border-border rounded-lg shadow-inner p-4 min-h-[500px] lg:min-h-[700px]"> {/* Adjusted min-height */}
+    <div className="w-full h-full flex items-center justify-center bg-card border border-dashed border-border rounded-lg shadow-inner p-4 min-h-[500px] lg:min-h-[700px]"> {/* Changed flex-grow to w-full h-full */}
       <div className="text-center">
         <div className="relative" style={{ width: productToDisplay.width, height: productToDisplay.height }}>
           <Image 
@@ -41,3 +41,4 @@ export default function DesignCanvas() {
     </div>
   );
 }
+
