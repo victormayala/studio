@@ -14,6 +14,16 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { ArrowLeft, PlusCircle, Trash2, Image as ImageIcon } from 'lucide-react';
 
+// Define the BoundaryBox interface
+interface BoundaryBox {
+  id: string;
+  name: string;
+  x: number; // percentage from left
+  y: number; // percentage from top
+  width: number; // percentage width
+  height: number; // percentage height
+}
+
 // Mock data - replace with actual data fetching
 interface ProductDetails {
   id: string;
@@ -24,7 +34,7 @@ interface ProductDetails {
   sizes: string[];
   imageUrl: string;
   aiHint?: string;
-  // Boundary boxes would be an array of objects: { id: string, x: number, y: number, width: number, height: number }
+  boundaryBoxes: BoundaryBox[]; // Added boundaryBoxes
 }
 
 const mockProductDetails: ProductDetails = {
@@ -34,32 +44,33 @@ const mockProductDetails: ProductDetails = {
   price: 19.99,
   colors: ['#FFFFFF', '#000000', '#FF0000'],
   sizes: ['S', 'M', 'L', 'XL'],
-  imageUrl: 'https://placehold.co/600x600.png', // Larger placeholder for main view
+  imageUrl: 'https://placehold.co/600x600.png',
   aiHint: 't-shirt mockup front',
+  boundaryBoxes: [], // Initialized as empty
 };
 
 export default function ProductOptionsPage() {
   const params = useParams();
   const productId = params.productId as string;
 
-  // In a real app, fetch product details based on productId
   const [product, setProduct] = useState<ProductDetails | null>(null);
   
-  // For color/size inputs
   const [newColorHex, setNewColorHex] = useState<string>('#CCCCCC');
   const [newColorSwatch, setNewColorSwatch] = useState<string>('#CCCCCC');
   const [newSize, setNewSize] = useState<string>('');
 
   useEffect(() => {
-    // Simulate fetching product data
     if (productId) {
-      // Replace with actual API call: fetchProductDetails(productId).then(setProduct);
-      // For now, we find it in the larger mock or use a specific one
-      if (mockProductDetails.id === productId) { // Simplified mock logic
+      if (mockProductDetails.id === productId) {
           setProduct(mockProductDetails);
       } else {
-          // Fallback or fetch from a list if you had one
-          const genericProduct = { ...mockProductDetails, id: productId, name: `Product ${productId}`, imageUrl: `https://placehold.co/600x600.png?text=Product+${productId}` };
+          const genericProduct = { 
+            ...mockProductDetails, 
+            id: productId, 
+            name: `Product ${productId}`, 
+            imageUrl: `https://placehold.co/600x600.png?text=Product+${productId}`,
+            boundaryBoxes: [], // Ensure boundaryBoxes is initialized for generic products too
+          };
           setProduct(genericProduct);
       }
     }
@@ -74,29 +85,67 @@ export default function ProductOptionsPage() {
   }
 
   const handleAddColor = () => {
-    // Placeholder: add color to product.colors state
-    alert(`Adding color: ${newColorHex}`);
+    if (!product) return;
+    const updatedProduct = { ...product, colors: [...product.colors, newColorHex] };
+    setProduct(updatedProduct);
+    setNewColorHex('#CCCCCC'); 
+    setNewColorSwatch('#CCCCCC');
+    // Placeholder for actual API call
+    // alert(`Adding color: ${newColorHex}`);
   };
 
   const handleRemoveColor = (colorToRemove: string) => {
+    if (!product) return;
+    const updatedProduct = { ...product, colors: product.colors.filter(c => c !== colorToRemove) };
+    setProduct(updatedProduct);
     // Placeholder
-    alert(`Removing color: ${colorToRemove}`);
+    // alert(`Removing color: ${colorToRemove}`);
   };
 
   const handleAddSize = () => {
-    // Placeholder
-    alert(`Adding size: ${newSize}`);
+    if (!product || !newSize.trim()) return;
+    const updatedProduct = { ...product, sizes: [...product.sizes, newSize.trim()] };
+    setProduct(updatedProduct);
     setNewSize('');
+    // Placeholder
+    // alert(`Adding size: ${newSize}`);
   };
 
   const handleRemoveSize = (sizeToRemove: string) => {
+     if (!product) return;
+    const updatedProduct = { ...product, sizes: product.sizes.filter(s => s !== sizeToRemove) };
+    setProduct(updatedProduct);
     // Placeholder
-    alert(`Removing size: ${sizeToRemove}`);
+    // alert(`Removing size: ${sizeToRemove}`);
   };
   
   const handleSaveChanges = () => {
     alert("Saving changes... (functionality not implemented)");
   };
+
+  const handleAddBoundaryBox = () => {
+    if (!product || product.boundaryBoxes.length >= 3) return;
+    const newBox: BoundaryBox = {
+      id: crypto.randomUUID(),
+      name: `Area ${product.boundaryBoxes.length + 1}`,
+      x: 10, // Default values
+      y: 10,
+      width: 30,
+      height: 20,
+    };
+    setProduct(prev => prev ? { ...prev, boundaryBoxes: [...prev.boundaryBoxes, newBox] } : null);
+  };
+
+  const handleRemoveBoundaryBox = (boxId: string) => {
+    setProduct(prev => prev ? { ...prev, boundaryBoxes: prev.boundaryBoxes.filter(b => b.id !== boxId) } : null);
+  };
+  
+  const handleProductDetailChange = (field: keyof ProductDetails, value: any) => {
+    if (product) {
+      setProduct({ ...product, [field]: value });
+    }
+  };
+
 
   return (
     <div className="container mx-auto p-4 md:p-6 lg:p-8 bg-card min-h-screen">
@@ -117,7 +166,6 @@ export default function ProductOptionsPage() {
       </p>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-        {/* Left Column: Product Image & Boundary Box Placeholder */}
         <div className="md:col-span-1 space-y-6">
            <Card className="shadow-md">
             <CardHeader>
@@ -145,20 +193,55 @@ export default function ProductOptionsPage() {
           <Card className="shadow-md">
             <CardHeader>
               <CardTitle className="font-headline text-lg">Customization Areas</CardTitle>
-              <CardDescription>Define printable/customizable regions.</CardDescription>
+              <CardDescription>Define printable/customizable regions. (Max 3)</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="p-4 text-center bg-muted rounded-md min-h-[100px] flex items-center justify-center">
-                <p className="text-sm text-muted-foreground">
-                  Interactive boundary box editor coming soon.
-                  <br/>(Up to 3 areas)
+              {product.boundaryBoxes.length > 0 && (
+                <div className="space-y-3 mb-4">
+                  {product.boundaryBoxes.map((box, index) => (
+                    <div key={box.id} className="p-3 border rounded-md bg-muted/30">
+                      <div className="flex justify-between items-center mb-1.5">
+                        <h4 className="font-semibold text-sm text-foreground">
+                          {/* Basic name editing could be added here later */}
+                          Area {index + 1} 
+                        </h4>
+                        <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            onClick={() => handleRemoveBoundaryBox(box.id)} 
+                            className="text-destructive hover:bg-destructive/10 hover:text-destructive h-7 w-7"
+                            title="Remove Area"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                      {/* For now, display values. Inputs for editing can be a future step. */}
+                      <div className="text-xs text-muted-foreground space-y-0.5">
+                        <p><strong>Name:</strong> {box.name}</p>
+                        <p><strong>X:</strong> {box.x}% | <strong>Y:</strong> {box.y}%</p>
+                        <p><strong>Width:</strong> {box.width}% | <strong>Height:</strong> {box.height}%</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {product.boundaryBoxes.length < 3 ? (
+                <Button onClick={handleAddBoundaryBox} variant="outline" className="w-full hover:bg-accent hover:text-accent-foreground">
+                  <PlusCircle className="mr-2 h-4 w-4" />
+                  Add Customization Area
+                </Button>
+              ) : (
+                <p className="text-sm text-muted-foreground text-center py-2">
+                  Maximum of 3 customization areas reached.
                 </p>
-              </div>
+              )}
+               <p className="text-xs text-muted-foreground mt-3 text-center">
+                  Interactive boundary box editor coming soon.
+                </p>
             </CardContent>
           </Card>
         </div>
 
-        {/* Right Column: Form Fields */}
         <div className="md:col-span-2 space-y-6">
           <Card className="shadow-md">
             <CardHeader>
@@ -167,15 +250,33 @@ export default function ProductOptionsPage() {
             <CardContent className="space-y-4">
               <div>
                 <Label htmlFor="productName">Product Name</Label>
-                <Input id="productName" defaultValue={product.name} className="mt-1" />
+                <Input 
+                    id="productName" 
+                    value={product.name} 
+                    onChange={(e) => handleProductDetailChange('name', e.target.value)}
+                    className="mt-1" 
+                />
               </div>
               <div>
                 <Label htmlFor="productDescription">Product Description</Label>
-                <Textarea id="productDescription" defaultValue={product.description} className="mt-1" rows={4} />
+                <Textarea 
+                    id="productDescription" 
+                    value={product.description} 
+                    onChange={(e) => handleProductDetailChange('description', e.target.value)}
+                    className="mt-1" 
+                    rows={4} 
+                />
               </div>
               <div>
                 <Label htmlFor="productPrice">Product Price ($)</Label>
-                <Input id="productPrice" type="number" defaultValue={product.price} className="mt-1" step="0.01" />
+                <Input 
+                    id="productPrice" 
+                    type="number" 
+                    value={product.price} 
+                    onChange={(e) => handleProductDetailChange('price', parseFloat(e.target.value) || 0)}
+                    className="mt-1" 
+                    step="0.01" 
+                />
               </div>
             </CardContent>
           </Card>
@@ -224,11 +325,11 @@ export default function ProductOptionsPage() {
                     placeholder="#RRGGBB"
                     value={newColorHex}
                     onChange={(e) => setNewColorHex(e.target.value.toUpperCase())}
-                    onBlur={(e) => setNewColorSwatch(e.target.value)}
+                    onBlur={(e) => setNewColorSwatch(e.target.value)} // Ensure swatch updates if hex is manually changed
                     maxLength={7}
                     className="flex-grow"
                   />
-                  <Button onClick={handleAddColor} variant="outline" size="icon" className="shrink-0">
+                  <Button onClick={handleAddColor} variant="outline" size="icon" className="shrink-0 hover:bg-accent hover:text-accent-foreground">
                     <PlusCircle className="h-5 w-5" />
                     <span className="sr-only">Add Color</span>
                   </Button>
@@ -275,7 +376,7 @@ export default function ProductOptionsPage() {
                     onChange={(e) => setNewSize(e.target.value)}
                      className="flex-grow"
                   />
-                  <Button onClick={handleAddSize} variant="outline" size="icon" className="shrink-0">
+                  <Button onClick={handleAddSize} variant="outline" size="icon" className="shrink-0 hover:bg-accent hover:text-accent-foreground">
                     <PlusCircle className="h-5 w-5" />
                      <span className="sr-only">Add Size</span>
                   </Button>
@@ -294,3 +395,4 @@ export default function ProductOptionsPage() {
     </div>
   );
 }
+
