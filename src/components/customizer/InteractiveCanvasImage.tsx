@@ -5,6 +5,7 @@ import Image from 'next/image';
 import type { CanvasImage } from '@/contexts/UploadContext';
 import { Trash2, RefreshCwIcon, MoveIcon } from 'lucide-react';
 import type { MouseEvent as ReactMouseEvent, TouchEvent as ReactTouchEvent } from 'react';
+import React from 'react'; // Import React for React.memo
 
 const HANDLE_SIZE = 24; // Size of the control handles in pixels
 
@@ -12,6 +13,7 @@ interface InteractiveCanvasImageProps {
   image: CanvasImage;
   isSelected: boolean;
   isBeingDragged: boolean;
+  baseImageDimension: number; // Receive the base dimension as a prop
   onImageSelectAndDragStart: (e: ReactMouseEvent<HTMLDivElement> | ReactTouchEvent<HTMLDivElement>, image: CanvasImage) => void;
   onRotateHandleMouseDown: (e: ReactMouseEvent<HTMLDivElement> | ReactTouchEvent<HTMLDivElement>, image: CanvasImage) => void;
   onResizeHandleMouseDown: (e: ReactMouseEvent<HTMLDivElement> | ReactTouchEvent<HTMLDivElement>, image: CanvasImage) => void;
@@ -22,6 +24,7 @@ function InteractiveCanvasImageComponent({
   image,
   isSelected,
   isBeingDragged,
+  baseImageDimension,
   onImageSelectAndDragStart,
   onRotateHandleMouseDown,
   onResizeHandleMouseDown,
@@ -35,14 +38,15 @@ function InteractiveCanvasImageComponent({
       style={{
         top: `${image.y}%`,
         left: `${image.x}%`,
-        width: `${200 * image.scale}px`,
-        height: `${200 * image.scale}px`,
+        // Use baseImageDimension for width and height calculations
+        width: `${baseImageDimension * image.scale}px`,
+        height: `${baseImageDimension * image.scale}px`,
         transform: `translate(-50%, -50%) rotate(${image.rotation}deg)`,
         zIndex: isSelected ? image.zIndex + 100 : image.zIndex,
         transition: isBeingDragged ? 'none' : 'transform 0.1s ease-out, border 0.1s ease-out, width 0.1s ease-out, height 0.1s ease-out',
       }}
       onClick={(e) => {
-        e.stopPropagation(); // Prevent canvas background click
+        e.stopPropagation(); 
         // Selection is handled by onImageSelectAndDragStart on mousedown/touchstart
       }}
       onMouseDown={(e) => onImageSelectAndDragStart(e, image)}
@@ -54,7 +58,7 @@ function InteractiveCanvasImageComponent({
         fill
         style={{ objectFit: 'contain' }}
         className="rounded-sm pointer-events-none"
-        priority // Consider if all images need priority
+        priority 
       />
       {isSelected && (
         <>
@@ -63,7 +67,7 @@ function InteractiveCanvasImageComponent({
             className="absolute -top-3 -right-3 bg-destructive text-destructive-foreground rounded-full p-1 cursor-pointer hover:bg-destructive/80 transition-colors flex items-center justify-center"
             style={{ width: HANDLE_SIZE, height: HANDLE_SIZE, zIndex: 10 }}
             onClick={(e) => onRemoveHandleClick(e, image.id)}
-            onMouseDown={(e) => e.stopPropagation()} // Prevent drag start on image
+            onMouseDown={(e) => e.stopPropagation()} 
             onTouchStart={(e) => { e.stopPropagation(); onRemoveHandleClick(e, image.id);}}
             title="Remove image"
           >
@@ -89,7 +93,7 @@ function InteractiveCanvasImageComponent({
             onTouchStart={(e) => onResizeHandleMouseDown(e, image)}
             title="Resize image"
           >
-            <MoveIcon size={HANDLE_SIZE * 0.6} />
+            <MoveIcon size={HANDLE_SIZE * 0.6} /> {/* This icon is more for "move all directions" but commonly used for resize corner */}
           </div>
         </>
       )}
@@ -97,6 +101,4 @@ function InteractiveCanvasImageComponent({
   );
 }
 
-// Memoize the component to prevent unnecessary re-renders
-import React from 'react';
 export const InteractiveCanvasImage = React.memo(InteractiveCanvasImageComponent);
