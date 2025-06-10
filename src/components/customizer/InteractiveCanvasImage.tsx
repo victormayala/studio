@@ -34,9 +34,18 @@ function InteractiveCanvasImageComponent({
 }: InteractiveCanvasImageProps) {
   const showHandles = isSelected && !image.isLocked;
 
-  // The zIndex for selected items is boosted significantly to ensure handles are always on top
-  // of other images during interaction, but the base stacking order comes from image.zIndex.
   const dynamicZIndex = isSelected && !image.isLocked ? image.zIndex + 100 : image.zIndex;
+
+  const style = React.useMemo(() => ({
+    top: `${image.y}%`,
+    left: `${image.x}%`,
+    width: `${baseImageDimension * image.scale}px`,
+    height: `${baseImageDimension * image.scale}px`,
+    transform: `translate(-50%, -50%) rotate(${image.rotation}deg)`,
+    zIndex: dynamicZIndex,
+    transition: isBeingDragged ? 'none' : 'transform 0.1s ease-out, border 0.1s ease-out, width 0.1s ease-out, height 0.1s ease-out',
+  }), [image.y, image.x, image.scale, image.rotation, dynamicZIndex, isBeingDragged, baseImageDimension]);
+
 
   return (
     <div
@@ -46,15 +55,7 @@ function InteractiveCanvasImageComponent({
                   ${isSelected && !image.isLocked ? 'ring-2 ring-primary ring-offset-2 ring-offset-background' : ''}
                   ${!image.isLocked ? 'hover:ring-1 hover:ring-primary/50' : ''}
                   `}
-      style={{
-        top: `${image.y}%`,
-        left: `${image.x}%`,
-        width: `${baseImageDimension * image.scale}px`,
-        height: `${baseImageDimension * image.scale}px`,
-        transform: `translate(-50%, -50%) rotate(${image.rotation}deg)`,
-        zIndex: dynamicZIndex, // Use the calculated zIndex
-        transition: isBeingDragged ? 'none' : 'transform 0.1s ease-out, border 0.1s ease-out, width 0.1s ease-out, height 0.1s ease-out',
-      }}
+      style={style}
       onClick={(e) => {
         e.stopPropagation();
         if (!image.isLocked) {

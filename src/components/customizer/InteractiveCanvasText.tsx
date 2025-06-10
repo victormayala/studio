@@ -32,6 +32,18 @@ function InteractiveCanvasTextComponent({
   const showHandles = isSelected && !textItem.isLocked;
   const dynamicZIndex = isSelected && !textItem.isLocked ? textItem.zIndex + 100 : textItem.zIndex;
 
+  const style = React.useMemo(() => ({
+    top: `${textItem.y}%`,
+    left: `${textItem.x}%`,
+    zIndex: dynamicZIndex,
+    color: textItem.color,
+    fontFamily: textItem.fontFamily,
+    fontSize: `${textItem.fontSize * textItem.scale}px`,
+    transform: `translate(-50%, -50%) rotate(${textItem.rotation}deg)`,
+    transition: isBeingDragged ? 'none' : 'transform 0.1s ease-out, border 0.1s ease-out, font-size 0.1s ease-out',
+    userSelect: 'none' as const, // Prevent text selection during drag
+  }), [textItem.y, textItem.x, dynamicZIndex, textItem.color, textItem.fontFamily, textItem.fontSize, textItem.scale, textItem.rotation, isBeingDragged]);
+
   return (
     <div
       id={`canvas-text-${textItem.id}`}
@@ -41,17 +53,7 @@ function InteractiveCanvasTextComponent({
                   ${!textItem.isLocked ? 'hover:ring-1 hover:ring-primary/50' : ''}
                   whitespace-nowrap
                   `}
-      style={{
-        top: `${textItem.y}%`,
-        left: `${textItem.x}%`,
-        zIndex: dynamicZIndex,
-        color: textItem.color,
-        fontFamily: textItem.fontFamily,
-        fontSize: `${textItem.fontSize * textItem.scale}px`,
-        transform: `translate(-50%, -50%) rotate(${textItem.rotation}deg)`,
-        transition: isBeingDragged ? 'none' : 'transform 0.1s ease-out, border 0.1s ease-out, font-size 0.1s ease-out',
-        userSelect: 'none', // Prevent text selection during drag
-      }}
+      style={style}
       onClick={(e) => {
         e.stopPropagation();
         if (!textItem.isLocked) {
