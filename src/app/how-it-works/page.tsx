@@ -1,6 +1,7 @@
 
 "use client";
 
+import React from 'react'; // Added React import
 import MarketingHeader from '@/components/layout/MarketingHeader';
 import MarketingFooter from '@/components/layout/MarketingFooter';
 import { Button } from '@/components/ui/button';
@@ -117,3 +118,4 @@ const CardStep = ({ step, index }: CardStepProps) => {
     </div>
   );
 };
+
