@@ -30,7 +30,7 @@ export default function PremiumDesignsPanel() {
               <div
                 key={design.id}
                 onClick={() => handleDesignClick(design)}
-                className="p-2 border rounded-md cursor-pointer bg-card hover:bg-accent/5 flex flex-col items-center gap-1 transition-all border-border group relative aspect-video" // aspect-video ensures consistent shape, gap-1 for spacing
+                className="p-2 border rounded-md cursor-pointer bg-card hover:bg-accent/5 flex flex-col items-center gap-1 transition-all border-border group relative aspect-square" // Changed from aspect-video to aspect-square
                 title={`Add "${design.name}" to canvas - $${design.price.toFixed(2)}`}
               >
                 {/* Badge and PlusCircle are direct children of the relative card for z-index control */}
