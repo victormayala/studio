@@ -6,51 +6,54 @@ import { useUploads } from '@/contexts/UploadContext';
 import { premiumDesignsData, type PremiumDesignItem } from '@/lib/premium-designs-data';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import Image from 'next/image';
-import { Gem, PlusCircle } from 'lucide-react'; // Using Gem icon for "Premium Designs"
-import { Button } from '@/components/ui/button'; // For potential future "buy" button, not used for add yet.
+import { Gem, PlusCircle } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { cn } from '@/lib/utils';
 
 export default function PremiumDesignsPanel() {
   const { addCanvasImageFromUrl } = useUploads();
 
   const handleDesignClick = (design: PremiumDesignItem) => {
-    // For now, directly add to canvas. Future implementation might involve a purchase flow.
     addCanvasImageFromUrl(design.name, design.imageUrl, design.type, design.id);
   };
 
   return (
     <div className="space-y-4 h-full flex flex-col p-4">
       <h3 className="text-md font-semibold text-foreground mb-0 px-1 font-headline">Premium Designs</h3>
-      <p className="text-xs text-muted-foreground px-1">Click a design to add it to the canvas. Costs $1.00 each.</p>
+      <p className="text-xs text-muted-foreground px-1">Click a design to add it to the canvas. Costs vary.</p>
 
       {premiumDesignsData.length > 0 ? (
         <ScrollArea className="flex-grow border rounded-md bg-background">
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-2 lg:grid-cols-2 gap-3 p-3">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-2 lg:grid-cols-3 gap-3 p-3">
             {premiumDesignsData.map((design) => (
               <div
                 key={design.id}
                 onClick={() => handleDesignClick(design)}
-                className="p-2 border rounded-md cursor-pointer bg-card hover:bg-accent/5 flex flex-col items-center gap-1 transition-all border-border group relative aspect-square" // Changed from aspect-video to aspect-square
+                className="relative border rounded-md cursor-pointer bg-card hover:bg-accent/5 transition-all border-border group aspect-square p-3 flex items-center justify-center"
                 title={`Add "${design.name}" to canvas - $${design.price.toFixed(2)}`}
               >
-                {/* Badge and PlusCircle are direct children of the relative card for z-index control */}
-                <Badge variant="secondary" className="absolute top-1.5 left-1.5 text-xs bg-primary/10 text-primary font-semibold border-primary/20 z-10">
-                  ${design.price.toFixed(2)}
+                <Badge
+                  variant="default" // Will use primary color by default
+                  className={cn(
+                    "absolute top-1 right-1 text-xs font-semibold z-10",
+                    "bg-primary text-primary-foreground px-1.5 py-0.5 h-auto min-w-[24px] justify-center" // More specific styling for the badge
+                  )}
+                >
+                  ${design.price.toFixed(0)}
                 </Badge>
-                <PlusCircle className="absolute top-1.5 right-1.5 h-5 w-5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity z-10" />
+                <PlusCircle className="absolute top-1 left-1 h-5 w-5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity z-10" />
                 
-                <div className="relative w-full flex-grow overflow-hidden rounded-sm"> {/* Image container: flex-grow, overflow-hidden */}
+                <div className="relative w-full h-full">
                   <Image
                     src={design.imageUrl}
                     alt={design.name}
                     fill
-                    sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 25vw"
-                    className="object-contain" // Ensures image scales down to fit
+                    sizes="(max-width: 768px) 30vw, (max-width: 1200px) 20vw, 15vw" // Adjusted sizes for better rendering within square
+                    className="object-contain"
                     data-ai-hint={design.aiHint}
                   />
                 </div>
-                
-                <span className="text-xs text-center truncate w-full flex-shrink-0">{design.name}</span> {/* flex-shrink-0 prevents name from shrinking too much */}
+                {/* Design name removed to match example */}
               </div>
             ))}
           </div>
@@ -64,3 +67,4 @@ export default function PremiumDesignsPanel() {
     </div>
   );
 }
+
