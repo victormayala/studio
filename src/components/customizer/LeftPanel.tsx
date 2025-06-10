@@ -24,7 +24,7 @@ import { useState } from "react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import UploadArea from "./UploadArea";
-// Removed: import ImageTransformControls from "./ImageTransformControls";
+import LayersPanel from "./LayersPanel"; // Added import
 import { useUploads } from "@/contexts/UploadContext";
 
 const menuItems = [
@@ -52,12 +52,9 @@ export default function LeftPanel() {
 
     switch (activeItem) {
       case "uploads":
-        return (
-          <>
-            <UploadArea />
-            {/* Removed ImageTransformControls rendering */}
-          </>
-        );
+        return <UploadArea />;
+      case "layers":
+        return <LayersPanel />; // Added LayersPanel
       default:
         return (
           <div className="p-6 text-center text-muted-foreground h-full flex flex-col items-center justify-center">

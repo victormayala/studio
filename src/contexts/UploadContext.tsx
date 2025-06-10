@@ -34,6 +34,8 @@ interface UploadContextType {
   selectedCanvasImageId: string | null;
   selectCanvasImage: (canvasImageId: string | null) => void;
   updateCanvasImage: (canvasImageId: string, updates: Partial<Pick<CanvasImage, 'scale' | 'rotation' | 'x' | 'y' | 'zIndex'>>) => void;
+  bringLayerForward: (canvasImageId: string) => void;
+  sendLayerBackward: (canvasImageId: string) => void;
 }
 
 const UploadContext = createContext<UploadContextType | undefined>(undefined);
@@ -77,11 +79,11 @@ export function UploadProvider({ children }: { children: ReactNode }) {
       rotation: 0,
       x: 50, // Default to center (percentage)
       y: 50, // Default to center (percentage)
-      zIndex: canvasImages.length + 1, // New images on top
+      zIndex: (Math.max(0, ...canvasImages.map(img => img.zIndex)) + 1), // New images on top
     };
     setCanvasImages(prev => [...prev, newCanvasImage]);
     setSelectedCanvasImageId(newCanvasImage.id);
-  }, [uploadedImages, canvasImages.length, setCanvasImages, setSelectedCanvasImageId]);
+  }, [uploadedImages, canvasImages, setCanvasImages, setSelectedCanvasImageId]);
 
   const removeCanvasImage = useCallback((canvasImageId: string) => {
     setCanvasImages(prev => prev.filter(img => img.id !== canvasImageId));
@@ -102,6 +104,62 @@ export function UploadProvider({ children }: { children: ReactNode }) {
     );
   }, [setCanvasImages]);
 
+  const bringLayerForward = useCallback((canvasImageId: string) => {
+    setCanvasImages(prevImages => {
+      const sortedImages = [...prevImages].sort((a, b) => a.zIndex - b.zIndex);
+      const currentIndex = sortedImages.findIndex(img => img.id === canvasImageId);
+
+      if (currentIndex === -1 || currentIndex === sortedImages.length - 1) {
+        return prevImages; // Not found or already at the top
+      }
+
+      const imageToMove = sortedImages[currentIndex];
+      const imageAbove = sortedImages[currentIndex + 1];
+
+      // Swap zIndex
+      const newZIndexOfImageToMove = imageAbove.zIndex;
+      const newZIndexOfImageAbove = imageToMove.zIndex;
+
+      return prevImages.map(img => {
+        if (img.id === imageToMove.id) {
+          return { ...img, zIndex: newZIndexOfImageToMove };
+        }
+        if (img.id === imageAbove.id) {
+          return { ...img, zIndex: newZIndexOfImageAbove };
+        }
+        return img;
+      });
+    });
+  }, [setCanvasImages]);
+
+  const sendLayerBackward = useCallback((canvasImageId: string) => {
+    setCanvasImages(prevImages => {
+      const sortedImages = [...prevImages].sort((a, b) => a.zIndex - b.zIndex);
+      const currentIndex = sortedImages.findIndex(img => img.id === canvasImageId);
+
+      if (currentIndex === -1 || currentIndex === 0) {
+        return prevImages; // Not found or already at the bottom
+      }
+
+      const imageToMove = sortedImages[currentIndex];
+      const imageBelow = sortedImages[currentIndex - 1];
+
+      // Swap zIndex
+      const newZIndexOfImageToMove = imageBelow.zIndex;
+      const newZIndexOfImageBelow = imageToMove.zIndex;
+      
+      return prevImages.map(img => {
+        if (img.id === imageToMove.id) {
+          return { ...img, zIndex: newZIndexOfImageToMove };
+        }
+        if (img.id === imageBelow.id) {
+          return { ...img, zIndex: newZIndexOfImageBelow };
+        }
+        return img;
+      });
+    });
+  }, [setCanvasImages]);
+
 
   return (
     <UploadContext.Provider
@@ -114,6 +172,8 @@ export function UploadProvider({ children }: { children: ReactNode }) {
         selectedCanvasImageId,
         selectCanvasImage,
         updateCanvasImage,
+        bringLayerForward,
+        sendLayerBackward,
       }}
     >
       {children}
