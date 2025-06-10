@@ -30,24 +30,27 @@ export default function PremiumDesignsPanel() {
               <div
                 key={design.id}
                 onClick={() => handleDesignClick(design)}
-                className="p-2 border rounded-md cursor-pointer bg-card hover:bg-accent/5 flex flex-col items-center justify-center gap-2 transition-all border-border group relative aspect-video"
+                className="p-2 border rounded-md cursor-pointer bg-card hover:bg-accent/5 flex flex-col items-center gap-1 transition-all border-border group relative aspect-video" // aspect-video ensures consistent shape, gap-1 for spacing
                 title={`Add "${design.name}" to canvas - $${design.price.toFixed(2)}`}
               >
-                <div className="relative w-full h-24">
+                {/* Badge and PlusCircle are direct children of the relative card for z-index control */}
+                <Badge variant="secondary" className="absolute top-1.5 left-1.5 text-xs bg-primary/10 text-primary font-semibold border-primary/20 z-10">
+                  ${design.price.toFixed(2)}
+                </Badge>
+                <PlusCircle className="absolute top-1.5 right-1.5 h-5 w-5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity z-10" />
+                
+                <div className="relative w-full flex-grow overflow-hidden rounded-sm"> {/* Image container: flex-grow, overflow-hidden */}
                   <Image
                     src={design.imageUrl}
                     alt={design.name}
                     fill
                     sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 25vw"
-                    className="object-contain"
+                    className="object-contain" // Ensures image scales down to fit
                     data-ai-hint={design.aiHint}
                   />
                 </div>
-                <span className="text-xs text-center truncate w-full mt-1">{design.name}</span>
-                <Badge variant="secondary" className="absolute top-1 left-1 text-xs bg-primary/10 text-primary font-semibold border-primary/20">
-                  ${design.price.toFixed(2)}
-                </Badge>
-                <PlusCircle className="absolute top-2 right-2 h-5 w-5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                
+                <span className="text-xs text-center truncate w-full flex-shrink-0">{design.name}</span> {/* flex-shrink-0 prevents name from shrinking too much */}
               </div>
             ))}
           </div>
