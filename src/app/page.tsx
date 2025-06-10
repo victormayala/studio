@@ -16,7 +16,7 @@ export default function CustomizerPage() {
         
         <SidebarInset className="flex flex-col flex-1 overflow-hidden">
           <AppHeader />
-          <main className="flex flex-1 p-4 md:p-6 gap-4 md:gap-6 overflow-y-auto"> {/* scrollable main content */}
+          <main className="flex flex-1 gap-4 md:gap-6 overflow-y-auto"> {/* scrollable main content, removed p-4 md:p-6 */}
             <DesignCanvas />
             <RightPanel />
           </main>
