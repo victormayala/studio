@@ -28,7 +28,8 @@ import LayersPanel from "./LayersPanel";
 import TextToolPanel from "./TextToolPanel";
 import ShapesPanel from "./ShapesPanel";
 import ClipartPanel from "./ClipartPanel";
-import FreeDesignsPanel from "./FreeDesignsPanel"; // Added import
+import FreeDesignsPanel from "./FreeDesignsPanel";
+import PremiumDesignsPanel from "./PremiumDesignsPanel"; // Added import
 import { useUploads } from "@/contexts/UploadContext";
 
 const menuItems = [
@@ -65,8 +66,10 @@ export default function LeftPanel() {
         return <ShapesPanel />;
       case "clipart":
         return <ClipartPanel />;
-      case "free-designs": // Added case for Free Designs Panel
+      case "free-designs":
         return <FreeDesignsPanel />;
+      case "premium-designs": // Added case for Premium Designs Panel
+        return <PremiumDesignsPanel />;
       default:
         return (
           <div className="p-6 text-center text-muted-foreground h-full flex flex-col items-center justify-center">
