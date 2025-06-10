@@ -1,3 +1,4 @@
+
 // src/components/customizer/DesignCanvas.tsx
 "use client";
 
@@ -7,11 +8,11 @@ import Image from 'next/image';
 const defaultProduct = {
   id: 'tshirt-white',
   name: 'Plain White T-shirt',
-  imageUrl: 'https://placehold.co/500x600.png', // Placeholder for a T-shirt
+  imageUrl: 'https://placehold.co/600x600.png', // Placeholder for a T-shirt
   imageAlt: 'Plain white T-shirt ready for customization',
-  width: 500,
+  width: 600,
   height: 600,
-  aiHint: 't-shirt mockup'
+  aiHint: 'white t-shirt' // More specific hint
 };
 
 export default function DesignCanvas() {
