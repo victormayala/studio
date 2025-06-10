@@ -1,10 +1,10 @@
 
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
-import Image from 'next/image';
+import NextImage from 'next/image'; // Renamed to avoid conflict with local Image
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -13,6 +13,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { ArrowLeft, PlusCircle, Trash2, Image as ImageIcon } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 // Define the BoundaryBox interface
 interface BoundaryBox {
@@ -34,7 +35,7 @@ interface ProductDetails {
   sizes: string[];
   imageUrl: string;
   aiHint?: string;
-  boundaryBoxes: BoundaryBox[]; // Added boundaryBoxes
+  boundaryBoxes: BoundaryBox[];
 }
 
 const mockProductDetails: ProductDetails = {
@@ -46,7 +47,7 @@ const mockProductDetails: ProductDetails = {
   sizes: ['S', 'M', 'L', 'XL'],
   imageUrl: 'https://placehold.co/600x600.png',
   aiHint: 't-shirt mockup front',
-  boundaryBoxes: [], // Initialized as empty
+  boundaryBoxes: [],
 };
 
 export default function ProductOptionsPage() {
@@ -58,20 +59,25 @@ export default function ProductOptionsPage() {
   const [newColorHex, setNewColorHex] = useState<string>('#CCCCCC');
   const [newColorSwatch, setNewColorSwatch] = useState<string>('#CCCCCC');
   const [newSize, setNewSize] = useState<string>('');
+  const [selectedBoundaryBoxId, setSelectedBoundaryBoxId] = useState<string | null>(null);
+  const imageWrapperRef = useRef<HTMLDivElement>(null);
+
 
   useEffect(() => {
     if (productId) {
-      if (mockProductDetails.id === productId) {
-          setProduct(mockProductDetails);
-      } else {
-          const genericProduct = { 
+      // Simulating fetching product details
+      const foundProduct = mockProductDetails.id === productId ? mockProductDetails : { 
             ...mockProductDetails, 
             id: productId, 
             name: `Product ${productId}`, 
             imageUrl: `https://placehold.co/600x600.png?text=Product+${productId}`,
-            boundaryBoxes: [], // Ensure boundaryBoxes is initialized for generic products too
+            boundaryBoxes: [], 
           };
-          setProduct(genericProduct);
+      setProduct(foundProduct);
+      if (foundProduct.boundaryBoxes.length > 0) {
+        // setSelectedBoundaryBoxId(foundProduct.boundaryBoxes[0].id); // Optionally select the first box
+      } else {
+        setSelectedBoundaryBoxId(null);
       }
     }
   }, [productId]);
@@ -90,16 +96,12 @@ export default function ProductOptionsPage() {
     setProduct(updatedProduct);
     setNewColorHex('#CCCCCC'); 
     setNewColorSwatch('#CCCCCC');
-    // Placeholder for actual API call
-    // alert(`Adding color: ${newColorHex}`);
   };
 
   const handleRemoveColor = (colorToRemove: string) => {
     if (!product) return;
     const updatedProduct = { ...product, colors: product.colors.filter(c => c !== colorToRemove) };
     setProduct(updatedProduct);
-    // Placeholder
-    // alert(`Removing color: ${colorToRemove}`);
   };
 
   const handleAddSize = () => {
@@ -107,16 +109,12 @@ export default function ProductOptionsPage() {
     const updatedProduct = { ...product, sizes: [...product.sizes, newSize.trim()] };
     setProduct(updatedProduct);
     setNewSize('');
-    // Placeholder
-    // alert(`Adding size: ${newSize}`);
   };
 
   const handleRemoveSize = (sizeToRemove: string) => {
      if (!product) return;
     const updatedProduct = { ...product, sizes: product.sizes.filter(s => s !== sizeToRemove) };
     setProduct(updatedProduct);
-    // Placeholder
-    // alert(`Removing size: ${sizeToRemove}`);
   };
   
   const handleSaveChanges = () => {
@@ -128,22 +126,35 @@ export default function ProductOptionsPage() {
     const newBox: BoundaryBox = {
       id: crypto.randomUUID(),
       name: `Area ${product.boundaryBoxes.length + 1}`,
-      x: 10, // Default values
-      y: 10,
+      x: 10 + product.boundaryBoxes.length * 5, 
+      y: 10 + product.boundaryBoxes.length * 5,
       width: 30,
       height: 20,
     };
-    setProduct(prev => prev ? { ...prev, boundaryBoxes: [...prev.boundaryBoxes, newBox] } : null);
+    const updatedProduct = { ...product, boundaryBoxes: [...product.boundaryBoxes, newBox] };
+    setProduct(updatedProduct);
+    setSelectedBoundaryBoxId(newBox.id); // Select the new box
   };
 
   const handleRemoveBoundaryBox = (boxId: string) => {
     setProduct(prev => prev ? { ...prev, boundaryBoxes: prev.boundaryBoxes.filter(b => b.id !== boxId) } : null);
+    if (selectedBoundaryBoxId === boxId) {
+      setSelectedBoundaryBoxId(null);
+    }
   };
   
   const handleProductDetailChange = (field: keyof ProductDetails, value: any) => {
     if (product) {
       setProduct({ ...product, [field]: value });
     }
+  };
+
+  const handleBoundaryBoxNameChange = (boxId: string, newName: string) => {
+    if (!product) return;
+    const updatedBoxes = product.boundaryBoxes.map(box =>
+      box.id === boxId ? { ...box, name: newName } : box
+    );
+    setProduct({ ...product, boundaryBoxes: updatedBoxes });
   };
 
 
@@ -169,24 +180,53 @@ export default function ProductOptionsPage() {
         <div className="md:col-span-1 space-y-6">
            <Card className="shadow-md">
             <CardHeader>
-              <CardTitle className="font-headline text-lg">Product Image</CardTitle>
+              <CardTitle className="font-headline text-lg">Product Image & Areas</CardTitle>
             </CardHeader>
             <CardContent>
-              {product.imageUrl ? (
-                <Image
-                  src={product.imageUrl}
-                  alt={product.name}
-                  width={600}
-                  height={600}
-                  className="rounded-md object-contain border aspect-square"
-                  data-ai-hint={product.aiHint || "product image"}
-                />
-              ) : (
-                 <div className="aspect-square bg-muted rounded-md flex flex-col items-center justify-center">
-                    <ImageIcon className="w-16 h-16 text-muted-foreground" />
-                    <p className="text-sm text-muted-foreground mt-2">No image available</p>
-                </div>
-              )}
+              <div ref={imageWrapperRef} className="relative w-full aspect-square border rounded-md overflow-hidden group bg-muted/20">
+                {product.imageUrl ? (
+                  <NextImage
+                    src={product.imageUrl}
+                    alt={product.name}
+                    fill // Use fill for responsive sizing within the aspect-square container
+                    className="object-contain" // Use object-contain to ensure the whole image is visible
+                    data-ai-hint={product.aiHint || "product image"}
+                    priority
+                  />
+                ) : (
+                  <div className="absolute inset-0 flex flex-col items-center justify-center">
+                      <ImageIcon className="w-16 h-16 text-muted-foreground" />
+                      <p className="text-sm text-muted-foreground mt-2">No image available</p>
+                  </div>
+                )}
+
+                {/* Render Boundary Boxes */}
+                {product.boundaryBoxes.map((box) => (
+                  <div
+                    key={box.id}
+                    className={cn(
+                      "absolute transition-all duration-150 ease-in-out",
+                      "border-2 hover:border-primary/70",
+                      selectedBoundaryBoxId === box.id ? 'border-primary ring-2 ring-primary ring-offset-2 bg-primary/10' : 'border-dashed border-muted-foreground/70 hover:bg-foreground/5',
+                      "cursor-pointer" // Add cursor pointer to indicate interactivity
+                    )}
+                    style={{
+                      left: `${box.x}%`,
+                      top: `${box.y}%`,
+                      width: `${box.width}%`,
+                      height: `${box.height}%`,
+                      // zIndex needed if you want them above other things, or to control stacking if they overlap
+                    }}
+                    onClick={() => setSelectedBoundaryBoxId(box.id)}
+                    title={`Select Area: ${box.name}`}
+                  >
+                    {/* Future: Handles can go here */}
+                  </div>
+                ))}
+              </div>
+              <p className="text-xs text-muted-foreground mt-2 text-center">
+                Click on an area on the image or in the list below to select it. Interactive editing coming soon.
+              </p>
             </CardContent>
           </Card>
 
@@ -198,28 +238,36 @@ export default function ProductOptionsPage() {
             <CardContent>
               {product.boundaryBoxes.length > 0 && (
                 <div className="space-y-3 mb-4">
-                  {product.boundaryBoxes.map((box, index) => (
-                    <div key={box.id} className="p-3 border rounded-md bg-muted/30">
+                  {product.boundaryBoxes.map((box) => (
+                    <div 
+                      key={box.id} 
+                      className={cn(
+                        "p-3 border rounded-md transition-all",
+                        selectedBoundaryBoxId === box.id ? 'bg-primary/10 border-primary shadow-md' : 'bg-muted/30 hover:bg-muted/50',
+                        "cursor-pointer"
+                      )}
+                      onClick={() => setSelectedBoundaryBoxId(box.id)}
+                    >
                       <div className="flex justify-between items-center mb-1.5">
-                        <h4 className="font-semibold text-sm text-foreground">
-                          {/* Basic name editing could be added here later */}
-                          Area {index + 1} 
-                        </h4>
+                        <Input
+                          value={box.name}
+                          onChange={(e) => handleBoundaryBoxNameChange(box.id, e.target.value)}
+                          className="text-sm font-semibold text-foreground h-8 flex-grow mr-2 bg-transparent border-0 focus-visible:ring-1 focus-visible:ring-ring p-1"
+                          onClick={(e) => e.stopPropagation()} // Prevent card click when editing name
+                        />
                         <Button 
                             variant="ghost" 
                             size="icon" 
-                            onClick={() => handleRemoveBoundaryBox(box.id)} 
+                            onClick={(e) => { e.stopPropagation(); handleRemoveBoundaryBox(box.id);}} 
                             className="text-destructive hover:bg-destructive/10 hover:text-destructive h-7 w-7"
                             title="Remove Area"
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>
                       </div>
-                      {/* For now, display values. Inputs for editing can be a future step. */}
                       <div className="text-xs text-muted-foreground space-y-0.5">
-                        <p><strong>Name:</strong> {box.name}</p>
-                        <p><strong>X:</strong> {box.x}% | <strong>Y:</strong> {box.y}%</p>
-                        <p><strong>Width:</strong> {box.width}% | <strong>Height:</strong> {box.height}%</p>
+                        <p><strong>X:</strong> {box.x.toFixed(1)}% | <strong>Y:</strong> {box.y.toFixed(1)}%</p>
+                        <p><strong>W:</strong> {box.width.toFixed(1)}% | <strong>H:</strong> {box.height.toFixed(1)}%</p>
                       </div>
                     </div>
                   ))}
@@ -235,9 +283,6 @@ export default function ProductOptionsPage() {
                   Maximum of 3 customization areas reached.
                 </p>
               )}
-               <p className="text-xs text-muted-foreground mt-3 text-center">
-                  Interactive boundary box editor coming soon.
-                </p>
             </CardContent>
           </Card>
         </div>
@@ -325,7 +370,7 @@ export default function ProductOptionsPage() {
                     placeholder="#RRGGBB"
                     value={newColorHex}
                     onChange={(e) => setNewColorHex(e.target.value.toUpperCase())}
-                    onBlur={(e) => setNewColorSwatch(e.target.value)} // Ensure swatch updates if hex is manually changed
+                    onBlur={(e) => setNewColorSwatch(e.target.value)} 
                     maxLength={7}
                     className="flex-grow"
                   />
