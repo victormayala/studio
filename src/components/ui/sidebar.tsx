@@ -141,10 +141,7 @@ const SidebarProvider = React.forwardRef<
                 ...style,
               } as React.CSSProperties
             }
-            className={cn(
-              "flex min-h-svh w-full", // group/sidebar-wrapper and has-[[data-variant=inset]]:bg-sidebar REMOVED
-              className
-            )}
+            className={cn(className)}
             ref={ref}
             {...props}
           >
@@ -323,7 +320,7 @@ const SidebarInset = React.forwardRef<
     <main
       ref={ref}
       className={cn(
-        "relative flex min-h-svh flex-1 flex-col bg-background", // Removed peer-data-[variant=inset] specific styles
+        "relative flex min-h-svh flex-1 flex-col bg-background",
         className
       )}
       {...props}
