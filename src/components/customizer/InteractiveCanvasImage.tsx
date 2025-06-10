@@ -14,7 +14,7 @@ interface InteractiveCanvasImageProps {
   isSelected: boolean;
   isBeingDragged: boolean;
   baseImageDimension: number;
-  onImageSelect: (imageId: string) => void; // New prop for pure selection
+  onImageSelect: (imageId: string) => void;
   onImageSelectAndDragStart: (e: ReactMouseEvent<HTMLDivElement> | ReactTouchEvent<HTMLDivElement>, image: CanvasImage) => void;
   onRotateHandleMouseDown: (e: ReactMouseEvent<HTMLDivElement> | ReactTouchEvent<HTMLDivElement>, image: CanvasImage) => void;
   onResizeHandleMouseDown: (e: ReactMouseEvent<HTMLDivElement> | ReactTouchEvent<HTMLDivElement>, image: CanvasImage) => void;
@@ -26,7 +26,7 @@ function InteractiveCanvasImageComponent({
   isSelected,
   isBeingDragged,
   baseImageDimension,
-  onImageSelect, // Destructure new prop
+  onImageSelect,
   onImageSelectAndDragStart,
   onRotateHandleMouseDown,
   onResizeHandleMouseDown,
@@ -34,12 +34,16 @@ function InteractiveCanvasImageComponent({
 }: InteractiveCanvasImageProps) {
   const showHandles = isSelected && !image.isLocked;
 
+  // The zIndex for selected items is boosted significantly to ensure handles are always on top
+  // of other images during interaction, but the base stacking order comes from image.zIndex.
+  const dynamicZIndex = isSelected && !image.isLocked ? image.zIndex + 100 : image.zIndex;
+
   return (
     <div
       id={`canvas-image-${image.id}`}
       className={`absolute group
                   ${image.isLocked ? 'cursor-not-allowed' : 'cursor-grab'}
-                  ${isSelected && !image.isLocked ? 'ring-2 ring-primary ring-offset-2 ring-offset-background z-50' : ''}
+                  ${isSelected && !image.isLocked ? 'ring-2 ring-primary ring-offset-2 ring-offset-background' : ''}
                   ${!image.isLocked ? 'hover:ring-1 hover:ring-primary/50' : ''}
                   `}
       style={{
@@ -48,25 +52,25 @@ function InteractiveCanvasImageComponent({
         width: `${baseImageDimension * image.scale}px`,
         height: `${baseImageDimension * image.scale}px`,
         transform: `translate(-50%, -50%) rotate(${image.rotation}deg)`,
-        zIndex: isSelected && !image.isLocked ? image.zIndex + 100 : image.zIndex,
+        zIndex: dynamicZIndex, // Use the calculated zIndex
         transition: isBeingDragged ? 'none' : 'transform 0.1s ease-out, border 0.1s ease-out, width 0.1s ease-out, height 0.1s ease-out',
       }}
       onClick={(e) => {
         e.stopPropagation();
         if (!image.isLocked) {
-          onImageSelect(image.id); // Use the new pure selection prop
+          onImageSelect(image.id);
         }
       }}
       onMouseDown={(e) => {
         if (!image.isLocked) {
-          onImageSelectAndDragStart(e, image); // This handles selection AND drag init
+          onImageSelectAndDragStart(e, image);
         } else {
           e.stopPropagation();
         }
       }}
       onTouchStart={(e) => {
          if (!image.isLocked) {
-          onImageSelectAndDragStart(e, image); // This handles selection AND drag init
+          onImageSelectAndDragStart(e, image);
         } else {
           e.stopPropagation();
         }
@@ -85,7 +89,7 @@ function InteractiveCanvasImageComponent({
           {/* Remove Button */}
           <div
             className="absolute -top-3 -right-3 bg-destructive text-destructive-foreground rounded-full p-1 cursor-pointer hover:bg-destructive/80 transition-colors flex items-center justify-center"
-            style={{ width: HANDLE_SIZE, height: HANDLE_SIZE, zIndex: 10 }}
+            style={{ width: HANDLE_SIZE, height: HANDLE_SIZE, zIndex: dynamicZIndex + 1 }} // Ensure handles are above the image
             onClick={(e) => onRemoveHandleClick(e, image.id)}
             onMouseDown={(e) => e.stopPropagation()}
             onTouchStart={(e) => { e.stopPropagation(); onRemoveHandleClick(e, image.id);}}
@@ -97,7 +101,7 @@ function InteractiveCanvasImageComponent({
           {/* Rotate Handle (Top-Center) */}
           <div
             className="absolute -top-3 left-1/2 -translate-x-1/2 bg-primary text-primary-foreground rounded-full p-1 cursor-[grab] active:cursor-[grabbing] flex items-center justify-center"
-            style={{ width: HANDLE_SIZE, height: HANDLE_SIZE, zIndex: 10 }}
+            style={{ width: HANDLE_SIZE, height: HANDLE_SIZE, zIndex: dynamicZIndex + 1 }}
             onMouseDown={(e) => onRotateHandleMouseDown(e, image)}
             onTouchStart={(e) => onRotateHandleMouseDown(e, image)}
             title="Rotate image"
@@ -108,7 +112,7 @@ function InteractiveCanvasImageComponent({
           {/* Resize Handle (Bottom-Right) */}
           <div
             className="absolute -bottom-3 -right-3 bg-primary text-primary-foreground rounded-full p-1 cursor-nwse-resize flex items-center justify-center"
-            style={{ width: HANDLE_SIZE, height: HANDLE_SIZE, zIndex: 10 }}
+            style={{ width: HANDLE_SIZE, height: HANDLE_SIZE, zIndex: dynamicZIndex + 1 }}
             onMouseDown={(e) => onResizeHandleMouseDown(e, image)}
             onTouchStart={(e) => onResizeHandleMouseDown(e, image)}
             title="Resize image"

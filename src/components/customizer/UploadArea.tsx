@@ -11,7 +11,7 @@ import { UploadCloud, PlusCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 export default function UploadArea() {
-  const { uploadedImages, addUploadedImage, addCanvasImage, selectedCanvasImageId } = useUploads();
+  const { uploadedImages, addUploadedImage, addCanvasImage } = useUploads();
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -43,7 +43,7 @@ export default function UploadArea() {
   };
 
   const handleImageClick = (image: UploadedImage) => {
-    addCanvasImage(image.id); // Adds a new instance to canvas and selects it
+    addCanvasImage(image.id);
   };
 
   return (
@@ -72,8 +72,7 @@ export default function UploadArea() {
               <div
                 key={image.id}
                 onClick={() => handleImageClick(image)}
-                className={`p-2 border rounded-md cursor-pointer hover:bg-muted/50 flex items-center gap-3 transition-all
-                            border-border`} // Removed active state based on selectedCanvasImageId as it's for canvas selection
+                className="p-2 border rounded-md cursor-pointer bg-card hover:bg-accent/5 flex items-center gap-3 transition-all border-border group"
                 title={`Add "${image.name}" to canvas`}
               >
                 <Image
