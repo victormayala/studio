@@ -6,7 +6,7 @@ import { useUploads, type CanvasImage, type CanvasText } from '@/contexts/Upload
 import type { MouseEvent as ReactMouseEvent, TouchEvent as ReactTouchEvent } from 'react';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { InteractiveCanvasImage } from './InteractiveCanvasImage';
-import { InteractiveCanvasText } from './InteractiveCanvasText'; // Added
+import { InteractiveCanvasText } from './InteractiveCanvasText';
 
 const defaultProduct = {
   id: 'tshirt-white',
@@ -92,7 +92,7 @@ export default function DesignCanvas() {
     item: CanvasImage | CanvasText,
     itemType: 'image' | 'text'
   ) => {
-    if (item.isLocked && type !== 'move') return; 
+    if (item.isLocked && type !== 'move') return;
     if (item.isLocked && type === 'move') return;
 
 
@@ -123,7 +123,6 @@ export default function DesignCanvas() {
         itemInitialHeight = BASE_IMAGE_DIMENSION;
     } else {
         const textItem = item as CanvasText;
-        // Estimate based on font size, very rough. Scale factor is applied to this.
         itemInitialWidth = Math.max(BASE_TEXT_DIMENSION_APPROX, textItem.fontSize * (textItem.content.length * 0.5)); 
         itemInitialHeight = Math.max(BASE_TEXT_DIMENSION_APPROX / 2, textItem.fontSize);
     }
@@ -180,7 +179,7 @@ export default function DesignCanvas() {
 
       const scaleRatio = distFromCenter / initialDistFromCenter;
       let newScale = initialScale * scaleRatio;
-      newScale = Math.max(0.1, Math.min(newScale, itemType === 'image' ? 10 : 20)); // Allow larger scale for text
+      newScale = Math.max(0.1, Math.min(newScale, itemType === 'image' ? 10 : 20)); 
       if (itemType === 'image') updateCanvasImage(itemId, { scale: newScale });
       else updateCanvasText(itemId, { scale: newScale });
     } else if (type === 'move' && initialX !== undefined && initialY !== undefined && itemInitialWidth !== undefined && itemInitialHeight !== undefined) {
@@ -193,18 +192,15 @@ export default function DesignCanvas() {
         let newX = initialX + dxPercent;
         let newY = initialY + dyPercent;
         
-        // Get current scale for clamping calculations
         const currentItem = itemType === 'image' ? canvasImages.find(i => i.id === itemId) : canvasTexts.find(t => t.id === itemId);
         const currentItemScale = currentItem?.scale || initialScale || 1;
 
-        // Use itemInitialWidth/Height from activeDrag state for clamping, scaled by current item scale
         const scaledItemWidthPx = itemInitialWidth * currentItemScale;
         const scaledItemHeightPx = itemInitialHeight * currentItemScale;
 
         const halfWidthPercent = (scaledItemWidthPx / 2 / canvasRect.width) * 100;
         const halfHeightPercent = (scaledItemHeightPx / 2 / canvasRect.height) * 100;
         
-        // Clamp based on the item's bounding box staying within the canvas
         newX = Math.max(halfWidthPercent, Math.min(newX, 100 - halfWidthPercent));
         newY = Math.max(halfHeightPercent, Math.min(newY, 100 - halfHeightPercent));
 
@@ -256,7 +252,7 @@ export default function DesignCanvas() {
       ref={canvasRef}
       className="w-full h-full flex items-center justify-center bg-card border border-dashed border-border rounded-lg shadow-inner p-4 min-h-[500px] lg:min-h-[700px] relative overflow-hidden"
       onClick={handleCanvasClick}
-      onTouchStart={handleCanvasClick as any} // For touch devices to deselect
+      onTouchStart={handleCanvasClick as any} 
     >
       <div className="text-center product-image-container">
         <div
@@ -275,7 +271,7 @@ export default function DesignCanvas() {
 
           {canvasImages.map((img) => (
             <InteractiveCanvasImage
-              key={img.id}
+              key={`${img.id}-${img.zIndex}`}
               image={img}
               isSelected={img.id === selectedCanvasImageId && !img.isLocked}
               isBeingDragged={activeDrag?.itemId === img.id && activeDrag?.type === 'move' && activeDrag?.itemType === 'image'}
@@ -290,7 +286,7 @@ export default function DesignCanvas() {
 
           {canvasTexts.map((textItem) => (
             <InteractiveCanvasText
-              key={textItem.id}
+              key={`${textItem.id}-${textItem.zIndex}`}
               textItem={textItem}
               isSelected={textItem.id === selectedCanvasTextId && !textItem.isLocked}
               isBeingDragged={activeDrag?.itemId === textItem.id && activeDrag?.type === 'move' && activeDrag?.itemType === 'text'}
@@ -312,3 +308,5 @@ export default function DesignCanvas() {
     </div>
   );
 }
+
+    

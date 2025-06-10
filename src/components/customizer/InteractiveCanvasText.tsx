@@ -19,7 +19,7 @@ interface InteractiveCanvasTextProps {
   onRemoveHandleClick: (e: ReactMouseEvent<HTMLDivElement> | ReactTouchEvent<HTMLDivElement>, textId: string) => void;
 }
 
-function InteractiveCanvasTextComponent({
+export function InteractiveCanvasText({ // Changed to a regular export, removed React.memo
   textItem,
   isSelected,
   isBeingDragged,
@@ -154,44 +154,4 @@ function InteractiveCanvasTextComponent({
   );
 }
 
-function areTextPropsEqual(prevProps: InteractiveCanvasTextProps, nextProps: InteractiveCanvasTextProps): boolean {
-  if (prevProps.isSelected !== nextProps.isSelected ||
-      prevProps.isBeingDragged !== nextProps.isBeingDragged) {
-    return false;
-  }
-
-  const pTxt = prevProps.textItem;
-  const nTxt = nextProps.textItem;
-
-  // Compare all relevant properties of textItem
-  return (
-    pTxt.id === nTxt.id &&
-    pTxt.content === nTxt.content &&
-    pTxt.x === nTxt.x &&
-    pTxt.y === nTxt.y &&
-    pTxt.rotation === nTxt.rotation &&
-    pTxt.scale === nTxt.scale &&
-    pTxt.zIndex === nTxt.zIndex &&
-    pTxt.isLocked === nTxt.isLocked &&
-    pTxt.fontFamily === nTxt.fontFamily &&
-    pTxt.fontSize === nTxt.fontSize &&
-    pTxt.textTransform === nTxt.textTransform &&
-    pTxt.fontWeight === nTxt.fontWeight &&
-    pTxt.fontStyle === nTxt.fontStyle &&
-    pTxt.textDecoration === nTxt.textDecoration &&
-    pTxt.lineHeight === nTxt.lineHeight &&
-    pTxt.letterSpacing === nTxt.letterSpacing &&
-    pTxt.isArchText === nTxt.isArchText && // Though visual not implemented, prop change matters
-    pTxt.color === nTxt.color &&
-    pTxt.outlineEnabled === nTxt.outlineEnabled &&
-    pTxt.outlineColor === nTxt.outlineColor &&
-    pTxt.outlineWidth === nTxt.outlineWidth &&
-    pTxt.shadowEnabled === nTxt.shadowEnabled &&
-    pTxt.shadowColor === nTxt.shadowColor &&
-    pTxt.shadowOffsetX === nTxt.shadowOffsetX &&
-    pTxt.shadowOffsetY === nTxt.shadowOffsetY &&
-    pTxt.shadowBlur === nTxt.shadowBlur
-  );
-}
-
-export const InteractiveCanvasText = React.memo(InteractiveCanvasTextComponent, areTextPropsEqual);
+    

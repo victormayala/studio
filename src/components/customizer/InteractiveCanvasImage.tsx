@@ -21,7 +21,7 @@ interface InteractiveCanvasImageProps {
   onRemoveHandleClick: (e: ReactMouseEvent<HTMLDivElement> | ReactTouchEvent<HTMLDivElement>, imageId: string) => void;
 }
 
-function InteractiveCanvasImageComponent({
+export function InteractiveCanvasImage({ // Changed to a regular export, removed React.memo
   image,
   isSelected,
   isBeingDragged,
@@ -92,7 +92,7 @@ function InteractiveCanvasImageComponent({
           {/* Remove Button */}
           <div
             className="absolute -top-3 -right-3 bg-destructive text-destructive-foreground rounded-full p-1 cursor-pointer hover:bg-destructive/80 transition-colors flex items-center justify-center"
-            style={{ width: HANDLE_SIZE, height: HANDLE_SIZE, zIndex: dynamicZIndex + 1 }} // Ensure handles are above the image
+            style={{ width: HANDLE_SIZE, height: HANDLE_SIZE, zIndex: dynamicZIndex + 1 }} 
             onClick={(e) => onRemoveHandleClick(e, image.id)}
             onMouseDown={(e) => e.stopPropagation()}
             onTouchStart={(e) => { e.stopPropagation(); onRemoveHandleClick(e, image.id);}}
@@ -128,28 +128,4 @@ function InteractiveCanvasImageComponent({
   );
 }
 
-function areImagePropsEqual(prevProps: InteractiveCanvasImageProps, nextProps: InteractiveCanvasImageProps): boolean {
-  if (prevProps.isSelected !== nextProps.isSelected ||
-      prevProps.isBeingDragged !== nextProps.isBeingDragged ||
-      prevProps.baseImageDimension !== nextProps.baseImageDimension) {
-    return false;
-  }
-
-  const pImg = prevProps.image;
-  const nImg = nextProps.image;
-
-  return (
-    pImg.id === nImg.id &&
-    pImg.x === nImg.x &&
-    pImg.y === nImg.y &&
-    pImg.scale === nImg.scale &&
-    pImg.rotation === nImg.rotation &&
-    pImg.zIndex === nImg.zIndex &&
-    pImg.isLocked === nImg.isLocked &&
-    pImg.dataUrl === nImg.dataUrl // In case dataUrl could change, though unlikely for existing items
-    // Callbacks are not compared as they might be new references from parent,
-    // but the core visual properties are most important for memoization.
-  );
-}
-
-export const InteractiveCanvasImage = React.memo(InteractiveCanvasImageComponent, areImagePropsEqual);
+    
