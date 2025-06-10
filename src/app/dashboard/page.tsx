@@ -6,15 +6,15 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { PlusCircle, MoreHorizontal, Edit3, Code, Trash2 } from "lucide-react";
-import Link from "next/link"; // Keep Link if header navigation is still there or planned elsewhere
+import { PlusCircle, MoreHorizontal, Settings, Code, Trash2 } from "lucide-react"; // Added Settings
+import Link from "next/link";
 
 interface MockProduct {
   id: string;
   name: string;
   status: 'Customizable' | 'Draft' | 'Archived';
   lastEdited: string;
-  imageUrl?: string; // Optional image for the product
+  imageUrl?: string;
   aiHint?: string;
 }
 
@@ -27,13 +27,11 @@ const mockProducts: MockProduct[] = [
 
 export default function DashboardPage() {
   const handleAddNewProduct = () => {
-    // Placeholder: Will eventually trigger a modal or navigate to a product creation page
     alert("Add New Product functionality coming soon!");
   };
 
   return (
     <div className="flex flex-col min-h-screen">
-      {/* AppHeader is typically part of a layout, assuming it's handled by RootLayout or a specific dashboard layout */}
       <main className="flex-1 p-4 md:p-6 lg:p-8 bg-background">
         <div className="container mx-auto">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
@@ -115,15 +113,17 @@ export default function DashboardPage() {
                                 </Button>
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end" className="bg-popover border-border">
-                                <DropdownMenuItem onClick={() => alert(`Edit ${product.name}`)} className="hover:bg-accent focus:bg-accent">
-                                  <Edit3 className="mr-2 h-4 w-4" />
-                                  Edit Customizer
+                                <DropdownMenuItem asChild className="hover:bg-accent focus:bg-accent cursor-pointer">
+                                  <Link href={`/dashboard/products/${product.id}/options`}>
+                                    <Settings className="mr-2 h-4 w-4" />
+                                    Product Options
+                                  </Link>
                                 </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => alert(`Embed code for ${product.name}`)} className="hover:bg-accent focus:bg-accent">
+                                <DropdownMenuItem onClick={() => alert(`Embed code for ${product.name}`)} className="hover:bg-accent focus:bg-accent cursor-pointer">
                                   <Code className="mr-2 h-4 w-4" />
                                   Get Embed Code
                                 </DropdownMenuItem>
-                                <DropdownMenuItem className="text-destructive hover:!bg-destructive/10 focus:!bg-destructive/10 focus:!text-destructive" onClick={() => alert(`Archive ${product.name}`)}>
+                                <DropdownMenuItem className="text-destructive hover:!bg-destructive/10 focus:!bg-destructive/10 focus:!text-destructive cursor-pointer" onClick={() => alert(`Archive ${product.name}`)}>
                                   <Trash2 className="mr-2 h-4 w-4" />
                                   Archive
                                 </DropdownMenuItem>
@@ -151,5 +151,3 @@ export default function DashboardPage() {
     </div>
   );
 }
-
-    
