@@ -6,7 +6,7 @@ import { Logo } from '@/components/icons/Logo';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { Menu } from 'lucide-react';
-import { useIsMobile } from '@/hooks/use-mobile'; // Assuming you have this hook
+import { useIsMobile } from '@/hooks/use-mobile'; 
 
 const navLinks = [
   { href: "/", label: "Home" },
@@ -24,13 +24,13 @@ export default function MarketingHeader() {
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-card">
-      <div className="container flex h-16 max-w-screen-2xl items-center px-4 md:px-6"> {/* Removed justify-between for spacer technique */}
+      <div className="container flex h-16 max-w-screen-2xl items-center justify-between px-4 md:px-6"> {/* Ensured justify-between */}
         <Link href="/" className="flex items-center space-x-2">
           <Logo />
         </Link>
         
         {isMobile ? (
-          <div className="ml-auto"> {/* Ensure mobile trigger is pushed to the right */}
+          <div className="ml-auto"> {/* ml-auto pushes mobile menu to the right */}
             <Sheet>
               <SheetTrigger asChild>
                 <Button variant="ghost" size="icon">
@@ -61,10 +61,8 @@ export default function MarketingHeader() {
           </div>
         ) : (
           <>
-            {/* Spacer 1: Pushes nav to center from left */}
-            <div className="hidden md:flex flex-1" />
-
-            <nav className="hidden md:flex items-center justify-center space-x-6 text-sm font-medium">
+            {/* Navigation links centered */}
+            <nav className="md:flex items-center justify-center space-x-6 text-sm font-medium mx-auto"> {/* Use md:flex and mx-auto */}
               {navLinks.map((link) => (
                 <Link
                   key={link.label}
@@ -75,11 +73,9 @@ export default function MarketingHeader() {
                 </Link>
               ))}
             </nav>
-
-            {/* Spacer 2: Pushes auth buttons to right, allows nav to be centered */}
-            <div className="hidden md:flex flex-1" />
             
-            <div className="hidden md:flex items-center space-x-3">
+            {/* Authentication buttons on the right */}
+            <div className="md:flex items-center space-x-3"> {/* Use md:flex */}
                {authLinks.map((link) => (
                   <Button key={link.label} asChild variant={link.variant} size="sm">
                     <Link href={link.href}>{link.label}</Link>
