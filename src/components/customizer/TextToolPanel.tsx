@@ -22,7 +22,7 @@ import {
   AccordionTrigger,
 } from '@/components/ui/accordion';
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
-import { Bold, Italic, Underline, CaseUpper, CaseLower, Type, Palette, Settings, PaletteIcon, ShadowIcon, BaselineIcon, PilcrowIcon, TextQuote, ColumnsIcon, RowsIcon, CornerDownLeftIcon } from 'lucide-react';
+import { Bold, Italic, Underline, CaseUpper, CaseLower, Type, Palette, Settings, Blend, PenLine, Pilcrow } from 'lucide-react';
 import { useUploads, type CanvasText } from '@/contexts/UploadContext';
 import { googleFonts, type GoogleFont } from '@/lib/google-fonts';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -116,7 +116,7 @@ export default function TextToolPanel() {
         {/* Font Settings */}
         <AccordionItem value="font-settings">
           <AccordionTrigger className="font-medium">
-            <PilcrowIcon className="mr-2 h-4 w-4" /> Font Settings
+            <Pilcrow className="mr-2 h-4 w-4" /> Font Settings
           </AccordionTrigger>
           <AccordionContent className="space-y-4 pt-2">
             <div>
@@ -225,7 +225,7 @@ export default function TextToolPanel() {
         {/* Color Settings */}
         <AccordionItem value="color-settings">
           <AccordionTrigger className="font-medium">
-            <PaletteIcon className="mr-2 h-4 w-4" /> Color Settings
+            <Palette className="mr-2 h-4 w-4" /> Color Settings
           </AccordionTrigger>
           <AccordionContent className="space-y-4 pt-2">
             <div className="flex items-center space-x-2">
@@ -252,7 +252,7 @@ export default function TextToolPanel() {
               <AccordionItem value="text-outline" className="border-b-0">
                 <AccordionTrigger className="py-2 hover:no-underline">
                   <div className="flex items-center w-full">
-                    <BaselineIcon className="mr-2 h-4 w-4" />
+                    <PenLine className="mr-2 h-4 w-4" />
                     Text Outline
                     <Switch
                         id="outlineEnabledSwitch"
@@ -289,7 +289,7 @@ export default function TextToolPanel() {
               <AccordionItem value="text-shadow" className="border-b-0">
                 <AccordionTrigger className="py-2 hover:no-underline">
                     <div className="flex items-center w-full">
-                        <ShadowIcon className="mr-2 h-4 w-4" />
+                        <Blend className="mr-2 h-4 w-4" />
                         Text Shadow
                         <Switch
                             id="shadowEnabledSwitch"
