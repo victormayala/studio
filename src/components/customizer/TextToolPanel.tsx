@@ -22,9 +22,9 @@ import {
   AccordionTrigger,
 } from '@/components/ui/accordion';
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
-import { Bold, Italic, Underline, CaseUpper, CaseLower, Type, Palette, Settings, Blend, PenLine, Pilcrow } from 'lucide-react';
+import { Bold, Italic, Underline, CaseUpper, CaseLower, Type, Palette, Blend, PenLine, Pilcrow } from 'lucide-react';
 import { useUploads, type CanvasText } from '@/contexts/UploadContext';
-import { googleFonts, type GoogleFont } from '@/lib/google-fonts';
+import { googleFonts } from '@/lib/google-fonts';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
 // Helper to validate and sanitize hex color
@@ -46,7 +46,6 @@ export default function TextToolPanel() {
 
   const selectedText = canvasTexts.find(t => t.id === selectedCanvasTextId);
 
-  // Local state for controls, synced with selectedText
   const [currentStyle, setCurrentStyle] = useState<Partial<CanvasText>>({});
 
   useEffect(() => {
@@ -72,11 +71,29 @@ export default function TextToolPanel() {
         shadowBlur: selectedText.shadowBlur,
         content: selectedText.content,
       });
-      setTextValue(selectedText.content); // Also update the main textarea if a text is selected
+      setTextValue(selectedText.content);
     } else {
-      // Reset or set to defaults if no text is selected
-      setCurrentStyle({});
-      // setTextValue(''); // Optionally clear the add text area too
+      setCurrentStyle({ // Default styles when no text is selected for the add text area
+        fontFamily: googleFonts.find(f => f.name === 'Arial')?.family || 'Arial, sans-serif',
+        fontSize: 24,
+        textTransform: 'none',
+        fontWeight: 'normal',
+        fontStyle: 'normal',
+        textDecoration: 'none',
+        lineHeight: 1.2,
+        letterSpacing: 0,
+        isArchText: false,
+        color: '#333333',
+        outlineEnabled: false,
+        outlineColor: '#000000',
+        outlineWidth: 1,
+        shadowEnabled: false,
+        shadowColor: '#000000',
+        shadowOffsetX: 0,
+        shadowOffsetY: 0,
+        shadowBlur: 0,
+      });
+      // Do not clear textValue here, so user can type then click add
     }
   }, [selectedText]);
 
@@ -97,30 +114,31 @@ export default function TextToolPanel() {
 
   const handleAddText = () => {
     if (textValue.trim()) {
-      addCanvasText(textValue.trim());
-      //setTextValue(''); // Clear textarea after adding, or not, based on preference
+      // Pass the currentStyle object to addCanvasText
+      addCanvasText(textValue.trim(), currentStyle);
+      // setTextValue(''); // Optionally clear textarea
     }
   };
   
   const handleContentChange = (newContent: string) => {
-    setTextValue(newContent); // Update local textValue for the "Add Text" area
+    setTextValue(newContent);
     if (selectedCanvasTextId && selectedText) {
-       handleStyleChange('content', newContent); // Update content of selected text
+       handleStyleChange('content', newContent);
     }
   };
 
   const renderControls = () => (
-    <ScrollArea className="flex-grow pr-2">
-    <div className="space-y-4">
+    <ScrollArea className="flex-grow pr-1 -mr-1"> {/* Offset scrollbar slightly */}
+    <div className="space-y-4 py-2">
       <Accordion type="multiple" defaultValue={['font-settings', 'color-settings']} className="w-full">
         {/* Font Settings */}
         <AccordionItem value="font-settings">
-          <AccordionTrigger className="font-medium">
+          <AccordionTrigger className="font-medium text-sm py-3 px-1">
             <Pilcrow className="mr-2 h-4 w-4" /> Font Settings
           </AccordionTrigger>
-          <AccordionContent className="space-y-4 pt-2">
+          <AccordionContent className="space-y-4 pt-3 pb-1 px-1">
             <div>
-              <Label htmlFor="fontFamilySelect" className="text-xs">Font Family</Label>
+              <Label htmlFor="fontFamilySelect" className="text-xs mb-1 block">Font Family</Label>
               <Select
                 value={currentStyle.fontFamily || 'Arial, sans-serif'}
                 onValueChange={(value) => handleStyleChange('fontFamily', value)}
@@ -138,14 +156,14 @@ export default function TextToolPanel() {
               </Select>
             </div>
 
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-2 gap-3">
               <div>
-                <Label htmlFor="textTransform" className="text-xs">Case</Label>
+                <Label htmlFor="textTransform" className="text-xs mb-1 block">Case</Label>
                 <Select
                   value={currentStyle.textTransform || 'none'}
                   onValueChange={(value: 'none' | 'uppercase' | 'lowercase') => handleStyleChange('textTransform', value)}
                 >
-                  <SelectTrigger id="textTransform"><SelectValue/></SelectTrigger>
+                  <SelectTrigger id="textTransform" className="h-9"><SelectValue/></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="none">Normal</SelectItem>
                     <SelectItem value="uppercase"><CaseUpper className="inline h-4 w-4 mr-1"/>Uppercase</SelectItem>
@@ -158,7 +176,7 @@ export default function TextToolPanel() {
                  <ToggleGroup 
                     type="multiple" 
                     variant="outline" 
-                    className="w-full grid grid-cols-3"
+                    className="w-full grid grid-cols-3 gap-px" // Added gap-px for slight separation
                     value={
                         [
                          currentStyle.fontWeight === 'bold' ? 'bold' : undefined,
@@ -174,15 +192,15 @@ export default function TextToolPanel() {
                         });
                     }}
                  >
-                    <ToggleGroupItem value="bold" aria-label="Toggle bold" className="h-9 w-full px-2"><Bold /></ToggleGroupItem>
-                    <ToggleGroupItem value="italic" aria-label="Toggle italic" className="h-9 w-full px-2"><Italic /></ToggleGroupItem>
-                    <ToggleGroupItem value="underline" aria-label="Toggle underline" className="h-9 w-full px-2"><Underline /></ToggleGroupItem>
+                    <ToggleGroupItem value="bold" aria-label="Toggle bold" className="h-9 w-full px-1 rounded-l-md rounded-r-none border-r-0"><Bold size={18}/></ToggleGroupItem>
+                    <ToggleGroupItem value="italic" aria-label="Toggle italic" className="h-9 w-full px-1 rounded-none border-r-0"><Italic size={18} /></ToggleGroupItem>
+                    <ToggleGroupItem value="underline" aria-label="Toggle underline" className="h-9 w-full px-1 rounded-r-md rounded-l-none"><Underline size={18}/></ToggleGroupItem>
                 </ToggleGroup>
               </div>
             </div>
             
             <div>
-              <Label htmlFor="fontSizeSlider" className="text-xs">Size: {currentStyle.fontSize?.toFixed(0) || 24}px</Label>
+              <Label htmlFor="fontSizeSlider" className="text-xs mb-1 block">Size: {currentStyle.fontSize?.toFixed(0) || 24}px</Label>
               <Slider
                 id="fontSizeSlider"
                 min={8} max={128} step={1}
@@ -192,7 +210,7 @@ export default function TextToolPanel() {
               />
             </div>
             <div>
-              <Label htmlFor="lineHeightSlider" className="text-xs">Line Height: {(currentStyle.lineHeight || 1.2).toFixed(1)}</Label>
+              <Label htmlFor="lineHeightSlider" className="text-xs mb-1 block">Line Height: {(currentStyle.lineHeight || 1.2).toFixed(1)}</Label>
               <Slider
                 id="lineHeightSlider"
                 min={0.5} max={3} step={0.1}
@@ -202,7 +220,7 @@ export default function TextToolPanel() {
               />
             </div>
             <div>
-              <Label htmlFor="letterSpacingSlider" className="text-xs">Letter Spacing: {currentStyle.letterSpacing?.toFixed(1) || 0}px</Label>
+              <Label htmlFor="letterSpacingSlider" className="text-xs mb-1 block">Letter Spacing: {currentStyle.letterSpacing?.toFixed(1) || 0}px</Label>
               <Slider
                 id="letterSpacingSlider"
                 min={-5} max={20} step={0.5}
@@ -211,35 +229,35 @@ export default function TextToolPanel() {
                 onValueChange={([value]) => handleStyleChange('letterSpacing', value)}
               />
             </div>
-            <div className="flex items-center space-x-2">
+            <div className="flex items-center space-x-2 pt-1">
               <Switch
                 id="archTextSwitch"
                 checked={currentStyle.isArchText || false}
                 onCheckedChange={(checked) => handleStyleChange('isArchText', checked)}
               />
-              <Label htmlFor="archTextSwitch" className="text-xs">Arch Text (Visual Only)</Label>
+              <Label htmlFor="archTextSwitch" className="text-xs">Arch Text <span className="text-muted-foreground/80 text-[10px]">(Visual Only)</span></Label>
             </div>
           </AccordionContent>
         </AccordionItem>
 
         {/* Color Settings */}
         <AccordionItem value="color-settings">
-          <AccordionTrigger className="font-medium">
+          <AccordionTrigger className="font-medium text-sm py-3 px-1">
             <Palette className="mr-2 h-4 w-4" /> Color Settings
           </AccordionTrigger>
-          <AccordionContent className="space-y-4 pt-2">
+          <AccordionContent className="space-y-4 pt-3 pb-1 px-1">
             <div className="flex items-center space-x-2">
-              <Label htmlFor="textColorSwatch" className="text-xs">Text</Label>
+              <Label htmlFor="textColorSwatch" className="text-xs shrink-0">Text</Label>
               <Input
                 type="color"
                 id="textColorSwatch"
-                className="h-8 w-10 p-1"
+                className="h-8 w-10 p-0.5 border-none rounded" // Compact swatch
                 value={currentStyle.color || '#333333'}
                 onChange={(e) => handleStyleChange('color', e.target.value)}
               />
               <Input
                 id="textColorHex"
-                className="h-8 text-xs"
+                className="h-8 text-xs flex-grow max-w-[100px]" // Constrained width
                 value={currentStyle.color || '#333333'}
                 onChange={(e) => handleStyleChange('color', sanitizeHex(e.target.value))}
                 onBlur={(e) => handleStyleChange('color', sanitizeHex(e.target.value))}
@@ -248,34 +266,34 @@ export default function TextToolPanel() {
             </div>
 
             {/* Text Outline */}
-            <Accordion type="single" collapsible className="w-full text-xs border-t pt-2">
+            <Accordion type="single" collapsible className="w-full text-xs border-t pt-2 mt-3">
               <AccordionItem value="text-outline" className="border-b-0">
-                <AccordionTrigger className="py-2 hover:no-underline">
+                <AccordionTrigger className="py-2 text-xs hover:no-underline font-normal">
                   <div className="flex items-center w-full">
-                    <PenLine className="mr-2 h-4 w-4" />
+                    <PenLine className="mr-2 h-3 w-3" />
                     Text Outline
                     <Switch
                         id="outlineEnabledSwitch"
-                        className="ml-auto scale-75"
+                        className="ml-auto scale-[0.7] origin-right" // Smaller switch
                         checked={currentStyle.outlineEnabled || false}
                         onCheckedChange={(checked) => handleStyleChange('outlineEnabled', checked)}
-                        onClick={(e) => e.stopPropagation()} // Prevent accordion toggle
+                        onClick={(e) => e.stopPropagation()} 
                     />
                   </div>
                 </AccordionTrigger>
-                <AccordionContent className="space-y-3 pt-1 pb-2">
+                <AccordionContent className="space-y-3 pt-2 pb-1 pl-1">
                   {currentStyle.outlineEnabled && (
                     <>
                       <div className="flex items-center space-x-2">
-                        <Label htmlFor="outlineColorSwatch" className="text-xs">Color</Label>
-                        <Input type="color" id="outlineColorSwatch" className="h-8 w-10 p-1" value={currentStyle.outlineColor || '#000000'} onChange={(e) => handleStyleChange('outlineColor', e.target.value)}/>
-                        <Input id="outlineColorHex" className="h-8 text-xs" value={currentStyle.outlineColor || '#000000'} 
+                        <Label htmlFor="outlineColorSwatch" className="text-xs shrink-0">Color</Label>
+                        <Input type="color" id="outlineColorSwatch" className="h-8 w-10 p-0.5 border-none rounded" value={currentStyle.outlineColor || '#000000'} onChange={(e) => handleStyleChange('outlineColor', e.target.value)}/>
+                        <Input id="outlineColorHex" className="h-8 text-xs flex-grow max-w-[100px]" value={currentStyle.outlineColor || '#000000'} 
                                onChange={(e) => handleStyleChange('outlineColor', sanitizeHex(e.target.value))}
                                onBlur={(e) => handleStyleChange('outlineColor', sanitizeHex(e.target.value))}
                                maxLength={7}/>
                       </div>
                       <div>
-                        <Label htmlFor="outlineWidthSlider" className="text-xs">Width: {currentStyle.outlineWidth?.toFixed(1) || 0}px</Label>
+                        <Label htmlFor="outlineWidthSlider" className="text-xs mb-1 block">Width: {currentStyle.outlineWidth?.toFixed(1) || 0}px</Label>
                         <Slider id="outlineWidthSlider" min={0} max={10} step={0.5} defaultValue={[1]} value={[currentStyle.outlineWidth || 0]} onValueChange={([value]) => handleStyleChange('outlineWidth', value)}/>
                       </div>
                     </>
@@ -285,45 +303,45 @@ export default function TextToolPanel() {
             </Accordion>
 
             {/* Text Shadow */}
-             <Accordion type="single" collapsible className="w-full text-xs border-t pt-2">
+             <Accordion type="single" collapsible className="w-full text-xs border-t pt-2 mt-2">
               <AccordionItem value="text-shadow" className="border-b-0">
-                <AccordionTrigger className="py-2 hover:no-underline">
+                <AccordionTrigger className="py-2 text-xs hover:no-underline font-normal">
                     <div className="flex items-center w-full">
-                        <Blend className="mr-2 h-4 w-4" />
+                        <Blend className="mr-2 h-3 w-3" />
                         Text Shadow
                         <Switch
                             id="shadowEnabledSwitch"
-                            className="ml-auto scale-75"
+                            className="ml-auto scale-[0.7] origin-right"
                             checked={currentStyle.shadowEnabled || false}
                             onCheckedChange={(checked) => handleStyleChange('shadowEnabled', checked)}
                             onClick={(e) => e.stopPropagation()}
                         />
                     </div>
                 </AccordionTrigger>
-                <AccordionContent className="space-y-3 pt-1 pb-2">
+                <AccordionContent className="space-y-3 pt-2 pb-1 pl-1">
                   {currentStyle.shadowEnabled && (
                     <>
                       <div className="flex items-center space-x-2">
-                        <Label htmlFor="shadowColorSwatch" className="text-xs">Color</Label>
-                        <Input type="color" id="shadowColorSwatch" className="h-8 w-10 p-1" value={currentStyle.shadowColor || '#000000'} onChange={(e) => handleStyleChange('shadowColor', e.target.value)}/>
-                        <Input id="shadowColorHex" className="h-8 text-xs" value={currentStyle.shadowColor || '#000000'} 
+                        <Label htmlFor="shadowColorSwatch" className="text-xs shrink-0">Color</Label>
+                        <Input type="color" id="shadowColorSwatch" className="h-8 w-10 p-0.5 border-none rounded" value={currentStyle.shadowColor || '#000000'} onChange={(e) => handleStyleChange('shadowColor', e.target.value)}/>
+                        <Input id="shadowColorHex" className="h-8 text-xs flex-grow max-w-[100px]" value={currentStyle.shadowColor || '#000000'} 
                                onChange={(e) => handleStyleChange('shadowColor', sanitizeHex(e.target.value))}
                                onBlur={(e) => handleStyleChange('shadowColor', sanitizeHex(e.target.value))}
                                maxLength={7}/>
                       </div>
-                      <div className="grid grid-cols-2 gap-2">
+                      <div className="grid grid-cols-2 gap-3">
                         <div>
-                            <Label htmlFor="shadowOffsetXSlider" className="text-xs">Offset X: {currentStyle.shadowOffsetX?.toFixed(0) || 0}px</Label>
-                            <Slider id="shadowOffsetXSlider" min={-20} max={20} step={1} defaultValue={[2]} value={[currentStyle.shadowOffsetX || 0]} onValueChange={([value]) => handleStyleChange('shadowOffsetX', value)}/>
+                            <Label htmlFor="shadowOffsetXSlider" className="text-xs mb-1 block">Offset X: {currentStyle.shadowOffsetX?.toFixed(0) || 0}px</Label>
+                            <Slider id="shadowOffsetXSlider" min={-20} max={20} step={1} defaultValue={[0]} value={[currentStyle.shadowOffsetX || 0]} onValueChange={([value]) => handleStyleChange('shadowOffsetX', value)}/>
                         </div>
                         <div>
-                            <Label htmlFor="shadowOffsetYSlider" className="text-xs">Offset Y: {currentStyle.shadowOffsetY?.toFixed(0) || 0}px</Label>
-                            <Slider id="shadowOffsetYSlider" min={-20} max={20} step={1} defaultValue={[2]} value={[currentStyle.shadowOffsetY || 0]} onValueChange={([value]) => handleStyleChange('shadowOffsetY', value)}/>
+                            <Label htmlFor="shadowOffsetYSlider" className="text-xs mb-1 block">Offset Y: {currentStyle.shadowOffsetY?.toFixed(0) || 0}px</Label>
+                            <Slider id="shadowOffsetYSlider" min={-20} max={20} step={1} defaultValue={[0]} value={[currentStyle.shadowOffsetY || 0]} onValueChange={([value]) => handleStyleChange('shadowOffsetY', value)}/>
                         </div>
                       </div>
                       <div>
-                        <Label htmlFor="shadowBlurSlider" className="text-xs">Blur: {currentStyle.shadowBlur?.toFixed(0) || 0}px</Label>
-                        <Slider id="shadowBlurSlider" min={0} max={30} step={1} defaultValue={[2]} value={[currentStyle.shadowBlur || 0]} onValueChange={([value]) => handleStyleChange('shadowBlur', value)}/>
+                        <Label htmlFor="shadowBlurSlider" className="text-xs mb-1 block">Blur: {currentStyle.shadowBlur?.toFixed(0) || 0}px</Label>
+                        <Slider id="shadowBlurSlider" min={0} max={30} step={1} defaultValue={[0]} value={[currentStyle.shadowBlur || 0]} onValueChange={([value]) => handleStyleChange('shadowBlur', value)}/>
                       </div>
                     </>
                   )}
@@ -347,23 +365,37 @@ export default function TextToolPanel() {
           onChange={(e) => handleContentChange(e.target.value)}
           placeholder="Enter text here..."
           rows={3}
-          className="bg-background mt-1"
+          className="bg-background mt-1 text-base" // Ensure text area font is readable
         />
       </div>
-      {!selectedCanvasTextId && (
-        <Button onClick={handleAddText} className="w-full bg-primary text-primary-foreground hover:bg-primary/90">
-          <Type className="mr-2 h-4 w-4" />
-          Add Text to Canvas
-        </Button>
-      )}
       
       {selectedCanvasTextId ? renderControls() : (
-        <div className="flex-grow flex flex-col items-center justify-center text-center p-4 border border-dashed rounded-md bg-muted/20 mt-4">
-            <Type className="h-10 w-10 text-muted-foreground mb-2" />
-            <p className="text-sm text-muted-foreground">Add text using the area above.</p>
-            <p className="text-xs text-muted-foreground mt-1">Or select an existing text item on the canvas to edit its properties here.</p>
-        </div>
+        <>
+          <Button onClick={handleAddText} className="w-full bg-primary text-primary-foreground hover:bg-primary/90">
+            <Type className="mr-2 h-4 w-4" />
+            Add Text to Canvas
+          </Button>
+          <div className="flex-grow flex flex-col items-center justify-center text-center p-4 border border-dashed rounded-md bg-muted/20 mt-2">
+              <Type className="h-10 w-10 text-muted-foreground mb-2" />
+              <p className="text-sm text-muted-foreground">Edit text properties for new text above.</p>
+              <p className="text-xs text-muted-foreground mt-1">Or select an existing text item on the canvas to edit its properties here.</p>
+          </div>
+        </>
+      )}
+       {/* If text is selected, the controls are rendered by renderControls(). 
+           The "Add Text" button could be hidden or repurposed. 
+           For now, let's allow adding new text even if one is selected, using the current textarea content and styles.
+           If you'd prefer to change button text to "Update Text" or hide it, that's an option.
+      */}
+      {selectedCanvasTextId && (
+         <Button onClick={handleAddText} variant="outline" className="w-full mt-auto">
+            <Type className="mr-2 h-4 w-4" />
+            Add as New Text
+        </Button>
       )}
     </div>
   );
 }
+
+
+    
