@@ -7,11 +7,11 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import Image from 'next/image';
-import { UploadCloud } from 'lucide-react'; 
+import { UploadCloud, PlusCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 export default function UploadArea() {
-  const { uploadedImages, addUploadedImage, setActiveUploadedImage, activeUploadedImage, clearActiveUploadedImage } = useUploads();
+  const { uploadedImages, addUploadedImage, addCanvasImage, selectedCanvasImageId } = useUploads();
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -24,30 +24,26 @@ export default function UploadArea() {
           title: "Invalid File Type",
           description: "Please upload an image file (PNG, JPG, GIF, etc.).",
         });
-        event.target.value = ''; 
+        event.target.value = '';
         return;
       }
-      
+
       if (file.size > 5 * 1024 * 1024) {
          toast({
           variant: "destructive",
           title: "File Too Large",
           description: "Please upload an image smaller than 5MB.",
         });
-        event.target.value = ''; 
+        event.target.value = '';
         return;
       }
       await addUploadedImage(file);
-      event.target.value = ''; 
+      event.target.value = '';
     }
   };
 
   const handleImageClick = (image: UploadedImage) => {
-    if (activeUploadedImage?.id === image.id) {
-      clearActiveUploadedImage(); // Deselect if clicking the already active image
-    } else {
-      setActiveUploadedImage(image);
-    }
+    addCanvasImage(image.id); // Adds a new instance to canvas and selects it
   };
 
   return (
@@ -71,21 +67,24 @@ export default function UploadArea() {
       {uploadedImages.length > 0 ? (
         <ScrollArea className="flex-grow border rounded-md bg-background">
           <div className="p-2 space-y-2">
+            <p className="text-xs text-muted-foreground px-1 pb-1">Click an image to add it to the canvas:</p>
             {uploadedImages.map((image) => (
               <div
                 key={image.id}
                 onClick={() => handleImageClick(image)}
                 className={`p-2 border rounded-md cursor-pointer hover:bg-muted/50 flex items-center gap-3 transition-all
-                            ${activeUploadedImage?.id === image.id ? 'ring-2 ring-primary bg-muted' : 'border-border'}`}
+                            border-border`} // Removed active state based on selectedCanvasImageId as it's for canvas selection
+                title={`Add "${image.name}" to canvas`}
               >
-                <Image 
-                  src={image.dataUrl} 
-                  alt={image.name} 
-                  width={40} 
-                  height={40} 
-                  className="rounded object-cover aspect-square bg-muted-foreground/10" 
+                <Image
+                  src={image.dataUrl}
+                  alt={image.name}
+                  width={40}
+                  height={40}
+                  className="rounded object-cover aspect-square bg-muted-foreground/10"
                 />
-                <span className="text-sm truncate flex-grow" title={image.name}>{image.name}</span>
+                <span className="text-sm truncate flex-grow">{image.name}</span>
+                <PlusCircle className="h-5 w-5 text-muted-foreground group-hover:text-primary" />
               </div>
             ))}
           </div>

@@ -3,29 +3,45 @@
 import type { Dispatch, ReactNode, SetStateAction } from 'react';
 import { createContext, useContext, useState, useCallback } from 'react';
 
+// Represents a file uploaded by the user
 export interface UploadedImage {
-  id: string;
+  id: string; // Unique ID for the uploaded file itself
   name: string;
   dataUrl: string;
   type: string; // e.g., 'image/png'
+}
+
+// Represents an instance of an image on the canvas
+export interface CanvasImage {
+  id: string; // Unique ID for THIS INSTANCE on the canvas
+  sourceImageId: string; // ID of the original UploadedImage
+  name: string;
+  dataUrl: string;
+  type: string;
   scale: number;
   rotation: number;
+  x: number; // percentage for left
+  y: number; // percentage for top
+  zIndex: number;
 }
 
 interface UploadContextType {
   uploadedImages: UploadedImage[];
   addUploadedImage: (file: File) => Promise<void>;
-  activeUploadedImage: UploadedImage | null;
-  setActiveUploadedImage: Dispatch<SetStateAction<UploadedImage | null>>;
-  clearActiveUploadedImage: () => void;
-  updateActiveImageTransform: (transform: Partial<{ scale: number; rotation: number }>) => void;
+  canvasImages: CanvasImage[];
+  addCanvasImage: (sourceImageId: string) => void;
+  removeCanvasImage: (canvasImageId: string) => void;
+  selectedCanvasImageId: string | null;
+  selectCanvasImage: (canvasImageId: string | null) => void;
+  updateCanvasImage: (canvasImageId: string, updates: Partial<Pick<CanvasImage, 'scale' | 'rotation' | 'x' | 'y' | 'zIndex'>>) => void;
 }
 
 const UploadContext = createContext<UploadContextType | undefined>(undefined);
 
 export function UploadProvider({ children }: { children: ReactNode }) {
   const [uploadedImages, setUploadedImages] = useState<UploadedImage[]>([]);
-  const [activeUploadedImage, setActiveUploadedImage] = useState<UploadedImage | null>(null);
+  const [canvasImages, setCanvasImages] = useState<CanvasImage[]>([]);
+  const [selectedCanvasImageId, setSelectedCanvasImageId] = useState<string | null>(null);
 
   const addUploadedImage = useCallback(async (file: File) => {
     const reader = new FileReader();
@@ -37,53 +53,67 @@ export function UploadProvider({ children }: { children: ReactNode }) {
           name: file.name,
           dataUrl,
           type: file.type,
-          scale: 1,
-          rotation: 0,
         };
         setUploadedImages((prev) => [...prev, newImage]);
-        // Optionally, set the newly uploaded image as active immediately
-        // setActiveUploadedImage(newImage);
       }
     };
     reader.onerror = (error) => {
       console.error("Error reading file:", error);
-      // TODO: Implement user-facing error handling, e.g., using a toast notification
     };
     reader.readAsDataURL(file);
   }, []);
 
-  const clearActiveUploadedImage = useCallback(() => {
-    setActiveUploadedImage(null);
+  const addCanvasImage = useCallback((sourceImageId: string) => {
+    const sourceImage = uploadedImages.find(img => img.id === sourceImageId);
+    if (!sourceImage) return;
+
+    const newCanvasImage: CanvasImage = {
+      id: crypto.randomUUID(), // Unique ID for the canvas instance
+      sourceImageId: sourceImage.id,
+      name: sourceImage.name,
+      dataUrl: sourceImage.dataUrl,
+      type: sourceImage.type,
+      scale: 1,
+      rotation: 0,
+      x: 50, // Default to center (percentage)
+      y: 50, // Default to center (percentage)
+      zIndex: canvasImages.length + 1, // New images on top
+    };
+    setCanvasImages(prev => [...prev, newCanvasImage]);
+    setSelectedCanvasImageId(newCanvasImage.id);
+  }, [uploadedImages, canvasImages.length]);
+
+  const removeCanvasImage = useCallback((canvasImageId: string) => {
+    setCanvasImages(prev => prev.filter(img => img.id !== canvasImageId));
+    if (selectedCanvasImageId === canvasImageId) {
+      setSelectedCanvasImageId(null);
+    }
+  }, [selectedCanvasImageId]);
+
+  const selectCanvasImage = useCallback((canvasImageId: string | null) => {
+    setSelectedCanvasImageId(canvasImageId);
   }, []);
 
-  const updateActiveImageTransform = useCallback((transform: Partial<{ scale: number; rotation: number }>) => {
-    setActiveUploadedImage(prev => {
-      if (!prev) return null;
-      return {
-        ...prev,
-        ...transform,
-      };
-    });
-    // Also update the image in the main list if you want transforms to be persistent
-    // when switching between images. For now, this only affects the active one.
-    // If persistence is needed:
-    setUploadedImages(prevImages => 
-      prevImages.map(img => 
-        img.id === activeUploadedImage?.id ? { ...img, ...transform } : img
+  const updateCanvasImage = useCallback((canvasImageId: string, updates: Partial<Pick<CanvasImage, 'scale' | 'rotation' | 'x' | 'y' | 'zIndex'>>) => {
+    setCanvasImages(prev =>
+      prev.map(img =>
+        img.id === canvasImageId ? { ...img, ...updates } : img
       )
     );
+  }, []);
 
-  }, [activeUploadedImage?.id]);
 
   return (
     <UploadContext.Provider
       value={{
         uploadedImages,
         addUploadedImage,
-        activeUploadedImage,
-        setActiveUploadedImage,
-        clearActiveUploadedImage,
-        updateActiveImageTransform,
+        canvasImages,
+        addCanvasImage,
+        removeCanvasImage,
+        selectedCanvasImageId,
+        selectCanvasImage,
+        updateCanvasImage,
       }}
     >
       {children}
