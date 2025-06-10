@@ -34,7 +34,9 @@ function InteractiveCanvasImageComponent({
 }: InteractiveCanvasImageProps) {
   const showHandles = isSelected && !image.isLocked;
 
-  const dynamicZIndex = isSelected && !image.isLocked ? image.zIndex + 100 : image.zIndex;
+  const dynamicZIndex = React.useMemo(() => {
+    return isSelected && !image.isLocked ? image.zIndex + 100 : image.zIndex;
+  }, [isSelected, image.isLocked, image.zIndex]);
 
   const style = React.useMemo(() => ({
     top: `${image.y}%`,
@@ -126,4 +128,28 @@ function InteractiveCanvasImageComponent({
   );
 }
 
-export const InteractiveCanvasImage = React.memo(InteractiveCanvasImageComponent);
+function areImagePropsEqual(prevProps: InteractiveCanvasImageProps, nextProps: InteractiveCanvasImageProps): boolean {
+  if (prevProps.isSelected !== nextProps.isSelected ||
+      prevProps.isBeingDragged !== nextProps.isBeingDragged ||
+      prevProps.baseImageDimension !== nextProps.baseImageDimension) {
+    return false;
+  }
+
+  const pImg = prevProps.image;
+  const nImg = nextProps.image;
+
+  return (
+    pImg.id === nImg.id &&
+    pImg.x === nImg.x &&
+    pImg.y === nImg.y &&
+    pImg.scale === nImg.scale &&
+    pImg.rotation === nImg.rotation &&
+    pImg.zIndex === nImg.zIndex &&
+    pImg.isLocked === nImg.isLocked &&
+    pImg.dataUrl === nImg.dataUrl // In case dataUrl could change, though unlikely for existing items
+    // Callbacks are not compared as they might be new references from parent,
+    // but the core visual properties are most important for memoization.
+  );
+}
+
+export const InteractiveCanvasImage = React.memo(InteractiveCanvasImageComponent, areImagePropsEqual);

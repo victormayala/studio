@@ -30,15 +30,18 @@ function InteractiveCanvasTextComponent({
   onRemoveHandleClick,
 }: InteractiveCanvasTextProps) {
   const showHandles = isSelected && !textItem.isLocked;
-  const dynamicZIndex = isSelected && !textItem.isLocked ? textItem.zIndex + 100 : textItem.zIndex;
+  
+  const dynamicZIndex = React.useMemo(() => {
+    return isSelected && !textItem.isLocked ? textItem.zIndex + 100 : textItem.zIndex;
+  }, [isSelected, textItem.isLocked, textItem.zIndex]);
 
-  const textShadowValue = textItem.shadowEnabled && (textItem.shadowOffsetX !== 0 || textItem.shadowOffsetY !== 0 || textItem.shadowBlur !== 0)
+  const textShadowValue = React.useMemo(() => textItem.shadowEnabled && (textItem.shadowOffsetX !== 0 || textItem.shadowOffsetY !== 0 || textItem.shadowBlur !== 0)
     ? `${textItem.shadowOffsetX}px ${textItem.shadowOffsetY}px ${textItem.shadowBlur}px ${textItem.shadowColor}`
-    : 'none';
+    : 'none', [textItem.shadowEnabled, textItem.shadowOffsetX, textItem.shadowOffsetY, textItem.shadowBlur, textItem.shadowColor]);
 
-  const textStrokeValue = textItem.outlineEnabled && textItem.outlineWidth > 0
+  const textStrokeValue = React.useMemo(() => textItem.outlineEnabled && textItem.outlineWidth > 0
     ? `${textItem.outlineWidth}px ${textItem.outlineColor}`
-    : undefined;
+    : undefined, [textItem.outlineEnabled, textItem.outlineWidth, textItem.outlineColor]);
 
 
   const style = React.useMemo(() => {
@@ -57,28 +60,24 @@ function InteractiveCanvasTextComponent({
       letterSpacing: `${textItem.letterSpacing}px`,
       transform: `translate(-50%, -50%) rotate(${textItem.rotation}deg)`,
       transition: isBeingDragged ? 'none' : 'transform 0.1s ease-out, border 0.1s ease-out, font-size 0.1s ease-out, color 0.1s ease-out',
-      userSelect: 'none' as const, // Prevent text selection during drag
-      whiteSpace: 'pre-wrap', // Or 'pre' or 'nowrap' depending on desired behavior for multi-line
+      userSelect: 'none' as const, 
+      whiteSpace: 'pre-wrap', 
       textShadow: textShadowValue,
     };
     
     if (textStrokeValue) {
-        // CSS text-stroke is not standard in React.CSSProperties, so assert type
         (baseStyle as any).WebkitTextStroke = textStrokeValue;
         (baseStyle as any).textStroke = textStrokeValue;
     }
     
-    // Arch text is complex and not handled by simple CSS.
-    // if (textItem.isArchText) { /* Add arch text specific styling if implemented */ }
-
     return baseStyle;
 
   }, [
-      textItem.y, textItem.x, dynamicZIndex, textItem.color, textItem.fontFamily, 
+      textItem.y, textItem.x, textItem.color, textItem.fontFamily, 
       textItem.fontSize, textItem.scale, textItem.rotation, isBeingDragged,
       textItem.fontWeight, textItem.fontStyle, textItem.textDecoration, textItem.textTransform,
-      textItem.lineHeight, textItem.letterSpacing, textItem.isArchText,
-      textShadowValue, textStrokeValue
+      textItem.lineHeight, textItem.letterSpacing, 
+      textShadowValue, textStrokeValue, dynamicZIndex 
   ]);
   
 
@@ -155,4 +154,44 @@ function InteractiveCanvasTextComponent({
   );
 }
 
-export const InteractiveCanvasText = React.memo(InteractiveCanvasTextComponent);
+function areTextPropsEqual(prevProps: InteractiveCanvasTextProps, nextProps: InteractiveCanvasTextProps): boolean {
+  if (prevProps.isSelected !== nextProps.isSelected ||
+      prevProps.isBeingDragged !== nextProps.isBeingDragged) {
+    return false;
+  }
+
+  const pTxt = prevProps.textItem;
+  const nTxt = nextProps.textItem;
+
+  // Compare all relevant properties of textItem
+  return (
+    pTxt.id === nTxt.id &&
+    pTxt.content === nTxt.content &&
+    pTxt.x === nTxt.x &&
+    pTxt.y === nTxt.y &&
+    pTxt.rotation === nTxt.rotation &&
+    pTxt.scale === nTxt.scale &&
+    pTxt.zIndex === nTxt.zIndex &&
+    pTxt.isLocked === nTxt.isLocked &&
+    pTxt.fontFamily === nTxt.fontFamily &&
+    pTxt.fontSize === nTxt.fontSize &&
+    pTxt.textTransform === nTxt.textTransform &&
+    pTxt.fontWeight === nTxt.fontWeight &&
+    pTxt.fontStyle === nTxt.fontStyle &&
+    pTxt.textDecoration === nTxt.textDecoration &&
+    pTxt.lineHeight === nTxt.lineHeight &&
+    pTxt.letterSpacing === nTxt.letterSpacing &&
+    pTxt.isArchText === nTxt.isArchText && // Though visual not implemented, prop change matters
+    pTxt.color === nTxt.color &&
+    pTxt.outlineEnabled === nTxt.outlineEnabled &&
+    pTxt.outlineColor === nTxt.outlineColor &&
+    pTxt.outlineWidth === nTxt.outlineWidth &&
+    pTxt.shadowEnabled === nTxt.shadowEnabled &&
+    pTxt.shadowColor === nTxt.shadowColor &&
+    pTxt.shadowOffsetX === nTxt.shadowOffsetX &&
+    pTxt.shadowOffsetY === nTxt.shadowOffsetY &&
+    pTxt.shadowBlur === nTxt.shadowBlur
+  );
+}
+
+export const InteractiveCanvasText = React.memo(InteractiveCanvasTextComponent, areTextPropsEqual);
