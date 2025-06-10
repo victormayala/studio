@@ -25,14 +25,15 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import UploadArea from "./UploadArea";
 import LayersPanel from "./LayersPanel";
-import TextToolPanel from "./TextToolPanel"; // Added import
+import TextToolPanel from "./TextToolPanel";
+import ShapesPanel from "./ShapesPanel"; // Added import
 import { useUploads } from "@/contexts/UploadContext";
 
 const menuItems = [
   { id: "products", label: "Products", icon: Package },
   { id: "layers", label: "Layers", icon: Layers },
   { id: "uploads", label: "Uploads", icon: UploadCloud },
-  { id: "text", label: "Text", icon: Type }, // Changed label for consistency
+  { id: "text", label: "Text", icon: Type },
   { id: "shapes", label: "Shapes", icon: Shapes },
   { id: "clipart", label: "Clipart", icon: Smile },
   { id: "free-designs", label: "Free Designs", icon: Palette },
@@ -56,8 +57,10 @@ export default function LeftPanel() {
         return <UploadArea />;
       case "layers":
         return <LayersPanel />;
-      case "text": // Added case for Text Tool
+      case "text":
         return <TextToolPanel />;
+      case "shapes": // Added case for Shapes Panel
+        return <ShapesPanel />;
       default:
         return (
           <div className="p-6 text-center text-muted-foreground h-full flex flex-col items-center justify-center">

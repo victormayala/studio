@@ -2,11 +2,12 @@
 "use client";
 
 import Image from 'next/image';
-import { useUploads, type CanvasImage, type CanvasText } from '@/contexts/UploadContext';
+import { useUploads, type CanvasImage, type CanvasText, type CanvasShape } from '@/contexts/UploadContext';
 import type { MouseEvent as ReactMouseEvent, TouchEvent as ReactTouchEvent } from 'react';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { InteractiveCanvasImage } from './InteractiveCanvasImage';
 import { InteractiveCanvasText } from './InteractiveCanvasText';
+import { InteractiveCanvasShape } from './InteractiveCanvasShape'; // Added import
 
 const defaultProduct = {
   id: 'tshirt-white',
@@ -19,27 +20,21 @@ const defaultProduct = {
 };
 
 const BASE_IMAGE_DIMENSION = 200;
-const BASE_TEXT_DIMENSION_APPROX = 50; // Approx base for text scaling logic
+const BASE_TEXT_DIMENSION_APPROX = 50; 
+const BASE_SHAPE_DIMENSION = 100; // Default base size for shapes
 
 export default function DesignCanvas() {
   const productToDisplay = defaultProduct;
   const {
-    canvasImages,
-    selectCanvasImage,
-    selectedCanvasImageId,
-    updateCanvasImage,
-    removeCanvasImage,
-    canvasTexts,
-    selectCanvasText,
-    selectedCanvasTextId,
-    updateCanvasText,
-    removeCanvasText,
+    canvasImages, selectCanvasImage, selectedCanvasImageId, updateCanvasImage, removeCanvasImage,
+    canvasTexts, selectCanvasText, selectedCanvasTextId, updateCanvasText, removeCanvasText,
+    canvasShapes, selectCanvasShape, selectedCanvasShapeId, updateCanvasShape, removeCanvasShape, // Added shape context items
   } = useUploads();
 
   const [activeDrag, setActiveDrag] = useState<{
     type: 'rotate' | 'resize' | 'move';
     itemId: string;
-    itemType: 'image' | 'text';
+    itemType: 'image' | 'text' | 'shape'; // Added 'shape'
     startX: number;
     startY: number;
     initialRotation?: number;
@@ -54,7 +49,7 @@ export default function DesignCanvas() {
 
   const canvasRef = useRef<HTMLDivElement>(null);
 
-  const getMouseOrTouchCoords = (e: MouseEvent | TouchEvent | ReactMouseEvent | ReactTouchEvent) => {
+  const getMouseOrTouchCoords = (e: MouseEvent | TouchEvent | ReactMouseEvent | ReactTouchEvent<SVGElement> | ReactMouseEvent<HTMLDivElement> | ReactTouchEvent<HTMLDivElement>) => {
     if ('touches' in e && e.touches.length > 0) {
       return { x: e.touches[0].clientX, y: e.touches[0].clientY };
     }
@@ -65,10 +60,10 @@ export default function DesignCanvas() {
     if (e.target === canvasRef.current) {
         selectCanvasImage(null);
         selectCanvasText(null);
+        selectCanvasShape(null); // Deselect shape
     }
   };
 
-  // For Images
   const handleImageSelectAndDragStart = (
     e: ReactMouseEvent<HTMLDivElement> | ReactTouchEvent<HTMLDivElement>,
     image: CanvasImage
@@ -77,7 +72,6 @@ export default function DesignCanvas() {
     handleDragStart(e, 'move', image, 'image');
   };
 
-  // For Text
   const handleTextSelectAndDragStart = (
     e: ReactMouseEvent<HTMLDivElement> | ReactTouchEvent<HTMLDivElement>,
     textItem: CanvasText
@@ -86,15 +80,22 @@ export default function DesignCanvas() {
     handleDragStart(e, 'move', textItem, 'text');
   };
 
+  const handleShapeSelectAndDragStart = ( // Added for shapes
+    e: ReactMouseEvent<SVGElement> | ReactTouchEvent<SVGElement>, // Event target is SVG for shapes
+    shape: CanvasShape
+  ) => {
+    if (shape.isLocked) return;
+    handleDragStart(e, 'move', shape, 'shape');
+  };
+
   const handleDragStart = (
-    e: ReactMouseEvent<HTMLDivElement> | ReactTouchEvent<HTMLDivElement>,
+    e: ReactMouseEvent<HTMLDivElement> | ReactTouchEvent<HTMLDivElement> | ReactMouseEvent<SVGElement> | ReactTouchEvent<SVGElement>,
     type: 'rotate' | 'resize' | 'move',
-    item: CanvasImage | CanvasText,
-    itemType: 'image' | 'text'
+    item: CanvasImage | CanvasText | CanvasShape, // Added CanvasShape
+    itemType: 'image' | 'text' | 'shape' // Added 'shape'
   ) => {
     if (item.isLocked && type !== 'move') return;
     if (item.isLocked && type === 'move') return;
-
 
     e.preventDefault();
     e.stopPropagation();
@@ -102,9 +103,15 @@ export default function DesignCanvas() {
     if (itemType === 'image') {
       selectCanvasImage(item.id);
       selectCanvasText(null);
-    } else {
+      selectCanvasShape(null);
+    } else if (itemType === 'text') {
       selectCanvasText(item.id);
       selectCanvasImage(null);
+      selectCanvasShape(null);
+    } else if (itemType === 'shape') {
+      selectCanvasShape(item.id);
+      selectCanvasImage(null);
+      selectCanvasText(null);
     }
 
     if (!canvasRef.current) return;
@@ -121,11 +128,16 @@ export default function DesignCanvas() {
     if (itemType === 'image') {
         itemInitialWidth = BASE_IMAGE_DIMENSION;
         itemInitialHeight = BASE_IMAGE_DIMENSION;
-    } else {
+    } else if (itemType === 'text') {
         const textItem = item as CanvasText;
         itemInitialWidth = Math.max(BASE_TEXT_DIMENSION_APPROX, textItem.fontSize * (textItem.content.length * 0.5)); 
         itemInitialHeight = Math.max(BASE_TEXT_DIMENSION_APPROX / 2, textItem.fontSize);
+    } else if (itemType === 'shape') {
+        const shapeItem = item as CanvasShape;
+        itemInitialWidth = shapeItem.width; // Use actual base width/height from shape data
+        itemInitialHeight = shapeItem.height;
     }
+
 
     setActiveDrag({
       type,
@@ -147,9 +159,11 @@ export default function DesignCanvas() {
   const handleDragging = useCallback((e: MouseEvent | TouchEvent) => {
     if (!activeDrag || !canvasRef.current) return;
     
-    const activeItemData = activeDrag.itemType === 'image' 
-        ? canvasImages.find(img => img.id === activeDrag.itemId)
-        : canvasTexts.find(txt => txt.id === activeDrag.itemId);
+    let activeItemData: CanvasImage | CanvasText | CanvasShape | undefined;
+    if (activeDrag.itemType === 'image') activeItemData = canvasImages.find(img => img.id === activeDrag.itemId);
+    else if (activeDrag.itemType === 'text') activeItemData = canvasTexts.find(txt => txt.id === activeDrag.itemId);
+    else if (activeDrag.itemType === 'shape') activeItemData = canvasShapes.find(shp => shp.id === activeDrag.itemId);
+
 
     if (activeItemData?.isLocked) {
       setActiveDrag(null);
@@ -170,7 +184,8 @@ export default function DesignCanvas() {
       const startAngle = Math.atan2(startY - (canvasRect.top + itemCenterY), startX - (canvasRect.left + itemCenterX)) * (180 / Math.PI);
       let newRotation = initialRotation + (angle - startAngle);
       if (itemType === 'image') updateCanvasImage(itemId, { rotation: newRotation % 360 });
-      else updateCanvasText(itemId, { rotation: newRotation % 360 });
+      else if (itemType === 'text') updateCanvasText(itemId, { rotation: newRotation % 360 });
+      else if (itemType === 'shape') updateCanvasShape(itemId, { rotation: newRotation % 360 });
     } else if (type === 'resize' && initialScale !== undefined && itemInitialWidth !== undefined && itemInitialHeight !== undefined && itemCenterX !== undefined && itemCenterY !== undefined) {
       const distFromCenter = Math.sqrt(Math.pow(coords.x - (canvasRect.left + itemCenterX), 2) + Math.pow(coords.y - (canvasRect.top + itemCenterY), 2));
       const initialDistFromCenter = Math.sqrt(Math.pow(startX - (canvasRect.left + itemCenterX), 2) + Math.pow(startY - (canvasRect.top + itemCenterY), 2));
@@ -179,9 +194,11 @@ export default function DesignCanvas() {
 
       const scaleRatio = distFromCenter / initialDistFromCenter;
       let newScale = initialScale * scaleRatio;
-      newScale = Math.max(0.1, Math.min(newScale, itemType === 'image' ? 10 : 20)); 
+      newScale = Math.max(0.1, Math.min(newScale, itemType === 'image' ? 10 : (itemType === 'text' ? 20 : 10))); // Max scale for shapes also 10
+      
       if (itemType === 'image') updateCanvasImage(itemId, { scale: newScale });
-      else updateCanvasText(itemId, { scale: newScale });
+      else if (itemType === 'text') updateCanvasText(itemId, { scale: newScale });
+      else if (itemType === 'shape') updateCanvasShape(itemId, { scale: newScale });
     } else if (type === 'move' && initialX !== undefined && initialY !== undefined && itemInitialWidth !== undefined && itemInitialHeight !== undefined) {
         const dx = coords.x - startX;
         const dy = coords.y - startY;
@@ -192,7 +209,11 @@ export default function DesignCanvas() {
         let newX = initialX + dxPercent;
         let newY = initialY + dyPercent;
         
-        const currentItem = itemType === 'image' ? canvasImages.find(i => i.id === itemId) : canvasTexts.find(t => t.id === itemId);
+        let currentItem;
+        if (itemType === 'image') currentItem = canvasImages.find(i => i.id === itemId);
+        else if (itemType === 'text') currentItem = canvasTexts.find(t => t.id === itemId);
+        else if (itemType === 'shape') currentItem = canvasShapes.find(s => s.id === itemId);
+        
         const currentItemScale = currentItem?.scale || initialScale || 1;
 
         const scaledItemWidthPx = itemInitialWidth * currentItemScale;
@@ -204,13 +225,13 @@ export default function DesignCanvas() {
         newX = Math.max(halfWidthPercent, Math.min(newX, 100 - halfWidthPercent));
         newY = Math.max(halfHeightPercent, Math.min(newY, 100 - halfHeightPercent));
 
-
         if (isNaN(newX) || isNaN(newY)) return;
 
         if (itemType === 'image') updateCanvasImage(itemId, { x: newX, y: newY });
-        else updateCanvasText(itemId, { x: newX, y: newY });
+        else if (itemType === 'text') updateCanvasText(itemId, { x: newX, y: newY });
+        else if (itemType === 'shape') updateCanvasShape(itemId, { x: newX, y: newY });
     }
-  }, [activeDrag, updateCanvasImage, canvasImages, updateCanvasText, canvasTexts]);
+  }, [activeDrag, updateCanvasImage, canvasImages, updateCanvasText, canvasTexts, updateCanvasShape, canvasShapes]);
 
 
   const handleDragEnd = useCallback(() => {
@@ -237,13 +258,11 @@ export default function DesignCanvas() {
     };
   }, [activeDrag, handleDragging, handleDragEnd]);
 
-  const handleRemoveItem = (e: ReactMouseEvent | ReactTouchEvent, itemId: string, itemType: 'image' | 'text') => {
+  const handleRemoveItem = (e: ReactMouseEvent | ReactTouchEvent, itemId: string, itemType: 'image' | 'text' | 'shape') => {
     e.stopPropagation();
-    if (itemType === 'image') {
-      removeCanvasImage(itemId);
-    } else {
-      removeCanvasText(itemId);
-    }
+    if (itemType === 'image') removeCanvasImage(itemId);
+    else if (itemType === 'text') removeCanvasText(itemId);
+    else if (itemType === 'shape') removeCanvasShape(itemId);
   };
 
 
@@ -278,9 +297,9 @@ export default function DesignCanvas() {
               baseImageDimension={BASE_IMAGE_DIMENSION}
               onImageSelect={selectCanvasImage}
               onImageSelectAndDragStart={handleImageSelectAndDragStart}
-              onRotateHandleMouseDown={(e, imageItem) => handleDragStart(e, 'rotate', imageItem, 'image')}
-              onResizeHandleMouseDown={(e, imageItem) => handleDragStart(e, 'resize', imageItem, 'image')}
-              onRemoveHandleClick={(e, imageId) => handleRemoveItem(e, imageId, 'image')}
+              onRotateHandleMouseDown={(e, item) => handleDragStart(e, 'rotate', item, 'image')}
+              onResizeHandleMouseDown={(e, item) => handleDragStart(e, 'resize', item, 'image')}
+              onRemoveHandleClick={(e, id) => handleRemoveItem(e, id, 'image')}
             />
           ))}
 
@@ -294,19 +313,31 @@ export default function DesignCanvas() {
               onTextSelectAndDragStart={handleTextSelectAndDragStart}
               onRotateHandleMouseDown={(e, item) => handleDragStart(e, 'rotate', item, 'text')}
               onResizeHandleMouseDown={(e, item) => handleDragStart(e, 'resize', item, 'text')}
-              onRemoveHandleClick={(e, textId) => handleRemoveItem(e, textId, 'text')}
+              onRemoveHandleClick={(e, id) => handleRemoveItem(e, id, 'text')}
+            />
+          ))}
+
+          {canvasShapes.map((shape) => (
+            <InteractiveCanvasShape
+              key={`${shape.id}-${shape.zIndex}`}
+              shape={shape}
+              isSelected={shape.id === selectedCanvasShapeId && !shape.isLocked}
+              isBeingDragged={activeDrag?.itemId === shape.id && activeDrag?.type === 'move' && activeDrag?.itemType === 'shape'}
+              onShapeSelect={selectCanvasShape}
+              onShapeSelectAndDragStart={handleShapeSelectAndDragStart}
+              onRotateHandleMouseDown={(e, item) => handleDragStart(e, 'rotate', item, 'shape')}
+              onResizeHandleMouseDown={(e, item) => handleDragStart(e, 'resize', item, 'shape')}
+              onRemoveHandleClick={(e, id) => handleRemoveItem(e, id, 'shape')}
             />
           ))}
         </div>
         <p className="mt-4 text-muted-foreground font-medium">{productToDisplay.name}</p>
         <p className="text-sm text-muted-foreground">
-          {canvasImages.length > 0 || canvasTexts.length > 0 ? 
-            (selectedCanvasImageId || selectedCanvasTextId ? "Click & drag item or handles to transform. Click background to deselect." : "Click an item to select and transform it.") 
-            : "Add images or text using the tools on the left."}
+          {canvasImages.length > 0 || canvasTexts.length > 0 || canvasShapes.length > 0 ? 
+            (selectedCanvasImageId || selectedCanvasTextId || selectedCanvasShapeId ? "Click & drag item or handles to transform. Click background to deselect." : "Click an item to select and transform it.") 
+            : "Add images, text or shapes using the tools on the left."}
         </p>
       </div>
     </div>
   );
 }
-
-    
