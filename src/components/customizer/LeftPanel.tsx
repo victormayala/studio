@@ -24,7 +24,7 @@ import { useState } from "react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import UploadArea from "./UploadArea";
-import ImageTransformControls from "./ImageTransformControls";
+// Removed: import ImageTransformControls from "./ImageTransformControls";
 import { useUploads } from "@/contexts/UploadContext";
 
 const menuItems = [
@@ -40,7 +40,7 @@ const menuItems = [
 
 export default function LeftPanel() {
   const [activeItem, setActiveItem] = useState("products");
-  const { selectedCanvasImageId } = useUploads(); // Get selected image ID for canvas
+  const { selectedCanvasImageId } = useUploads(); 
 
   const handleItemClick = (id: string) => {
     setActiveItem(id);
@@ -55,7 +55,7 @@ export default function LeftPanel() {
         return (
           <>
             <UploadArea />
-            {selectedCanvasImageId && <ImageTransformControls />}
+            {/* Removed ImageTransformControls rendering */}
           </>
         );
       default:
