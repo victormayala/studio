@@ -82,7 +82,7 @@ export function UploadProvider({ children }: { children: ReactNode }) {
       rotation: 0,
       x: 50, 
       y: 50, 
-      zIndex: (Math.max(0, ...canvasImages.map(img => img.zIndex), 0) + 1),
+      zIndex: (Math.max(-1, ...canvasImages.map(img => img.zIndex)) + 1), // Ensure base is at least 0
       isLocked: false, 
     };
     setCanvasImages(prev => [...prev, newCanvasImage]);
@@ -97,19 +97,13 @@ export function UploadProvider({ children }: { children: ReactNode }) {
   }, [selectedCanvasImageId]);
 
   const selectCanvasImage = useCallback((canvasImageId: string | null) => {
-    // If trying to select an image that is locked, via canvas click, prevent it.
-    // Selection via LayersPanel might still be allowed based on UX decision in LayersPanel.tsx
     const imageToSelect = canvasImages.find(img => img.id === canvasImageId);
-    if (imageToSelect?.isLocked && canvasImageId !== null) { // check canvasImageId !== null to allow deselection
-        // If the currently selected image is the one we are trying to select (and it's locked)
-        // and the call is coming from a direct canvas click (not layers panel),
-        // it might be better to just return or ensure it gets deselected if already selected.
-        // For now, we allow selection from LayersPanel even if locked, but prevent canvas interaction.
-        // If we want to block selection from LayersPanel too, that logic would be in LayersPanel.
-        // This function primarily handles selection state.
+    if (imageToSelect?.isLocked && canvasImageId !== null) { 
+        // No special handling here, selection state managed by caller or this simple set.
+        // Deselection is allowed. Direct canvas interaction with locked items is prevented elsewhere.
     }
     setSelectedCanvasImageId(canvasImageId);
-  }, [canvasImages]); // Removed imageToSelect from dep array as it caused re-runs
+  }, [canvasImages]); 
 
   const updateCanvasImage = useCallback((canvasImageId: string, updates: Partial<Pick<CanvasImage, 'scale' | 'rotation' | 'x' | 'y' | 'zIndex' | 'isLocked'>>) => {
     setCanvasImages(prevCanvasImages =>
@@ -117,143 +111,114 @@ export function UploadProvider({ children }: { children: ReactNode }) {
         img.id === canvasImageId ? { ...img, ...updates } : img
       )
     );
-  }, [setCanvasImages]); // setCanvasImages is stable
+  }, []); 
 
   const bringLayerForward = useCallback((canvasImageId: string) => {
     setCanvasImages(prevImages => {
-      const images = [...prevImages];
-      const imageToMove = images.find(img => img.id === canvasImageId);
-      if (!imageToMove || imageToMove.isLocked) return prevImages;
-
-      const sortedByZIndex = images.filter(img => img.id !== canvasImageId).sort((a, b) => a.zIndex - b.zIndex);
-      
-      let newZIndex = imageToMove.zIndex;
-      let foundHigher = false;
-      for (const otherImage of sortedByZIndex) {
-        if (otherImage.zIndex > imageToMove.zIndex) {
-          newZIndex = otherImage.zIndex;
-          otherImage.zIndex = imageToMove.zIndex;
-          foundHigher = true;
-          break; 
-        }
-      }
-      if(!foundHigher && sortedByZIndex.length > 0) {
-         // It's already the highest among others, or only one image. If it needs to go above itself effectively.
-         // This case needs careful thought. If it's the highest, it can't go "higher" by swapping.
-         // For simplicity, if it's the highest non-locked item, this might not change anything or it might take the zIndex of the next item.
-         // A robust way: assign a new highest zIndex if it's not already the absolute highest.
-      }
-      
-      if (foundHigher) {
-        imageToMove.zIndex = newZIndex;
-      } else {
-        // If it didn't swap (e.g. it's already highest or only item), re-evaluate z-indices if needed
-        // or ensure its zIndex is correctly set relative to others.
-        // For now, if no swap happened, we ensure its zIndex is at least max + 1 if it's not the only one
-        const maxZ = Math.max(...images.map(i => i.zIndex), 0);
-        if (imageToMove.zIndex <= maxZ && images.length > 1 && imageToMove.zIndex !== maxZ) {
-            // This logic is tricky; direct swapping is better.
-        }
-      }
-      // The direct swap logic:
+      const images = [...prevImages]; 
       const currentImageIndex = images.findIndex(img => img.id === canvasImageId);
-      if (currentImageIndex === -1) return prevImages;
-
-      // Create a list of (zIndex, originalIndex) for images other than the one being moved
-      const otherImagesZIndices = images
-        .map((img, idx) => ({ zIndex: img.zIndex, originalIndex: idx, id: img.id }))
-        .filter(imgInfo => imgInfo.id !== canvasImageId)
-        .sort((a,b) => a.zIndex - b.zIndex);
+      if (currentImageIndex === -1 || images[currentImageIndex].isLocked) return prevImages;
 
       const imageToMoveInfo = images[currentImageIndex];
-      let targetSwapIndex = -1;
+      
+      let imageToSwapWithOriginalIndex = -1;
+      let closestHigherZIndex = Infinity;
 
-      for(let i = 0; i < otherImagesZIndices.length; i++) {
-        if (otherImagesZIndices[i].zIndex > imageToMoveInfo.zIndex) {
-            targetSwapIndex = otherImagesZIndices[i].originalIndex;
-            break;
+      for (let i = 0; i < images.length; i++) {
+        if (i === currentImageIndex) continue;
+        if (images[i].zIndex > imageToMoveInfo.zIndex) {
+          if (images[i].zIndex < closestHigherZIndex) {
+            closestHigherZIndex = images[i].zIndex;
+            imageToSwapWithOriginalIndex = i;
+          } else if (images[i].zIndex === closestHigherZIndex) {
+            // Optional: if multiple images share the same z-index immediately above,
+            // this logic picks the first one encountered. Could be refined if specific tie-breaking is needed.
+          }
         }
       }
       
-      if (targetSwapIndex !== -1) {
-        const tempZ = images[targetSwapIndex].zIndex;
-        images[targetSwapIndex].zIndex = imageToMoveInfo.zIndex;
+      if (imageToSwapWithOriginalIndex !== -1) {
+        const tempZ = images[imageToSwapWithOriginalIndex].zIndex;
+        images[imageToSwapWithOriginalIndex].zIndex = imageToMoveInfo.zIndex;
         imageToMoveInfo.zIndex = tempZ;
-        return images.map(img => ({...img})); // new array of new objects
+        return images.map(img => ({...img}));
       } else {
-        // If no image is strictly above it, it might be the highest or tied.
-        // To ensure it moves "forward", if it's not already the max, give it max+1
-        const maxZ = Math.max(...images.map(i => i.zIndex));
-        if (imageToMoveInfo.zIndex < maxZ || images.filter(i => i.zIndex === maxZ).length > 1) {
-            imageToMoveInfo.zIndex = maxZ + 1;
-             return images.map(img => ({...img}));
+        // No image is strictly above it. If it's not already the max, make it max + 1.
+        const maxOverallZ = Math.max(-1, ...images.map(i => i.zIndex));
+        if (imageToMoveInfo.zIndex <= maxOverallZ) { // Check if it's not already above all others
+           // Check if it's tied with maxOverallZ, or actually below it.
+           // If it is already maxOverallZ, and there are no others at maxOverallZ, it's already top.
+           const isTiedAtMax = imageToMoveInfo.zIndex === maxOverallZ && images.filter(i => i.zIndex === maxOverallZ && i.id !== imageToMoveInfo.id).length > 0;
+           if (imageToMoveInfo.zIndex < maxOverallZ || isTiedAtMax) {
+                imageToMoveInfo.zIndex = maxOverallZ + 1;
+                return images.map(img => ({...img}));
+           }
         }
       }
-
-
-      return prevImages; // Return original if no change
+      return prevImages;
     });
   }, []);
 
   const sendLayerBackward = useCallback((canvasImageId: string) => {
     setCanvasImages(prevImages => {
       const images = [...prevImages];
-      const imageToMove = images.find(img => img.id === canvasImageId);
-      if (!imageToMove || imageToMove.isLocked) return prevImages;
-
       const currentImageIndex = images.findIndex(img => img.id === canvasImageId);
-      if (currentImageIndex === -1) return prevImages;
-      
-      const otherImagesZIndices = images
-        .map((img, idx) => ({ zIndex: img.zIndex, originalIndex: idx, id: img.id }))
-        .filter(imgInfo => imgInfo.id !== canvasImageId)
-        .sort((a,b) => b.zIndex - a.zIndex); // sort descending for finding one below
+      if (currentImageIndex === -1 || images[currentImageIndex].isLocked) return prevImages;
 
       const imageToMoveInfo = images[currentImageIndex];
-      let targetSwapIndex = -1;
 
-      for(let i = 0; i < otherImagesZIndices.length; i++) {
-        if (otherImagesZIndices[i].zIndex < imageToMoveInfo.zIndex) {
-            targetSwapIndex = otherImagesZIndices[i].originalIndex;
-            break;
+      let imageToSwapWithOriginalIndex = -1;
+      let closestLowerZIndex = -Infinity;
+
+      for (let i = 0; i < images.length; i++) {
+        if (i === currentImageIndex) continue;
+        if (images[i].zIndex < imageToMoveInfo.zIndex) {
+          if (images[i].zIndex > closestLowerZIndex) {
+            closestLowerZIndex = images[i].zIndex;
+            imageToSwapWithOriginalIndex = i;
+          }
         }
       }
 
-      if (targetSwapIndex !== -1) {
-        const tempZ = images[targetSwapIndex].zIndex;
-        images[targetSwapIndex].zIndex = imageToMoveInfo.zIndex;
+      if (imageToSwapWithOriginalIndex !== -1) {
+        const tempZ = images[imageToSwapWithOriginalIndex].zIndex;
+        images[imageToSwapWithOriginalIndex].zIndex = imageToMoveInfo.zIndex;
         imageToMoveInfo.zIndex = tempZ;
         return images.map(img => ({...img}));
       } else {
-        // If no image is strictly below it, it might be the lowest or tied.
-        // To ensure it moves "backward", if it's not already min, give it min-1 (if positive)
-        const minZ = Math.min(...images.map(i => i.zIndex));
-         if (imageToMoveInfo.zIndex > minZ || images.filter(i => i.zIndex === minZ).length > 1) {
-            // This needs careful handling if zIndices can be anything.
-            // A simpler model might be to just re-assign zIndices 0 to N-1 after sorting.
-            // For now, if it didn't swap, we ensure its zIndex is correctly relative.
-            // If layers are dense (1,2,3,4), this swap works. If sparse (1, 5, 10), it also works.
+        // No image is strictly below it. If it's not already min, make it min - 1 (careful with 0 or negative).
+        const minOverallZ = Math.min(...images.map(i => i.zIndex));
+         if (imageToMoveInfo.zIndex >= minOverallZ) {
+            const isTiedAtMin = imageToMoveInfo.zIndex === minOverallZ && images.filter(i => i.zIndex === minOverallZ && i.id !== imageToMoveInfo.id).length > 0;
+            if (imageToMoveInfo.zIndex > minOverallZ || isTiedAtMin) {
+                // Try to find a new unique z-index that is one less than the current minimum of *other* layers,
+                // or if multiple items are at current minOverallZ, move below them.
+                // This can get complex if we want to avoid negative z-indices or compact them.
+                // A simpler approach if no direct swap: if it's tied for lowest, make its z-index slightly lower
+                // if new z-index remains >=0.
+                // For now, if it can't swap, it means it's effectively lowest or tied for lowest.
+                // The logic to push it further down (e.g. minOverallZ -1) can be added if specifically required
+                // ensuring that zIndices remain sensible (e.g. >= 0).
+            }
         }
       }
-      return prevImages; // Return original if no change
+      return prevImages; 
     });
   }, []);
 
 
   const duplicateCanvasImage = useCallback((canvasImageId: string) => {
     const originalImage = canvasImages.find(img => img.id === canvasImageId);
-    // Do not duplicate if original is locked, or handle as per UX decision
-    // if (originalImage?.isLocked) return; 
     if (!originalImage) return;
-
+    // if (originalImage.isLocked) return; // Optional: prevent duplicating locked items
 
     const newCanvasImage: CanvasImage = {
       ...originalImage,
       id: crypto.randomUUID(),
       x: originalImage.x + 2, 
       y: originalImage.y + 2, 
-      zIndex: (Math.max(0, ...canvasImages.map(img => img.zIndex), 0) + 1),
-      isLocked: false, // New duplicates are unlocked
+      zIndex: (Math.max(-1, ...canvasImages.map(img => img.zIndex)) + 1),
+      isLocked: false, 
     };
     setCanvasImages(prev => [...prev, newCanvasImage]);
     setSelectedCanvasImageId(newCanvasImage.id); 
@@ -265,7 +230,7 @@ export function UploadProvider({ children }: { children: ReactNode }) {
         if (img.id === canvasImageId) {
           const isNowLocked = !img.isLocked;
           if (isNowLocked && selectedCanvasImageId === canvasImageId) {
-            setSelectedCanvasImageId(null);
+            setSelectedCanvasImageId(null); // Deselect if locking the currently selected image
           }
           return { ...img, isLocked: isNowLocked };
         }
