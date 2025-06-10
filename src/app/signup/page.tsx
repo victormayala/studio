@@ -85,8 +85,8 @@ export default function SignUpPage() {
               <div className="text-center">
                 <p className="text-sm text-muted-foreground">
                   Already have an account?{' '}
-                  <Link href="/signin" passHref legacyBehavior>
-                    <a className="font-medium text-primary hover:underline">Sign in here</a>
+                  <Link href="/signin" className="font-medium text-primary hover:underline">
+                    Sign in here
                   </Link>
                 </p>
               </div>
