@@ -1,4 +1,5 @@
 import type {Config} from 'tailwindcss';
+const defaultTheme = require('tailwindcss/defaultTheme');
 
 export default {
   darkMode: ['class'],
@@ -10,9 +11,10 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        body: ['Inter', 'sans-serif'],
-        headline: ['Space Grotesk', 'sans-serif'],
-        code: ['Source Code Pro', 'monospace'],
+        // Set Roboto as the primary sans-serif font.
+        // Tailwind's default 'font-sans' utility will now use Roboto.
+        sans: ['Roboto', ...defaultTheme.fontFamily.sans],
+        // Removed custom 'body', 'headline', and 'code' as Roboto is the new default
       },
       colors: {
         background: 'hsl(var(--background))',
