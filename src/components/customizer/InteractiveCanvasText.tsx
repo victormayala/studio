@@ -32,17 +32,55 @@ function InteractiveCanvasTextComponent({
   const showHandles = isSelected && !textItem.isLocked;
   const dynamicZIndex = isSelected && !textItem.isLocked ? textItem.zIndex + 100 : textItem.zIndex;
 
-  const style = React.useMemo(() => ({
-    top: `${textItem.y}%`,
-    left: `${textItem.x}%`,
-    zIndex: dynamicZIndex,
-    color: textItem.color,
-    fontFamily: textItem.fontFamily,
-    fontSize: `${textItem.fontSize * textItem.scale}px`,
-    transform: `translate(-50%, -50%) rotate(${textItem.rotation}deg)`,
-    transition: isBeingDragged ? 'none' : 'transform 0.1s ease-out, border 0.1s ease-out, font-size 0.1s ease-out',
-    userSelect: 'none' as const, // Prevent text selection during drag
-  }), [textItem.y, textItem.x, dynamicZIndex, textItem.color, textItem.fontFamily, textItem.fontSize, textItem.scale, textItem.rotation, isBeingDragged]);
+  const textShadowValue = textItem.shadowEnabled && (textItem.shadowOffsetX !== 0 || textItem.shadowOffsetY !== 0 || textItem.shadowBlur !== 0)
+    ? `${textItem.shadowOffsetX}px ${textItem.shadowOffsetY}px ${textItem.shadowBlur}px ${textItem.shadowColor}`
+    : 'none';
+
+  const textStrokeValue = textItem.outlineEnabled && textItem.outlineWidth > 0
+    ? `${textItem.outlineWidth}px ${textItem.outlineColor}`
+    : undefined;
+
+
+  const style = React.useMemo(() => {
+    const baseStyle: React.CSSProperties = {
+      top: `${textItem.y}%`,
+      left: `${textItem.x}%`,
+      zIndex: dynamicZIndex,
+      color: textItem.color,
+      fontFamily: textItem.fontFamily,
+      fontSize: `${textItem.fontSize * textItem.scale}px`,
+      fontWeight: textItem.fontWeight,
+      fontStyle: textItem.fontStyle,
+      textDecoration: textItem.textDecoration,
+      textTransform: textItem.textTransform,
+      lineHeight: textItem.lineHeight,
+      letterSpacing: `${textItem.letterSpacing}px`,
+      transform: `translate(-50%, -50%) rotate(${textItem.rotation}deg)`,
+      transition: isBeingDragged ? 'none' : 'transform 0.1s ease-out, border 0.1s ease-out, font-size 0.1s ease-out, color 0.1s ease-out',
+      userSelect: 'none' as const, // Prevent text selection during drag
+      whiteSpace: 'pre-wrap', // Or 'pre' or 'nowrap' depending on desired behavior for multi-line
+      textShadow: textShadowValue,
+    };
+    
+    if (textStrokeValue) {
+        // CSS text-stroke is not standard in React.CSSProperties, so assert type
+        (baseStyle as any).WebkitTextStroke = textStrokeValue;
+        (baseStyle as any).textStroke = textStrokeValue;
+    }
+    
+    // Arch text is complex and not handled by simple CSS.
+    // if (textItem.isArchText) { /* Add arch text specific styling if implemented */ }
+
+    return baseStyle;
+
+  }, [
+      textItem.y, textItem.x, dynamicZIndex, textItem.color, textItem.fontFamily, 
+      textItem.fontSize, textItem.scale, textItem.rotation, isBeingDragged,
+      textItem.fontWeight, textItem.fontStyle, textItem.textDecoration, textItem.textTransform,
+      textItem.lineHeight, textItem.letterSpacing, textItem.isArchText,
+      textShadowValue, textStrokeValue
+  ]);
+  
 
   return (
     <div
@@ -51,7 +89,7 @@ function InteractiveCanvasTextComponent({
                   ${textItem.isLocked ? 'cursor-not-allowed' : 'cursor-grab'}
                   ${isSelected && !textItem.isLocked ? 'ring-2 ring-primary ring-offset-2 ring-offset-background' : ''}
                   ${!textItem.isLocked ? 'hover:ring-1 hover:ring-primary/50' : ''}
-                  whitespace-nowrap
+                  p-1 
                   `}
       style={style}
       onClick={(e) => {
@@ -83,7 +121,7 @@ function InteractiveCanvasTextComponent({
             className="absolute -top-3 -right-3 bg-destructive text-destructive-foreground rounded-full p-1 cursor-pointer hover:bg-destructive/80 transition-colors flex items-center justify-center"
             style={{ width: HANDLE_SIZE, height: HANDLE_SIZE, zIndex: dynamicZIndex + 1 }}
             onClick={(e) => onRemoveHandleClick(e, textItem.id)}
-            onMouseDown={(e) => e.stopPropagation()} // Prevent drag start from remove button
+            onMouseDown={(e) => e.stopPropagation()} 
             onTouchStart={(e) => { e.stopPropagation(); onRemoveHandleClick(e, textItem.id);}}
             title="Remove text"
           >
@@ -102,7 +140,6 @@ function InteractiveCanvasTextComponent({
           </div>
 
           {/* Resize Handle (Bottom-Right) */}
-          {/* Note: Actual resizing for text might involve font size or scale. This handle triggers the mechanism. */}
           <div
             className="absolute -bottom-3 -right-3 bg-primary text-primary-foreground rounded-full p-1 cursor-nwse-resize flex items-center justify-center"
             style={{ width: HANDLE_SIZE, height: HANDLE_SIZE, zIndex: dynamicZIndex + 1 }}
@@ -110,7 +147,7 @@ function InteractiveCanvasTextComponent({
             onTouchStart={(e) => onResizeHandleMouseDown(e, textItem)}
             title="Resize text"
           >
-            <MoveIcon size={HANDLE_SIZE * 0.6} /> {/* Using MoveIcon as a generic resize indicator */}
+            <MoveIcon size={HANDLE_SIZE * 0.6} /> 
           </div>
         </>
       )}

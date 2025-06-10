@@ -2,6 +2,8 @@
 'use client';
 import type { Dispatch, ReactNode, SetStateAction } from 'react';
 import { createContext, useContext, useState, useCallback } from 'react';
+import type { GoogleFont } from '@/lib/google-fonts'; // Import GoogleFont type
+import { googleFonts } from '@/lib/google-fonts';
 
 // Represents a file uploaded by the user
 export interface UploadedImage {
@@ -33,13 +35,32 @@ export interface CanvasText {
   x: number; // percentage for left
   y: number; // percentage for top
   rotation: number;
-  scale: number;
-  color: string;
-  fontSize: number; // in px, this is the base size
-  fontFamily: string;
+  scale: number; // General scale, also affects visual font size
   zIndex: number;
   isLocked: boolean;
   itemType?: 'text'; // To help differentiate in combined lists
+
+  // Font Settings
+  fontFamily: string;
+  fontSize: number; // Base font size in px, will be multiplied by scale
+  textTransform: 'none' | 'uppercase' | 'lowercase';
+  fontWeight: 'normal' | 'bold';
+  fontStyle: 'normal' | 'italic';
+  textDecoration: 'none' | 'underline';
+  lineHeight: number; // Multiplier, e.g., 1.2
+  letterSpacing: number; // In px
+  isArchText: boolean;
+
+  // Color Settings
+  color: string; // Text fill color
+  outlineEnabled: boolean;
+  outlineColor: string;
+  outlineWidth: number; // In px
+  shadowEnabled: boolean;
+  shadowColor: string;
+  shadowOffsetX: number; // In px
+  shadowOffsetY: number; // In px
+  shadowBlur: number; // In px
 }
 
 // Helper type for combined operations
@@ -66,7 +87,7 @@ interface UploadContextType {
   removeCanvasText: (canvasTextId: string) => void;
   selectedCanvasTextId: string | null;
   selectCanvasText: (canvasTextId: string | null) => void;
-  updateCanvasText: (canvasTextId: string, updates: Partial<Pick<CanvasText, 'scale' | 'rotation' | 'x' | 'y' | 'zIndex' | 'isLocked' | 'content' | 'color' | 'fontSize' | 'fontFamily'>>) => void;
+  updateCanvasText: (canvasTextId: string, updates: Partial<CanvasText>) => void;
   bringTextLayerForward: (canvasTextId: string) => void;
   sendTextLayerBackward: (canvasTextId: string) => void;
   duplicateCanvasText: (canvasTextId: string) => void;
@@ -193,6 +214,8 @@ export function UploadProvider({ children }: { children: ReactNode }) {
   // Text specific functions
   const addCanvasText = useCallback((content: string) => {
     const currentMaxZIndex = getMaxZIndex();
+    const defaultFont = googleFonts.find(f => f.name === 'Arial');
+
     const newText: CanvasText = {
       id: crypto.randomUUID(),
       content,
@@ -200,11 +223,28 @@ export function UploadProvider({ children }: { children: ReactNode }) {
       y: 50,
       rotation: 0,
       scale: 1,
-      color: '#333333', 
-      fontSize: 24, 
-      fontFamily: 'Arial, sans-serif', 
       zIndex: currentMaxZIndex + 1,
       isLocked: false,
+      // Font Settings
+      fontFamily: defaultFont ? defaultFont.family : 'Arial, sans-serif',
+      fontSize: 24, 
+      textTransform: 'none',
+      fontWeight: 'normal',
+      fontStyle: 'normal',
+      textDecoration: 'none',
+      lineHeight: 1.2, 
+      letterSpacing: 0, 
+      isArchText: false,
+      // Color Settings
+      color: '#333333', 
+      outlineEnabled: false,
+      outlineColor: '#000000',
+      outlineWidth: 1,
+      shadowEnabled: false,
+      shadowColor: '#000000',
+      shadowOffsetX: 2,
+      shadowOffsetY: 2,
+      shadowBlur: 2,
     };
     setCanvasTexts(prev => [...prev, newText]);
     setSelectedCanvasTextId(newText.id);
@@ -225,7 +265,7 @@ export function UploadProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  const updateCanvasText = useCallback((canvasTextId: string, updates: Partial<Pick<CanvasText, 'scale' | 'rotation' | 'x' | 'y' | 'zIndex' | 'isLocked' | 'content' | 'color' | 'fontSize' | 'fontFamily'>>) => {
+  const updateCanvasText = useCallback((canvasTextId: string, updates: Partial<CanvasText>) => {
     setCanvasTexts(prevCanvasTexts =>
       prevCanvasTexts.map(txt =>
         txt.id === canvasTextId ? { ...txt, ...updates } : txt
@@ -275,47 +315,47 @@ export function UploadProvider({ children }: { children: ReactNode }) {
       ...currentTexts.map(txt => ({ ...txt, itemType: 'text' as const })),
     ];
 
-    allItems.sort((a, b) => a.zIndex - b.zIndex); // Sort by zIndex ascending (visual bottom to top)
+    allItems.sort((a, b) => a.zIndex - b.zIndex);
 
     const itemIndex = allItems.findIndex(item => item.id === itemId && item.itemType === itemType);
 
-    if (itemIndex === -1) return; // Should not happen
-    if (allItems[itemIndex].isLocked) return; // Cannot reorder locked items
+    if (itemIndex === -1 || allItems[itemIndex].isLocked) return;
 
-    if (direction === 'forward') {
-      if (itemIndex < allItems.length - 1) { // Can move up
-        // Swap with the item above it
-        const temp = allItems[itemIndex];
-        allItems[itemIndex] = allItems[itemIndex + 1];
-        allItems[itemIndex + 1] = temp;
-      } else {
-        return; // Already at the top
-      }
-    } else { // backward
-      if (itemIndex > 0) { // Can move down
-        // Swap with the item below it
-        const temp = allItems[itemIndex];
-        allItems[itemIndex] = allItems[itemIndex - 1];
-        allItems[itemIndex - 1] = temp;
-      } else {
-        return; // Already at the bottom
-      }
+    let targetIndex = -1;
+    if (direction === 'forward' && itemIndex < allItems.length - 1) {
+      targetIndex = itemIndex + 1;
+    } else if (direction === 'backward' && itemIndex > 0) {
+      targetIndex = itemIndex - 1;
     }
 
-    // Re-assign sequential zIndex values
-    const newCanvasImages: CanvasImage[] = [];
-    const newCanvasTexts: CanvasText[] = [];
+    if (targetIndex !== -1 && !allItems[targetIndex].isLocked) {
+      // Swap positions in the sorted list
+      const temp = allItems[itemIndex];
+      allItems[itemIndex] = allItems[targetIndex];
+      allItems[targetIndex] = temp;
+    } else if (targetIndex !== -1 && allItems[targetIndex].isLocked) {
+        // If the target to swap with is locked, we don't perform the swap.
+        return;
+    } else {
+        // Already at the top/bottom or target is locked.
+        return;
+    }
+
+
+    const newCanvasImagesArray: CanvasImage[] = [];
+    const newCanvasTextsArray: CanvasText[] = [];
 
     allItems.forEach((item, newZIndex) => {
-      if (item.itemType === 'image') {
-        newCanvasImages.push({ ...(item as CanvasImage), zIndex: newZIndex });
+      const updatedItem = { ...item, zIndex: newZIndex };
+      if (updatedItem.itemType === 'image') {
+        newCanvasImagesArray.push(updatedItem as CanvasImage);
       } else {
-        newCanvasTexts.push({ ...(item as CanvasText), zIndex: newZIndex });
+        newCanvasTextsArray.push(updatedItem as CanvasText);
       }
     });
-
-    setCanvasImages(newCanvasImages);
-    setCanvasTexts(newCanvasTexts);
+    
+    setCanvasImages(newCanvasImagesArray);
+    setCanvasTexts(newCanvasTextsArray);
 
   }, [canvasImages, canvasTexts]);
 
