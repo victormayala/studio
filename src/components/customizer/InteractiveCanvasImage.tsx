@@ -5,15 +5,16 @@ import Image from 'next/image';
 import type { CanvasImage } from '@/contexts/UploadContext';
 import { Trash2, RefreshCwIcon, MoveIcon } from 'lucide-react';
 import type { MouseEvent as ReactMouseEvent, TouchEvent as ReactTouchEvent } from 'react';
-import React from 'react'; 
+import React from 'react';
 
 const HANDLE_SIZE = 24;
 
 interface InteractiveCanvasImageProps {
   image: CanvasImage;
-  isSelected: boolean; // This prop will be true only if image is selected AND not locked (logic handled in DesignCanvas)
+  isSelected: boolean;
   isBeingDragged: boolean;
-  baseImageDimension: number; 
+  baseImageDimension: number;
+  onImageSelect: (imageId: string) => void; // New prop for pure selection
   onImageSelectAndDragStart: (e: ReactMouseEvent<HTMLDivElement> | ReactTouchEvent<HTMLDivElement>, image: CanvasImage) => void;
   onRotateHandleMouseDown: (e: ReactMouseEvent<HTMLDivElement> | ReactTouchEvent<HTMLDivElement>, image: CanvasImage) => void;
   onResizeHandleMouseDown: (e: ReactMouseEvent<HTMLDivElement> | ReactTouchEvent<HTMLDivElement>, image: CanvasImage) => void;
@@ -22,9 +23,10 @@ interface InteractiveCanvasImageProps {
 
 function InteractiveCanvasImageComponent({
   image,
-  isSelected, // Already considers lock state from DesignCanvas
+  isSelected,
   isBeingDragged,
   baseImageDimension,
+  onImageSelect, // Destructure new prop
   onImageSelectAndDragStart,
   onRotateHandleMouseDown,
   onResizeHandleMouseDown,
@@ -46,27 +48,27 @@ function InteractiveCanvasImageComponent({
         width: `${baseImageDimension * image.scale}px`,
         height: `${baseImageDimension * image.scale}px`,
         transform: `translate(-50%, -50%) rotate(${image.rotation}deg)`,
-        zIndex: isSelected && !image.isLocked ? image.zIndex + 100 : image.zIndex, // Ensure selected unlocked is on top of others
+        zIndex: isSelected && !image.isLocked ? image.zIndex + 100 : image.zIndex,
         transition: isBeingDragged ? 'none' : 'transform 0.1s ease-out, border 0.1s ease-out, width 0.1s ease-out, height 0.1s ease-out',
       }}
       onClick={(e) => {
-        e.stopPropagation(); 
+        e.stopPropagation();
         if (!image.isLocked) {
-          onImageSelectAndDragStart(e, image); // Propagate for selection only if not locked
+          onImageSelect(image.id); // Use the new pure selection prop
         }
       }}
       onMouseDown={(e) => {
         if (!image.isLocked) {
-          onImageSelectAndDragStart(e, image);
+          onImageSelectAndDragStart(e, image); // This handles selection AND drag init
         } else {
-          e.stopPropagation(); // Prevent canvas deselection if locked image is clicked
+          e.stopPropagation();
         }
       }}
       onTouchStart={(e) => {
          if (!image.isLocked) {
-          onImageSelectAndDragStart(e, image);
+          onImageSelectAndDragStart(e, image); // This handles selection AND drag init
         } else {
-          e.stopPropagation(); 
+          e.stopPropagation();
         }
       }}
     >
@@ -76,7 +78,7 @@ function InteractiveCanvasImageComponent({
         fill
         style={{ objectFit: 'contain' }}
         className={`rounded-sm pointer-events-none ${image.isLocked ? 'opacity-75' : ''}`}
-        priority 
+        priority
       />
       {showHandles && (
         <>
@@ -85,7 +87,7 @@ function InteractiveCanvasImageComponent({
             className="absolute -top-3 -right-3 bg-destructive text-destructive-foreground rounded-full p-1 cursor-pointer hover:bg-destructive/80 transition-colors flex items-center justify-center"
             style={{ width: HANDLE_SIZE, height: HANDLE_SIZE, zIndex: 10 }}
             onClick={(e) => onRemoveHandleClick(e, image.id)}
-            onMouseDown={(e) => e.stopPropagation()} 
+            onMouseDown={(e) => e.stopPropagation()}
             onTouchStart={(e) => { e.stopPropagation(); onRemoveHandleClick(e, image.id);}}
             title="Remove image"
           >
@@ -111,7 +113,7 @@ function InteractiveCanvasImageComponent({
             onTouchStart={(e) => onResizeHandleMouseDown(e, image)}
             title="Resize image"
           >
-            <MoveIcon size={HANDLE_SIZE * 0.6} /> 
+            <MoveIcon size={HANDLE_SIZE * 0.6} />
           </div>
         </>
       )}
