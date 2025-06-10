@@ -8,6 +8,8 @@ export interface UploadedImage {
   name: string;
   dataUrl: string;
   type: string; // e.g., 'image/png'
+  scale: number;
+  rotation: number;
 }
 
 interface UploadContextType {
@@ -16,6 +18,7 @@ interface UploadContextType {
   activeUploadedImage: UploadedImage | null;
   setActiveUploadedImage: Dispatch<SetStateAction<UploadedImage | null>>;
   clearActiveUploadedImage: () => void;
+  updateActiveImageTransform: (transform: Partial<{ scale: number; rotation: number }>) => void;
 }
 
 const UploadContext = createContext<UploadContextType | undefined>(undefined);
@@ -34,6 +37,8 @@ export function UploadProvider({ children }: { children: ReactNode }) {
           name: file.name,
           dataUrl,
           type: file.type,
+          scale: 1,
+          rotation: 0,
         };
         setUploadedImages((prev) => [...prev, newImage]);
         // Optionally, set the newly uploaded image as active immediately
@@ -51,6 +56,25 @@ export function UploadProvider({ children }: { children: ReactNode }) {
     setActiveUploadedImage(null);
   }, []);
 
+  const updateActiveImageTransform = useCallback((transform: Partial<{ scale: number; rotation: number }>) => {
+    setActiveUploadedImage(prev => {
+      if (!prev) return null;
+      return {
+        ...prev,
+        ...transform,
+      };
+    });
+    // Also update the image in the main list if you want transforms to be persistent
+    // when switching between images. For now, this only affects the active one.
+    // If persistence is needed:
+    setUploadedImages(prevImages => 
+      prevImages.map(img => 
+        img.id === activeUploadedImage?.id ? { ...img, ...transform } : img
+      )
+    );
+
+  }, [activeUploadedImage?.id]);
+
   return (
     <UploadContext.Provider
       value={{
@@ -59,6 +83,7 @@ export function UploadProvider({ children }: { children: ReactNode }) {
         activeUploadedImage,
         setActiveUploadedImage,
         clearActiveUploadedImage,
+        updateActiveImageTransform,
       }}
     >
       {children}

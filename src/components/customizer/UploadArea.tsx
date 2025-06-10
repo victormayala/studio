@@ -7,11 +7,11 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import Image from 'next/image';
-import { UploadCloud } from 'lucide-react'; // Removed XCircle for now, can add later for delete
+import { UploadCloud } from 'lucide-react'; 
 import { useToast } from '@/hooks/use-toast';
 
 export default function UploadArea() {
-  const { uploadedImages, addUploadedImage, setActiveUploadedImage, activeUploadedImage } = useUploads();
+  const { uploadedImages, addUploadedImage, setActiveUploadedImage, activeUploadedImage, clearActiveUploadedImage } = useUploads();
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -24,17 +24,17 @@ export default function UploadArea() {
           title: "Invalid File Type",
           description: "Please upload an image file (PNG, JPG, GIF, etc.).",
         });
-        event.target.value = ''; // Reset file input
+        event.target.value = ''; 
         return;
       }
-      // Basic size validation (e.g., 5MB)
+      
       if (file.size > 5 * 1024 * 1024) {
          toast({
           variant: "destructive",
           title: "File Too Large",
           description: "Please upload an image smaller than 5MB.",
         });
-        event.target.value = ''; // Reset file input
+        event.target.value = ''; 
         return;
       }
       await addUploadedImage(file);
@@ -43,7 +43,11 @@ export default function UploadArea() {
   };
 
   const handleImageClick = (image: UploadedImage) => {
-    setActiveUploadedImage(image);
+    if (activeUploadedImage?.id === image.id) {
+      clearActiveUploadedImage(); // Deselect if clicking the already active image
+    } else {
+      setActiveUploadedImage(image);
+    }
   };
 
   return (
@@ -79,7 +83,7 @@ export default function UploadArea() {
                   alt={image.name} 
                   width={40} 
                   height={40} 
-                  className="rounded object-cover aspect-square bg-muted-foreground/10" // Added bg for images with transparency
+                  className="rounded object-cover aspect-square bg-muted-foreground/10" 
                 />
                 <span className="text-sm truncate flex-grow" title={image.name}>{image.name}</span>
               </div>

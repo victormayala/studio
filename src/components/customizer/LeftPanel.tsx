@@ -24,6 +24,8 @@ import { useState } from "react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import UploadArea from "./UploadArea";
+import ImageTransformControls from "./ImageTransformControls"; // Added import
+import { useUploads } from "@/contexts/UploadContext"; // Added import
 
 const menuItems = [
   { id: "products", label: "Products", icon: Package },
@@ -38,6 +40,7 @@ const menuItems = [
 
 export default function LeftPanel() {
   const [activeItem, setActiveItem] = useState("products");
+  const { activeUploadedImage } = useUploads(); // Get active image state
 
   const handleItemClick = (id: string) => {
     setActiveItem(id);
@@ -49,7 +52,12 @@ export default function LeftPanel() {
 
     switch (activeItem) {
       case "uploads":
-        return <UploadArea />;
+        return (
+          <>
+            <UploadArea />
+            {activeUploadedImage && <ImageTransformControls />}
+          </>
+        );
       // Add cases for other panels as they are implemented
       // case "products":
       //   return <div className="p-4">Products Panel Content (To be implemented)</div>;

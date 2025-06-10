@@ -9,8 +9,8 @@ const defaultProduct = {
   name: 'Plain White T-shirt',
   imageUrl: 'https://placehold.co/700x700.png',
   imageAlt: 'Plain white T-shirt ready for customization',
-  width: 700, // Increased from 600
-  height: 700, // Increased from 600
+  width: 700, 
+  height: 700, 
   aiHint: 'white t-shirt product'
 };
 
@@ -19,10 +19,10 @@ export default function DesignCanvas() {
   const { activeUploadedImage } = useUploads();
 
   return (
-    <div className="w-full h-full flex items-center justify-center bg-card border border-dashed border-border rounded-lg shadow-inner p-4 min-h-[500px] lg:min-h-[700px] relative">
+    <div className="w-full h-full flex items-center justify-center bg-card border border-dashed border-border rounded-lg shadow-inner p-4 min-h-[500px] lg:min-h-[700px] relative overflow-hidden">
       <div className="text-center">
         <div
-          className="relative" // Parent for absolute positioning of uploaded image
+          className="relative" 
           style={{ width: productToDisplay.width, height: productToDisplay.height }}
         >
           <Image 
@@ -37,15 +37,19 @@ export default function DesignCanvas() {
           
           {activeUploadedImage && (
             <div
-              className="absolute inset-0 flex items-center justify-center p-8" // p-8 to give some margin from product edges
-              style={{ pointerEvents: 'none' }} // Initially not interactive
+              className="absolute inset-0 flex items-center justify-center p-8" // p-8 to give some margin
+              style={{ 
+                transform: `scale(${activeUploadedImage.scale}) rotate(${activeUploadedImage.rotation}deg)`,
+                transition: 'transform 0.1s ease-out' // Smooth transition for transforms
+                // pointerEvents: 'none' // Kept for now, as controls are external
+              }} 
             >
               <Image
                 src={activeUploadedImage.dataUrl}
                 alt={activeUploadedImage.name}
                 fill 
                 style={{ objectFit: 'contain' }}
-                className="rounded-sm" // Optional: add slight rounding to uploaded image
+                className="rounded-sm" 
               />
             </div>
           )}
