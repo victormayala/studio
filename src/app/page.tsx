@@ -16,8 +16,8 @@ export default function CustomizerPage() {
         
         <SidebarInset className="flex flex-col flex-1 overflow-hidden">
           <AppHeader />
-          {/* New flex container for DesignCanvas and RightPanel, padding removed here */}
-          <div className="flex flex-1 gap-4 md:gap-6 overflow-hidden">
+          {/* Flex container for DesignCanvas and RightPanel, gap removed */}
+          <div className="flex flex-1 overflow-hidden">
             <main className="flex-1 overflow-y-auto"> {/* DesignCanvas container, takes most space */}
               <DesignCanvas />
             </main>
