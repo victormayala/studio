@@ -6,6 +6,7 @@ import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { ArrowUp, ArrowDown, Layers, Copy, Trash2, Lock, Unlock } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 export default function LayersPanel() {
   const { 
@@ -46,13 +47,20 @@ export default function LayersPanel() {
               <div
                 key={image.id}
                 onClick={() => {
-                  if (!image.isLocked) {
-                    selectCanvasImage(image.id);
-                  }
+                  // Allow selecting from layers panel even if locked,
+                  // selection on canvas itself is prevented for locked items.
+                  // Or, to prevent selection here too if locked:
+                  // if (!image.isLocked) { selectCanvasImage(image.id); }
+                  selectCanvasImage(image.id); 
                 }}
-                className={`p-2 border rounded-md flex items-center gap-3 transition-all
-                            ${image.isLocked ? 'opacity-70 cursor-not-allowed bg-muted/30' : 'cursor-pointer hover:bg-muted/50'}
-                            ${isSelected && !image.isLocked ? 'bg-muted ring-2 ring-primary' : 'border-border'}`}
+                className={cn(
+                  "p-2 border rounded-md flex items-center gap-3 transition-all bg-card border-border", // Base: white background, standard border
+                  image.isLocked
+                    ? "opacity-70 cursor-not-allowed" // Locked state: reduced opacity, non-interactive cursor
+                    : "cursor-pointer hover:bg-accent/10", // Unlocked state: interactive cursor, hover effect
+                  isSelected && "ring-2 ring-primary", // Selected (locked or unlocked): primary ring
+                  isSelected && !image.isLocked && "bg-primary/10" // Selected & unlocked: also gets a light primary background
+                )}
                 title={image.isLocked ? `${image.name} (Locked)` : `Select "${image.name}"`}
               >
                 <Image
@@ -70,6 +78,7 @@ export default function LayersPanel() {
                     className="h-7 w-7"
                     onClick={(e) => { e.stopPropagation(); duplicateCanvasImage(image.id); }}
                     title="Duplicate Layer"
+                    disabled={image.isLocked} // Disable if locked
                   >
                     <Copy className="h-4 w-4" />
                   </Button>
@@ -79,6 +88,7 @@ export default function LayersPanel() {
                     className="h-7 w-7"
                     onClick={(e) => { e.stopPropagation(); removeCanvasImage(image.id); }}
                     title="Delete Layer"
+                    // Deleting locked items is usually allowed, but if not: disabled={image.isLocked}
                   >
                     <Trash2 className="h-4 w-4" />
                   </Button>
@@ -120,3 +130,4 @@ export default function LayersPanel() {
     </div>
   );
 }
+
