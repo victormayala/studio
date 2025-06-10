@@ -49,8 +49,6 @@ export default function LayersPanel() {
                 onClick={() => {
                   // Allow selecting from layers panel even if locked,
                   // selection on canvas itself is prevented for locked items.
-                  // Or, to prevent selection here too if locked:
-                  // if (!image.isLocked) { selectCanvasImage(image.id); }
                   selectCanvasImage(image.id); 
                 }}
                 className={cn(
@@ -58,8 +56,8 @@ export default function LayersPanel() {
                   image.isLocked
                     ? "opacity-70 cursor-not-allowed" // Locked state: reduced opacity, non-interactive cursor
                     : "cursor-pointer hover:bg-accent/10", // Unlocked state: interactive cursor, hover effect
-                  isSelected && "ring-2 ring-primary", // Selected (locked or unlocked): primary ring
-                  isSelected && !image.isLocked && "bg-primary/10" // Selected & unlocked: also gets a light primary background
+                  isSelected && "ring-2 ring-primary" // Selected (locked or unlocked): primary ring
+                  // Removed: isSelected && !image.isLocked && "bg-primary/10" 
                 )}
                 title={image.isLocked ? `${image.name} (Locked)` : `Select "${image.name}"`}
               >
@@ -78,7 +76,7 @@ export default function LayersPanel() {
                     className="h-7 w-7"
                     onClick={(e) => { e.stopPropagation(); duplicateCanvasImage(image.id); }}
                     title="Duplicate Layer"
-                    disabled={image.isLocked} // Disable if locked
+                    disabled={image.isLocked} 
                   >
                     <Copy className="h-4 w-4" />
                   </Button>
@@ -88,7 +86,6 @@ export default function LayersPanel() {
                     className="h-7 w-7"
                     onClick={(e) => { e.stopPropagation(); removeCanvasImage(image.id); }}
                     title="Delete Layer"
-                    // Deleting locked items is usually allowed, but if not: disabled={image.isLocked}
                   >
                     <Trash2 className="h-4 w-4" />
                   </Button>
