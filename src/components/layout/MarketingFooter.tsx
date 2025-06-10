@@ -14,6 +14,15 @@ export default function MarketingFooter() {
             <Logo />
           </div>
           <nav className="flex flex-wrap justify-center md:justify-start gap-x-6 gap-y-2 mb-4 md:mb-0">
+            <Link href="/how-it-works" className="text-sm text-muted-foreground hover:text-foreground">
+              How It Works
+            </Link>
+            <Link href="/pricing" className="text-sm text-muted-foreground hover:text-foreground">
+              Pricing
+            </Link>
+            <Link href="/faq" className="text-sm text-muted-foreground hover:text-foreground">
+              FAQ
+            </Link>
             <Link href="/terms" className="text-sm text-muted-foreground hover:text-foreground">
               Terms of Service
             </Link>
