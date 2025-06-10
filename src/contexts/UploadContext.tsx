@@ -81,26 +81,26 @@ export function UploadProvider({ children }: { children: ReactNode }) {
     };
     setCanvasImages(prev => [...prev, newCanvasImage]);
     setSelectedCanvasImageId(newCanvasImage.id);
-  }, [uploadedImages, canvasImages.length]);
+  }, [uploadedImages, canvasImages.length, setCanvasImages, setSelectedCanvasImageId]);
 
   const removeCanvasImage = useCallback((canvasImageId: string) => {
     setCanvasImages(prev => prev.filter(img => img.id !== canvasImageId));
     if (selectedCanvasImageId === canvasImageId) {
       setSelectedCanvasImageId(null);
     }
-  }, [selectedCanvasImageId]);
+  }, [selectedCanvasImageId, setCanvasImages, setSelectedCanvasImageId]);
 
   const selectCanvasImage = useCallback((canvasImageId: string | null) => {
     setSelectedCanvasImageId(canvasImageId);
-  }, []);
+  }, [setSelectedCanvasImageId]);
 
   const updateCanvasImage = useCallback((canvasImageId: string, updates: Partial<Pick<CanvasImage, 'scale' | 'rotation' | 'x' | 'y' | 'zIndex'>>) => {
-    setCanvasImages(prev =>
-      prev.map(img =>
+    setCanvasImages(prevCanvasImages =>
+      prevCanvasImages.map(img =>
         img.id === canvasImageId ? { ...img, ...updates } : img
       )
     );
-  }, []);
+  }, [setCanvasImages]);
 
 
   return (

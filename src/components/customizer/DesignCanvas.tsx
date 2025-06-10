@@ -3,9 +3,9 @@
 
 import Image from 'next/image';
 import { useUploads, type CanvasImage } from '@/contexts/UploadContext';
-import { Trash2, RefreshCwIcon, MoveIcon } from 'lucide-react'; // Using RefreshCwIcon for rotate, MoveIcon for resize (placeholder)
 import type { MouseEvent as ReactMouseEvent, TouchEvent as ReactTouchEvent } from 'react';
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { InteractiveCanvasImage } from './InteractiveCanvasImage'; // New import
 
 const defaultProduct = {
   id: 'tshirt-white',
@@ -16,8 +16,6 @@ const defaultProduct = {
   height: 700,
   aiHint: 'white t-shirt mockup'
 };
-
-const HANDLE_SIZE = 24; // Size of the control handles in pixels
 
 export default function DesignCanvas() {
   const productToDisplay = defaultProduct;
@@ -54,10 +52,20 @@ export default function DesignCanvas() {
   };
 
   const handleCanvasClick = (e: ReactMouseEvent<HTMLDivElement>) => {
-    // If this handler is reached, it means the click was not on an interactive
-    // element (which would have called e.stopPropagation()).
-    // So, deselect any currently selected image.
-    selectCanvasImage(null);
+    // This check ensures that if the click originated from an interactive element
+    // (which should have called e.stopPropagation()), we don't deselect.
+    // The target check is a fallback, direct clicks on the canvasRef div.
+    if (e.target === canvasRef.current) {
+        selectCanvasImage(null);
+    }
+  };
+  
+  const handleImageSelectAndDragStart = (
+    e: ReactMouseEvent<HTMLDivElement> | ReactTouchEvent<HTMLDivElement>,
+    image: CanvasImage
+  ) => {
+     // Allow drag start on the image itself to initiate 'move'
+    handleDragStart(e, 'move', image);
   };
 
   const handleDragStart = (
@@ -66,7 +74,7 @@ export default function DesignCanvas() {
     image: CanvasImage
   ) => {
     e.preventDefault();
-    e.stopPropagation();
+    e.stopPropagation(); // Important: stop propagation here
     selectCanvasImage(image.id);
 
     const imageElement = document.getElementById(`canvas-image-${image.id}`);
@@ -76,8 +84,10 @@ export default function DesignCanvas() {
     const coords = getMouseOrTouchCoords(e);
 
     const imageRect = imageElement.getBoundingClientRect();
-    const imageCenterX = imageRect.left + imageRect.width / 2 - canvasRect.left;
-    const imageCenterY = imageRect.top + imageRect.height / 2 - canvasRect.top;
+    // Calculate image center relative to the canvas, considering current scale for accuracy
+    const imageCenterX = image.x/100 * canvasRect.width; 
+    const imageCenterY = image.y/100 * canvasRect.height;
+
 
     setActiveDrag({
       type,
@@ -90,8 +100,8 @@ export default function DesignCanvas() {
       initialY: image.y,
       imageCenterX,
       imageCenterY,
-      imageInitialWidth: imageRect.width / image.scale,
-      imageInitialHeight: imageRect.height / image.scale,
+      imageInitialWidth: imageRect.width / image.scale, // Unscaled width
+      imageInitialHeight: imageRect.height / image.scale, // Unscaled height
     });
   };
 
@@ -112,12 +122,19 @@ export default function DesignCanvas() {
       const startAngle = Math.atan2(startY - (canvasRect.top + imageCenterY), startX - (canvasRect.left + imageCenterX)) * (180 / Math.PI);
       let newRotation = initialRotation + (angle - startAngle);
       updateCanvasImage(imageId, { rotation: newRotation % 360 });
-    } else if (type === 'resize' && initialScale !== undefined && imageInitialWidth !== undefined ) {
-      const dx = coords.x - startX;
-      const scaleFactor = dx / (imageInitialWidth / 2) ;
-      let newScale = initialScale + scaleFactor;
-      newScale = Math.max(0.1, Math.min(newScale, 10));
+    } else if (type === 'resize' && initialScale !== undefined && imageInitialWidth !== undefined && imageInitialHeight !== undefined) {
+      // Calculate distance from image center to current mouse position
+      const distFromCenter = Math.sqrt(Math.pow(coords.x - (canvasRect.left + imageCenterX!), 2) + Math.pow(coords.y - (canvasRect.top + imageCenterY!), 2));
+      // Calculate distance from image center to initial mouse position for resize
+      const initialDistFromCenter = Math.sqrt(Math.pow(startX - (canvasRect.left + imageCenterX!), 2) + Math.pow(startY - (canvasRect.top + imageCenterY!), 2));
+      
+      if (initialDistFromCenter === 0) return; // Avoid division by zero
+
+      const scaleRatio = distFromCenter / initialDistFromCenter;
+      let newScale = initialScale * scaleRatio;
+      newScale = Math.max(0.1, Math.min(newScale, 10)); // Clamp scale
       updateCanvasImage(imageId, { scale: newScale });
+
     } else if (type === 'move' && initialX !== undefined && initialY !== undefined) {
         const dx = coords.x - startX;
         const dy = coords.y - startY;
@@ -127,16 +144,23 @@ export default function DesignCanvas() {
 
         let newX = initialX + dxPercent;
         let newY = initialY + dyPercent;
+        
+        // Clamping logic needs to be aware of the image's display size (scaled size)
+        // The image's actual pixel dimensions on canvas are (imageInitialWidth * currentScale)
+        // For clamping, we need half of this, converted to percentage of canvas
+        const currentScale = canvasImages.find(img => img.id === imageId)?.scale || initialScale || 1;
+        const scaledImageWidthPx = (imageInitialWidth || 200) * currentScale;
+        const scaledImageHeightPx = (imageInitialHeight || 200) * currentScale;
 
-        const approxImgWidthPercent = ( (200 * (initialScale || 1)) / canvasRect.width) * 100;
-        const approxImgHeightPercent = ( (200 * (initialScale || 1)) / canvasRect.height) * 100;
+        const halfWidthPercent = (scaledImageWidthPx / 2 / canvasRect.width) * 100;
+        const halfHeightPercent = (scaledImageHeightPx / 2 / canvasRect.height) * 100;
 
-        newX = Math.max(approxImgWidthPercent / 2, Math.min(newX, 100 - approxImgWidthPercent / 2));
-        newY = Math.max(approxImgHeightPercent / 2, Math.min(newY, 100 - approxImgHeightPercent / 2));
+        newX = Math.max(halfWidthPercent, Math.min(newX, 100 - halfWidthPercent));
+        newY = Math.max(halfHeightPercent, Math.min(newY, 100 - halfHeightPercent));
 
         updateCanvasImage(imageId, { x: newX, y: newY });
     }
-  }, [activeDrag, updateCanvasImage]);
+  }, [activeDrag, updateCanvasImage, canvasImages]);
 
 
   const handleDragEnd = useCallback(() => {
@@ -164,7 +188,7 @@ export default function DesignCanvas() {
   }, [activeDrag, handleDragging, handleDragEnd]);
 
   const handleRemoveImage = (e: ReactMouseEvent | ReactTouchEvent, imageId: string) => {
-    e.stopPropagation();
+    e.stopPropagation(); // Important
     removeCanvasImage(imageId);
   };
 
@@ -190,74 +214,21 @@ export default function DesignCanvas() {
           />
 
           {canvasImages.map((img) => (
-            <div
+            <InteractiveCanvasImage
               key={img.id}
-              id={`canvas-image-${img.id}`}
-              className={`absolute cursor-grab group
-                          ${img.id === selectedCanvasImageId ? 'ring-2 ring-primary ring-offset-2 ring-offset-background z-50' : 'hover:ring-1 hover:ring-primary/50'}`}
-              style={{
-                top: `${img.y}%`,
-                left: `${img.x}%`,
-                width: `${200 * img.scale}px`,
-                height: `${200 * img.scale}px`,
-                transform: `translate(-50%, -50%) rotate(${img.rotation}deg)`,
-                zIndex: img.id === selectedCanvasImageId ? img.zIndex + 100 : img.zIndex,
-                transition: activeDrag?.imageId === img.id ? 'none' : 'transform 0.1s ease-out, border 0.1s ease-out, width 0.1s ease-out, height 0.1s ease-out',
-              }}
-              onClick={(e) => { e.stopPropagation(); selectCanvasImage(img.id); }}
-              onMouseDown={(e) => handleDragStart(e, 'move', img)}
-              onTouchStart={(e) => handleDragStart(e, 'move', img)}
-            >
-              <Image
-                src={img.dataUrl}
-                alt={img.name}
-                fill
-                style={{ objectFit: 'contain' }}
-                className="rounded-sm pointer-events-none"
-              />
-              {img.id === selectedCanvasImageId && (
-                <>
-                  {/* Remove Button */}
-                  <div
-                    className="absolute -top-3 -right-3 bg-destructive text-destructive-foreground rounded-full p-1 cursor-pointer hover:bg-destructive/80 transition-colors flex items-center justify-center"
-                    style={{ width: HANDLE_SIZE, height: HANDLE_SIZE, zIndex: 10 }}
-                    onClick={(e) => handleRemoveImage(e, img.id)}
-                    onMouseDown={(e) => e.stopPropagation()}
-                    onTouchStart={(e) => { e.stopPropagation(); handleRemoveImage(e, img.id);}}
-                    title="Remove image"
-                  >
-                    <Trash2 size={HANDLE_SIZE * 0.6} />
-                  </div>
-
-                  {/* Rotate Handle (Top-Center) */}
-                  <div
-                    className="absolute -top-3 left-1/2 -translate-x-1/2 bg-primary text-primary-foreground rounded-full p-1 cursor-[grab] active:cursor-[grabbing] flex items-center justify-center"
-                    style={{ width: HANDLE_SIZE, height: HANDLE_SIZE, zIndex: 10 }}
-                    onMouseDown={(e) => handleDragStart(e, 'rotate', img)}
-                    onTouchStart={(e) => handleDragStart(e, 'rotate', img)}
-                    title="Rotate image"
-                  >
-                    <RefreshCwIcon size={HANDLE_SIZE * 0.6} />
-                  </div>
-
-                  {/* Resize Handle (Bottom-Right) */}
-                  <div
-                    className="absolute -bottom-3 -right-3 bg-primary text-primary-foreground rounded-full p-1 cursor-nwse-resize flex items-center justify-center"
-                    style={{ width: HANDLE_SIZE, height: HANDLE_SIZE, zIndex: 10 }}
-                    onMouseDown={(e) => handleDragStart(e, 'resize', img)}
-                    onTouchStart={(e) => handleDragStart(e, 'resize', img)}
-                    title="Resize image"
-                  >
-                     <MoveIcon size={HANDLE_SIZE * 0.6} />
-                  </div>
-                </>
-              )}
-            </div>
+              image={img}
+              isSelected={img.id === selectedCanvasImageId}
+              isBeingDragged={activeDrag?.imageId === img.id && activeDrag?.type === 'move'}
+              onImageSelectAndDragStart={handleImageSelectAndDragStart}
+              onRotateHandleMouseDown={(e, image) => handleDragStart(e, 'rotate', image)}
+              onResizeHandleMouseDown={(e, image) => handleDragStart(e, 'resize', image)}
+              onRemoveHandleClick={handleRemoveImage}
+            />
           ))}
         </div>
         <p className="mt-4 text-muted-foreground font-medium">{productToDisplay.name}</p>
         <p className="text-sm text-muted-foreground">
-          {canvasImages.length > 0 ? (selectedCanvasImageId ? "Click an image to select it, or click background to deselect." : "Click an image to select it.") : "Add images using the tools on the left."}
+          {canvasImages.length > 0 ? (selectedCanvasImageId ? "Drag handles to transform. Click background to deselect." : "Click an image to select it.") : "Add images using the tools on the left."}
         </p>
       </div>
     </div>
