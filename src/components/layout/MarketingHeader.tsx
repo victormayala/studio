@@ -24,13 +24,17 @@ export default function MarketingHeader() {
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-card">
-      <div className="container flex h-16 max-w-screen-2xl items-center justify-between px-4 md:px-6"> {/* Ensured justify-between */}
-        <Link href="/" className="flex items-center space-x-2">
-          <Logo />
-        </Link>
-        
+      <div className="container flex h-16 max-w-screen-2xl items-center px-4 md:px-6">
+        {/* Logo Section */}
+        <div className="flex items-center">
+          <Link href="/" className="flex items-center space-x-2">
+            <Logo />
+          </Link>
+        </div>
+
         {isMobile ? (
-          <div className="ml-auto"> {/* ml-auto pushes mobile menu to the right */}
+          // Mobile Menu Trigger
+          <div className="ml-auto"> {/* ml-auto pushes the hamburger menu to the right */}
             <Sheet>
               <SheetTrigger asChild>
                 <Button variant="ghost" size="icon">
@@ -60,9 +64,10 @@ export default function MarketingHeader() {
             </Sheet>
           </div>
         ) : (
+          // Desktop Navigation and Auth Buttons
           <>
-            {/* Navigation links centered */}
-            <nav className="md:flex items-center justify-center space-x-6 text-sm font-medium mx-auto"> {/* Use md:flex and mx-auto */}
+            {/* Navigation Links - Centered */}
+            <nav className="hidden md:flex flex-1 items-center justify-center space-x-6 text-sm font-medium">
               {navLinks.map((link) => (
                 <Link
                   key={link.label}
@@ -73,9 +78,9 @@ export default function MarketingHeader() {
                 </Link>
               ))}
             </nav>
-            
-            {/* Authentication buttons on the right */}
-            <div className="md:flex items-center space-x-3"> {/* Use md:flex */}
+
+            {/* Authentication Buttons - Right Aligned */}
+            <div className="hidden md:flex items-center space-x-3">
                {authLinks.map((link) => (
                   <Button key={link.label} asChild variant={link.variant} size="sm">
                     <Link href={link.href}>{link.label}</Link>
