@@ -24,42 +24,47 @@ export default function MarketingHeader() {
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-card">
-      <div className="container flex h-16 max-w-screen-2xl items-center justify-between px-4 md:px-6">
+      <div className="container flex h-16 max-w-screen-2xl items-center px-4 md:px-6"> {/* Removed justify-between for spacer technique */}
         <Link href="/" className="flex items-center space-x-2">
           <Logo />
         </Link>
         
         {isMobile ? (
-          <Sheet>
-            <SheetTrigger asChild>
-              <Button variant="ghost" size="icon">
-                <Menu className="h-6 w-6" />
-                <span className="sr-only">Toggle menu</span>
-              </Button>
-            </SheetTrigger>
-            <SheetContent side="right" className="w-[280px] p-6 bg-card">
-              <nav className="flex flex-col space-y-4">
-                {navLinks.map((link) => (
-                  <Link
-                    key={link.label}
-                    href={link.href}
-                    className="text-lg font-medium text-foreground hover:text-primary"
-                  >
-                    {link.label}
-                  </Link>
-                ))}
-                <hr className="my-2 border-border" />
-                {authLinks.map((link) => (
-                  <Button key={link.label} asChild variant={link.variant} className="w-full">
-                    <Link href={link.href}>{link.label}</Link>
-                  </Button>
-                ))}
-              </nav>
-            </SheetContent>
-          </Sheet>
+          <div className="ml-auto"> {/* Ensure mobile trigger is pushed to the right */}
+            <Sheet>
+              <SheetTrigger asChild>
+                <Button variant="ghost" size="icon">
+                  <Menu className="h-6 w-6" />
+                  <span className="sr-only">Toggle menu</span>
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="right" className="w-[280px] p-6 bg-card">
+                <nav className="flex flex-col space-y-4">
+                  {navLinks.map((link) => (
+                    <Link
+                      key={link.label}
+                      href={link.href}
+                      className="text-lg font-medium text-foreground hover:text-primary"
+                    >
+                      {link.label}
+                    </Link>
+                  ))}
+                  <hr className="my-2 border-border" />
+                  {authLinks.map((link) => (
+                    <Button key={link.label} asChild variant={link.variant} className="w-full">
+                      <Link href={link.href}>{link.label}</Link>
+                    </Button>
+                  ))}
+                </nav>
+              </SheetContent>
+            </Sheet>
+          </div>
         ) : (
           <>
-            <nav className="hidden md:flex flex-1 items-center justify-center space-x-6 text-sm font-medium">
+            {/* Spacer 1: Pushes nav to center from left */}
+            <div className="hidden md:flex flex-1" />
+
+            <nav className="hidden md:flex items-center justify-center space-x-6 text-sm font-medium">
               {navLinks.map((link) => (
                 <Link
                   key={link.label}
@@ -70,6 +75,10 @@ export default function MarketingHeader() {
                 </Link>
               ))}
             </nav>
+
+            {/* Spacer 2: Pushes auth buttons to right, allows nav to be centered */}
+            <div className="hidden md:flex flex-1" />
+            
             <div className="hidden md:flex items-center space-x-3">
                {authLinks.map((link) => (
                   <Button key={link.label} asChild variant={link.variant} size="sm">
