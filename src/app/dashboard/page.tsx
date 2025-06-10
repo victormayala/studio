@@ -32,7 +32,7 @@ export default function DashboardPage() {
 
   return (
     <div className="flex flex-col min-h-screen">
-      <main className="flex-1 p-4 md:p-6 lg:p-8 bg-background">
+      <main className="flex-1 p-4 md:p-6 lg:p-8 bg-card">
         <div className="container mx-auto">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
             <div>
