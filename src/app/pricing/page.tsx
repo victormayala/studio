@@ -58,9 +58,9 @@ const pricingTiers = [
 
 export default function PricingPage() {
   return (
-    <div className="flex flex-col min-h-screen bg-background">
+    <div className="flex flex-col min-h-screen bg-background"> {/* Overall page background remains theme default */}
       <MarketingHeader />
-      <main className="flex-1 py-12 md:py-20">
+      <main className="flex-1 py-12 md:py-20 bg-card"> {/* Main content area background set to white */}
         <div className="container mx-auto px-4">
           <div className="text-center mb-16">
             <h1 className="text-4xl md:text-5xl font-bold font-headline text-foreground mb-4">
@@ -73,6 +73,7 @@ export default function PricingPage() {
 
           <div className="grid md:grid-cols-3 gap-8 items-stretch">
             {pricingTiers.map((tier) => (
+              // Cards themselves are already white (bg-card), so this is fine
               <Card key={tier.name} className={`flex flex-col shadow-lg ${tier.popular ? 'border-primary ring-2 ring-primary' : 'border-border'}`}>
                 <CardHeader className="pb-4">
                   {tier.popular && (

@@ -39,9 +39,9 @@ const steps = [
 
 export default function HowItWorksPage() {
   return (
-    <div className="flex flex-col min-h-screen bg-background">
+    <div className="flex flex-col min-h-screen bg-background"> {/* Overall page background remains theme default */}
       <MarketingHeader />
-      <main className="flex-1 py-16 md:py-24 lg:py-32">
+      <main className="flex-1 py-16 md:py-24 lg:py-32 bg-card"> {/* Main content area background set to white */}
         <div className="container mx-auto px-4">
           <div className="text-center mb-20 md:mb-24">
             <h1 className="text-4xl md:text-5xl font-bold font-headline text-foreground mb-6">
@@ -93,7 +93,8 @@ const CardStep = ({ step, index }: CardStepProps) => {
   return (
     <div className={`flex flex-col md:flex-row items-center gap-10 lg:gap-16 ${isEven ? '' : 'md:flex-row-reverse'}`}>
       <div className="md:w-1/2 lg:w-5/12">
-        <div className="p-6 md:p-8 border rounded-xl shadow-lg bg-card h-full flex flex-col">
+        {/* Card background is already white by default, so no need to change its bg-card if the main area is white */}
+        <div className="p-6 md:p-8 border rounded-xl shadow-lg bg-card h-full flex flex-col"> 
           <div className="flex items-center mb-5">
             <div className={`mr-4 p-3 rounded-full bg-primary/10 text-primary`}>
               {React.cloneElement(step.icon, { className: "h-6 w-6" })}

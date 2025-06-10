@@ -16,7 +16,7 @@ export default function MarketingHomePage() {
       
       <main className="flex-1">
         {/* Hero Section */}
-        <section className="py-20 md:py-32 bg-gradient-to-br from-primary/10 via-background to-background">
+        <section className="py-20 md:py-32 bg-card"> {/* Changed background to bg-card */}
           <div className="container mx-auto px-4 text-center">
             <h1 className="text-4xl md:text-6xl font-bold font-headline text-foreground mb-6">
               Unleash Product Customization Power
@@ -47,7 +47,7 @@ export default function MarketingHomePage() {
         </section>
 
         {/* Features Section */}
-        <section className="py-16 md:py-24">
+        <section className="py-16 md:py-24"> {/* This section retains default background */}
           <div className="container mx-auto px-4">
             <h2 className="text-3xl md:text-4xl font-bold font-headline text-center text-foreground mb-16">
               Why Choose <span className="text-primary">CSTMZR</span>?
@@ -85,7 +85,7 @@ export default function MarketingHomePage() {
         </section>
 
         {/* How it Works Simplified */}
-        <section className="py-16 md:py-24 bg-muted/50">
+        <section className="py-16 md:py-24 bg-muted/50"> {/* This section retains its specific background */}
           <div className="container mx-auto px-4">
             <h2 className="text-3xl md:text-4xl font-bold font-headline text-center text-foreground mb-16">
               Get Started in 3 Simple Steps
@@ -116,7 +116,7 @@ export default function MarketingHomePage() {
         </section>
 
         {/* CTA Section */}
-        <section className="py-20 md:py-32">
+        <section className="py-20 md:py-32"> {/* This section retains default background */}
           <div className="container mx-auto px-4 text-center">
             <h2 className="text-3xl md:text-4xl font-bold font-headline text-foreground mb-6">
               Ready to Transform Your Store?
