@@ -6,7 +6,7 @@ import { Logo } from '@/components/icons/Logo';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { Menu } from 'lucide-react';
-import { useIsMobile } from '@/hooks/use-mobile'; 
+import { useIsMobile } from '@/hooks/use-mobile';
 
 const navLinks = [
   { href: "/", label: "Home" },
@@ -25,16 +25,16 @@ export default function MarketingHeader() {
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-card">
       <div className="container flex h-16 max-w-screen-2xl items-center justify-between px-4 md:px-6">
-        {/* Logo Section */}
+        {/* Logo Section - Always visible, pushed to the left by justify-between */}
         <div className="flex items-center">
           <Link href="/" className="flex items-center space-x-2">
             <Logo />
           </Link>
         </div>
 
+        {/* Mobile Menu Trigger OR Desktop Navigation & Auth Buttons */}
         {isMobile ? (
-          // Mobile Menu Trigger
-          <div className="ml-auto"> {/* ml-auto pushes the hamburger menu to the right */}
+          <div className="ml-auto"> {/* This div ensures the SheetTrigger is pushed to the right */}
             <Sheet>
               <SheetTrigger asChild>
                 <Button variant="ghost" size="icon">
@@ -64,10 +64,9 @@ export default function MarketingHeader() {
             </Sheet>
           </div>
         ) : (
-          // Desktop Navigation and Auth Buttons
-          <>
-            {/* Navigation Links - Centered */}
-            <nav className="hidden md:flex flex-1 items-center justify-center space-x-6 text-sm font-medium">
+          <> {/* Fragment for desktop items, direct children of the justify-between container */}
+            {/* Desktop Navigation - flex-1 to take available space, justify-center for its items */}
+            <nav className="flex flex-1 items-center justify-center space-x-6 text-sm font-medium">
               {navLinks.map((link) => (
                 <Link
                   key={link.label}
@@ -79,8 +78,8 @@ export default function MarketingHeader() {
               ))}
             </nav>
 
-            {/* Authentication Buttons - Right Aligned */}
-            <div className="hidden md:flex items-center space-x-3">
+            {/* Authentication Buttons - Pushed to the right by justify-between */}
+            <div className="flex items-center space-x-3">
                {authLinks.map((link) => (
                   <Button key={link.label} asChild variant={link.variant} size="sm">
                     <Link href={link.href}>{link.label}</Link>
