@@ -1,7 +1,7 @@
 
 "use client";
 
-import React from 'react'; // Added React import
+import React from 'react';
 import MarketingHeader from '@/components/layout/MarketingHeader';
 import MarketingFooter from '@/components/layout/MarketingFooter';
 import { Button } from '@/components/ui/button';
@@ -41,9 +41,9 @@ export default function HowItWorksPage() {
   return (
     <div className="flex flex-col min-h-screen bg-background">
       <MarketingHeader />
-      <main className="flex-1 py-16 md:py-24">
+      <main className="flex-1 py-16 md:py-24 lg:py-32">
         <div className="container mx-auto px-4">
-          <div className="text-center mb-16">
+          <div className="text-center mb-20 md:mb-24">
             <h1 className="text-4xl md:text-5xl font-bold font-headline text-foreground mb-6">
               How CSTMZR Transforms Your Store
             </h1>
@@ -52,13 +52,13 @@ export default function HowItWorksPage() {
             </p>
           </div>
           
-          <div className="grid md:grid-cols-1 gap-10 lg:gap-12">
+          <div className="grid md:grid-cols-1 gap-16 lg:gap-20">
             {steps.map((step, index) => (
               <CardStep key={index} step={step} index={index} totalSteps={steps.length} />
             ))}
           </div>
 
-          <div className="mt-20 text-center">
+          <div className="mt-24 md:mt-32 text-center">
             <h2 className="text-3xl font-bold font-headline text-foreground mb-4">Ready to Get Started?</h2>
             <p className="text-muted-foreground mb-8 max-w-xl mx-auto">
               Join businesses already leveraging the power of personalization with CSTMZR. Sign up today and take the first step towards a more interactive and profitable online store.
@@ -91,10 +91,10 @@ const CardStep = ({ step, index }: CardStepProps) => {
 
 
   return (
-    <div className={`flex flex-col md:flex-row items-center gap-8 lg:gap-12 ${isEven ? '' : 'md:flex-row-reverse'}`}>
+    <div className={`flex flex-col md:flex-row items-center gap-10 lg:gap-16 ${isEven ? '' : 'md:flex-row-reverse'}`}>
       <div className="md:w-1/2 lg:w-5/12">
-        <div className="p-8 border rounded-xl shadow-lg bg-card h-full flex flex-col">
-          <div className="flex items-center mb-4">
+        <div className="p-6 md:p-8 border rounded-xl shadow-lg bg-card h-full flex flex-col">
+          <div className="flex items-center mb-5">
             <div className={`mr-4 p-3 rounded-full bg-primary/10 text-primary`}>
               {React.cloneElement(step.icon, { className: "h-6 w-6" })}
             </div>
@@ -111,11 +111,10 @@ const CardStep = ({ step, index }: CardStepProps) => {
           alt={step.title}
           width={500}
           height={350}
-          className="rounded-xl shadow-xl object-cover border"
+          className="rounded-xl shadow-xl object-cover border w-full aspect-[500/350]"
           data-ai-hint={aiHint || "step visual"}
         />
       </div>
     </div>
   );
 };
-
