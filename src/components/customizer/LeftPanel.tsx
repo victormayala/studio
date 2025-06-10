@@ -24,14 +24,15 @@ import { useState } from "react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import UploadArea from "./UploadArea";
-import LayersPanel from "./LayersPanel"; // Added import
+import LayersPanel from "./LayersPanel";
+import TextToolPanel from "./TextToolPanel"; // Added import
 import { useUploads } from "@/contexts/UploadContext";
 
 const menuItems = [
   { id: "products", label: "Products", icon: Package },
   { id: "layers", label: "Layers", icon: Layers },
   { id: "uploads", label: "Uploads", icon: UploadCloud },
-  { id: "text", label: "Text Tool", icon: Type },
+  { id: "text", label: "Text", icon: Type }, // Changed label for consistency
   { id: "shapes", label: "Shapes", icon: Shapes },
   { id: "clipart", label: "Clipart", icon: Smile },
   { id: "free-designs", label: "Free Designs", icon: Palette },
@@ -40,7 +41,7 @@ const menuItems = [
 
 export default function LeftPanel() {
   const [activeItem, setActiveItem] = useState("products");
-  const { selectedCanvasImageId } = useUploads(); 
+  const { selectedCanvasImageId } = useUploads();
 
   const handleItemClick = (id: string) => {
     setActiveItem(id);
@@ -54,7 +55,9 @@ export default function LeftPanel() {
       case "uploads":
         return <UploadArea />;
       case "layers":
-        return <LayersPanel />; // Added LayersPanel
+        return <LayersPanel />;
+      case "text": // Added case for Text Tool
+        return <TextToolPanel />;
       default:
         return (
           <div className="p-6 text-center text-muted-foreground h-full flex flex-col items-center justify-center">

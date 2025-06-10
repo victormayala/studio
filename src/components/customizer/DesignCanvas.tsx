@@ -2,7 +2,7 @@
 "use client";
 
 import Image from 'next/image';
-import { useUploads, type CanvasImage } from '@/contexts/UploadContext';
+import { useUploads, type CanvasImage, type CanvasText } from '@/contexts/UploadContext'; // Added CanvasText
 import type { MouseEvent as ReactMouseEvent, TouchEvent as ReactTouchEvent } from 'react';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { InteractiveCanvasImage } from './InteractiveCanvasImage';
@@ -26,22 +26,28 @@ export default function DesignCanvas() {
     selectCanvasImage,
     selectedCanvasImageId,
     updateCanvasImage,
-    removeCanvasImage
+    removeCanvasImage,
+    canvasTexts, // Added
+    selectCanvasText, // Added
+    selectedCanvasTextId, // Added
+    // updateCanvasText, // Will be needed for text manipulation
+    // removeCanvasText, // Will be needed for text manipulation
   } = useUploads();
 
   const [activeDrag, setActiveDrag] = useState<{
     type: 'rotate' | 'resize' | 'move';
-    imageId: string;
+    itemId: string; // Changed from imageId to itemId
+    itemType: 'image' | 'text'; // Added itemType
     startX: number;
     startY: number;
     initialRotation?: number;
     initialScale?: number;
     initialX?: number;
     initialY?: number;
-    imageCenterX?: number;
-    imageCenterY?: number;
-    imageInitialWidth?: number;
-    imageInitialHeight?: number;
+    itemCenterX?: number; // Changed from imageCenterX
+    itemCenterY?: number; // Changed from imageCenterY
+    itemInitialWidth?: number; // Changed from imageInitialWidth
+    itemInitialHeight?: number; // Changed from imageInitialHeight
   } | null>(null);
 
   const canvasRef = useRef<HTMLDivElement>(null);
@@ -54,10 +60,9 @@ export default function DesignCanvas() {
   };
 
   const handleCanvasClick = (e: ReactMouseEvent<HTMLDivElement>) => {
-    // If the click is directly on the canvasRef (background), deselect.
-    // InteractiveCanvasImage and its handles use e.stopPropagation()
     if (e.target === canvasRef.current) {
         selectCanvasImage(null);
+        selectCanvasText(null); // Also deselect text
     }
   };
 
@@ -66,81 +71,110 @@ export default function DesignCanvas() {
     image: CanvasImage
   ) => {
     if (image.isLocked) return;
-    handleDragStart(e, 'move', image);
+    handleDragStart(e, 'move', image, 'image');
   };
 
+  // Generic drag start for both images and text
   const handleDragStart = (
     e: ReactMouseEvent<HTMLDivElement> | ReactTouchEvent<HTMLDivElement>,
     type: 'rotate' | 'resize' | 'move',
-    image: CanvasImage
+    item: CanvasImage | CanvasText, // Item can be image or text
+    itemType: 'image' | 'text'
   ) => {
-    if (image.isLocked && type !== 'move') return;
-    if (image.isLocked && type === 'move') return;
+    if (item.isLocked && type !== 'move') return; // Allow selecting locked items, but not moving/transforming
+    if (item.isLocked && type === 'move') return;
 
 
     e.preventDefault();
     e.stopPropagation();
-    selectCanvasImage(image.id); // Ensure selection on drag start
+    
+    if (itemType === 'image') {
+      selectCanvasImage(item.id);
+    } else {
+      selectCanvasText(item.id);
+    }
 
     if (!canvasRef.current) return;
 
     const canvasRect = canvasRef.current.getBoundingClientRect();
     const coords = getMouseOrTouchCoords(e);
 
-    const imageCenterXInCanvasPx = image.x/100 * canvasRect.width;
-    const imageCenterYInCanvasPx = image.y/100 * canvasRect.height;
+    const itemCenterXInCanvasPx = item.x/100 * canvasRect.width;
+    const itemCenterYInCanvasPx = item.y/100 * canvasRect.height;
+    
+    let itemInitialWidth = 0;
+    let itemInitialHeight = 0;
+
+    if (itemType === 'image') {
+        itemInitialWidth = BASE_IMAGE_DIMENSION;
+        itemInitialHeight = BASE_IMAGE_DIMENSION;
+    } else {
+        // For text, initial width/height might be derived differently or fixed
+        // For now, let's use a placeholder or calculate from rendered text later
+        // This part will be crucial for text resizing.
+        // For now, setting to a default or derived from item if available.
+        const textItem = item as CanvasText;
+        itemInitialWidth = textItem.width || 100; // Placeholder for text width
+        itemInitialHeight = textItem.height || 50; // Placeholder for text height
+    }
+
 
     setActiveDrag({
       type,
-      imageId: image.id,
+      itemId: item.id,
+      itemType,
       startX: coords.x,
       startY: coords.y,
-      initialRotation: image.rotation,
-      initialScale: image.scale,
-      initialX: image.x,
-      initialY: image.y,
-      imageCenterX: imageCenterXInCanvasPx,
-      imageCenterY: imageCenterYInCanvasPx,
-      imageInitialWidth: BASE_IMAGE_DIMENSION,
-      imageInitialHeight: BASE_IMAGE_DIMENSION,
+      initialRotation: item.rotation,
+      initialScale: item.scale,
+      initialX: item.x,
+      initialY: item.y,
+      itemCenterX: itemCenterXInCanvasPx,
+      itemCenterY: itemCenterYInCanvasPx,
+      itemInitialWidth,
+      itemInitialHeight,
     });
   };
 
   const handleDragging = useCallback((e: MouseEvent | TouchEvent) => {
     if (!activeDrag || !canvasRef.current) return;
-    const activeImage = canvasImages.find(img => img.id === activeDrag.imageId);
-    if (activeImage?.isLocked) {
+    
+    const activeItem = activeDrag.itemType === 'image' 
+        ? canvasImages.find(img => img.id === activeDrag.itemId)
+        : canvasTexts.find(txt => txt.id === activeDrag.itemId);
+
+    if (activeItem?.isLocked) {
       setActiveDrag(null);
       return;
     }
 
-
     const coords = getMouseOrTouchCoords(e);
     const {
-        type, imageId, startX, startY,
+        type, itemId, itemType, startX, startY,
         initialRotation, initialScale, initialX, initialY,
-        imageCenterX, imageCenterY, imageInitialWidth, imageInitialHeight
+        itemCenterX, itemCenterY, itemInitialWidth, itemInitialHeight
     } = activeDrag;
 
     const canvasRect = canvasRef.current.getBoundingClientRect();
 
-    if (type === 'rotate' && initialRotation !== undefined && imageCenterX !== undefined && imageCenterY !== undefined) {
-      const angle = Math.atan2(coords.y - (canvasRect.top + imageCenterY) , coords.x - (canvasRect.left + imageCenterX)) * (180 / Math.PI);
-      const startAngle = Math.atan2(startY - (canvasRect.top + imageCenterY), startX - (canvasRect.left + imageCenterX)) * (180 / Math.PI);
+    if (type === 'rotate' && initialRotation !== undefined && itemCenterX !== undefined && itemCenterY !== undefined) {
+      const angle = Math.atan2(coords.y - (canvasRect.top + itemCenterY) , coords.x - (canvasRect.left + itemCenterX)) * (180 / Math.PI);
+      const startAngle = Math.atan2(startY - (canvasRect.top + itemCenterY), startX - (canvasRect.left + itemCenterX)) * (180 / Math.PI);
       let newRotation = initialRotation + (angle - startAngle);
-      updateCanvasImage(imageId, { rotation: newRotation % 360 });
-    } else if (type === 'resize' && initialScale !== undefined && imageInitialWidth !== undefined && imageInitialHeight !== undefined && imageCenterX !== undefined && imageCenterY !== undefined) {
-      const distFromCenter = Math.sqrt(Math.pow(coords.x - (canvasRect.left + imageCenterX), 2) + Math.pow(coords.y - (canvasRect.top + imageCenterY), 2));
-      const initialDistFromCenter = Math.sqrt(Math.pow(startX - (canvasRect.left + imageCenterX), 2) + Math.pow(startY - (canvasRect.top + imageCenterY), 2));
+      if (itemType === 'image') updateCanvasImage(itemId, { rotation: newRotation % 360 });
+      // else updateCanvasText(itemId, { rotation: newRotation % 360 }); // TODO: Implement updateCanvasText
+    } else if (type === 'resize' && initialScale !== undefined && itemInitialWidth !== undefined && itemInitialHeight !== undefined && itemCenterX !== undefined && itemCenterY !== undefined) {
+      const distFromCenter = Math.sqrt(Math.pow(coords.x - (canvasRect.left + itemCenterX), 2) + Math.pow(coords.y - (canvasRect.top + itemCenterY), 2));
+      const initialDistFromCenter = Math.sqrt(Math.pow(startX - (canvasRect.left + itemCenterX), 2) + Math.pow(startY - (canvasRect.top + itemCenterY), 2));
 
       if (initialDistFromCenter === 0) return;
 
       const scaleRatio = distFromCenter / initialDistFromCenter;
       let newScale = initialScale * scaleRatio;
-      newScale = Math.max(0.1, Math.min(newScale, 10));
-      updateCanvasImage(imageId, { scale: newScale });
-
-    } else if (type === 'move' && initialX !== undefined && initialY !== undefined && imageInitialWidth !== undefined && imageInitialHeight !== undefined) {
+      newScale = Math.max(0.1, Math.min(newScale, 10)); // General scale limits
+      if (itemType === 'image') updateCanvasImage(itemId, { scale: newScale });
+      // else updateCanvasText(itemId, { scale: newScale }); // TODO: Implement updateCanvasText
+    } else if (type === 'move' && initialX !== undefined && initialY !== undefined && itemInitialWidth !== undefined && itemInitialHeight !== undefined) {
         const dx = coords.x - startX;
         const dy = coords.y - startY;
 
@@ -150,21 +184,25 @@ export default function DesignCanvas() {
         let newX = initialX + dxPercent;
         let newY = initialY + dyPercent;
 
-        const currentImgScale = canvasImages.find(img => img.id === imageId)?.scale || initialScale || 1;
-        const scaledImageWidthPx = imageInitialWidth * currentImgScale;
-        const scaledImageHeightPx = imageInitialHeight * currentImgScale;
+        const currentItemScale = (itemType === 'image' 
+            ? canvasImages.find(img => img.id === itemId)?.scale 
+            : canvasTexts.find(txt => txt.id === itemId)?.scale) || initialScale || 1;
+        
+        const scaledItemWidthPx = itemInitialWidth * currentItemScale;
+        const scaledItemHeightPx = itemInitialHeight * currentItemScale;
 
-        const halfWidthPercent = (scaledImageWidthPx / 2 / canvasRect.width) * 100;
-        const halfHeightPercent = (scaledImageHeightPx / 2 / canvasRect.height) * 100;
+        const halfWidthPercent = (scaledItemWidthPx / 2 / canvasRect.width) * 100;
+        const halfHeightPercent = (scaledItemHeightPx / 2 / canvasRect.height) * 100;
 
         newX = Math.max(halfWidthPercent, Math.min(newX, 100 - halfWidthPercent));
         newY = Math.max(halfHeightPercent, Math.min(newY, 100 - halfHeightPercent));
 
         if (isNaN(newX) || isNaN(newY)) return;
 
-        updateCanvasImage(imageId, { x: newX, y: newY });
+        if (itemType === 'image') updateCanvasImage(itemId, { x: newX, y: newY });
+        // else updateCanvasText(itemId, { x: newX, y: newY }); // TODO: Implement updateCanvasText
     }
-  }, [activeDrag, updateCanvasImage, canvasImages]);
+  }, [activeDrag, updateCanvasImage, canvasImages, canvasTexts]); // Added canvasTexts
 
 
   const handleDragEnd = useCallback(() => {
@@ -196,12 +234,19 @@ export default function DesignCanvas() {
     removeCanvasImage(imageId);
   };
 
+  // Placeholder for text item interactions
+  // const handleRemoveText = (e: ReactMouseEvent | ReactTouchEvent, textId: string) => {
+  //   e.stopPropagation();
+  //   removeCanvasText(textId);
+  // };
+
+
   return (
     <div
       ref={canvasRef}
       className="w-full h-full flex items-center justify-center bg-card border border-dashed border-border rounded-lg shadow-inner p-4 min-h-[500px] lg:min-h-[700px] relative overflow-hidden"
       onClick={handleCanvasClick}
-      onTouchStart={handleCanvasClick as any} // Using 'as any' for simplicity, ensure this behaves as expected on touch
+      onTouchStart={handleCanvasClick as any}
     >
       <div className="text-center product-image-container">
         <div
@@ -223,19 +268,53 @@ export default function DesignCanvas() {
               key={img.id}
               image={img}
               isSelected={img.id === selectedCanvasImageId && !img.isLocked}
-              isBeingDragged={activeDrag?.imageId === img.id && activeDrag?.type === 'move'}
+              isBeingDragged={activeDrag?.itemId === img.id && activeDrag?.type === 'move' && activeDrag?.itemType === 'image'}
               baseImageDimension={BASE_IMAGE_DIMENSION}
-              onImageSelect={selectCanvasImage} // Pass direct selection function
+              onImageSelect={selectCanvasImage}
               onImageSelectAndDragStart={handleImageSelectAndDragStart}
-              onRotateHandleMouseDown={(e, imageItem) => handleDragStart(e, 'rotate', imageItem)}
-              onResizeHandleMouseDown={(e, imageItem) => handleDragStart(e, 'resize', imageItem)}
+              onRotateHandleMouseDown={(e, imageItem) => handleDragStart(e, 'rotate', imageItem, 'image')}
+              onResizeHandleMouseDown={(e, imageItem) => handleDragStart(e, 'resize', imageItem, 'image')}
               onRemoveHandleClick={handleRemoveImage}
             />
+          ))}
+
+          {/* Render Canvas Texts */}
+          {canvasTexts.map((text) => (
+            <div
+              key={text.id}
+              className={`absolute cursor-grab whitespace-nowrap ${selectedCanvasTextId === text.id && !text.isLocked ? 'ring-2 ring-primary ring-offset-2 ring-offset-background' : ''} ${text.isLocked ? 'cursor-not-allowed opacity-70' : 'hover:ring-1 hover:ring-primary/50'}`}
+              style={{
+                top: `${text.y}%`,
+                left: `${text.x}%`,
+                zIndex: text.zIndex,
+                color: text.color,
+                fontSize: `${text.fontSize * text.scale}px`, // Apply scale to font size for now
+                fontFamily: text.fontFamily,
+                transform: `translate(-50%, -50%) rotate(${text.rotation}deg)`, // Scale is applied to font size directly for now
+                // transition: activeDrag?.itemId === text.id && activeDrag?.type === 'move' && activeDrag?.itemType === 'text' ? 'none' : 'transform 0.1s ease-out, border 0.1s ease-out',
+                // userSelect: 'none' // Prevent text selection during drag
+              }}
+              onClick={(e) => {
+                e.stopPropagation();
+                if (!text.isLocked) selectCanvasText(text.id);
+              }}
+              // onMouseDown={(e) => { // Basic move for text, more complex handles later
+              //   if (!text.isLocked) handleDragStart(e, 'move', text, 'text');
+              // }}
+              // onTouchStart={(e) => {
+              //   if (!text.isLocked) handleDragStart(e, 'move', text, 'text');
+              // }}
+            >
+              {text.content}
+              {/* TODO: Add text manipulation handles (remove, rotate, resize/edit) similar to images */}
+            </div>
           ))}
         </div>
         <p className="mt-4 text-muted-foreground font-medium">{productToDisplay.name}</p>
         <p className="text-sm text-muted-foreground">
-          {canvasImages.length > 0 ? (selectedCanvasImageId ? "Click & drag image or handles to transform. Click background to deselect." : "Click an image to select and transform it.") : "Add images using the tools on the left."}
+          {canvasImages.length > 0 || canvasTexts.length > 0 ? 
+            (selectedCanvasImageId || selectedCanvasTextId ? "Click & drag item or handles to transform. Click background to deselect." : "Click an item to select and transform it.") 
+            : "Add images or text using the tools on the left."}
         </p>
       </div>
     </div>
