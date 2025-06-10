@@ -3,8 +3,8 @@ import './globals.css';
 import { Toaster } from "@/components/ui/toaster";
 
 export const metadata: Metadata = {
-  title: 'Embedz - Product Customizer',
-  description: 'Customize your products with Embedz and generate embeddable scripts.',
+  title: 'CSTMZR - Your Product Customization Platform',
+  description: 'Easily create and embed product customizers for your e-commerce store. Connect with Shopify, WordPress, and more.',
 };
 
 export default function RootLayout({

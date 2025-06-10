@@ -16,7 +16,9 @@ export default function AppHeader() {
     <header className="flex items-center justify-between h-16 border-b bg-card shadow-sm">
       <div className="flex items-center gap-4 pl-4 md:pl-6">
         <SidebarTrigger className="md:hidden" />
-        <Logo />
+        <Link href="/customizer" aria-label="Go to Customizer">
+            <Logo />
+        </Link>
       </div>
       <div className="flex items-center gap-2 pr-4 md:pr-6">
         <Button asChild variant="outline" className="hover:bg-accent hover:text-accent-foreground">
