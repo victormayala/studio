@@ -16,10 +16,13 @@ export default function CustomizerPage() {
         
         <SidebarInset className="flex flex-col flex-1 overflow-hidden">
           <AppHeader />
-          <main className="flex flex-1 gap-4 md:gap-6 overflow-y-auto"> {/* scrollable main content, removed p-4 md:p-6 */}
-            <DesignCanvas />
-            <RightPanel />
-          </main>
+          {/* New flex container for DesignCanvas and RightPanel */}
+          <div className="flex flex-1 gap-4 md:gap-6 overflow-hidden p-4 md:p-6">
+            <main className="flex-1 overflow-y-auto"> {/* DesignCanvas container, takes most space */}
+              <DesignCanvas />
+            </main>
+            <RightPanel /> {/* RightPanel sits to the right of the main content */}
+          </div>
         </SidebarInset>
       </div>
     </SidebarProvider>
