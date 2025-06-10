@@ -38,7 +38,7 @@ export default function FaqPage() {
   return (
     <div className="flex flex-col min-h-screen bg-background">
       <MarketingHeader />
-      <main className="flex-1 py-12 md:py-20">
+      <main className="flex-1 py-12 md:py-20 bg-card">
         <div className="container mx-auto px-4">
           <div className="text-center mb-16">
             <h1 className="text-4xl md:text-5xl font-bold font-headline text-foreground mb-4">
@@ -76,3 +76,4 @@ export default function FaqPage() {
     </div>
   );
 }
+

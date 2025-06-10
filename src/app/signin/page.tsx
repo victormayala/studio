@@ -24,7 +24,7 @@ export default function SignInPage() {
   return (
     <div className="flex flex-col min-h-screen bg-background">
       <MarketingHeader />
-      <main className="flex-1 flex items-center justify-center py-12 md:py-20">
+      <main className="flex-1 flex items-center justify-center py-12 md:py-20 bg-card">
         <Card className="w-full max-w-md shadow-xl">
           <CardHeader className="text-center">
             <CardTitle className="text-3xl font-headline text-foreground">Welcome Back!</CardTitle>
@@ -47,8 +47,8 @@ export default function SignInPage() {
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <Label htmlFor="password">Password</Label>
-                  <Link href="/forgot-password" passHref legacyBehavior>
-                    <a className="text-sm text-primary hover:underline">Forgot password?</a>
+                  <Link href="/forgot-password" className="text-sm text-primary hover:underline">
+                    Forgot password?
                   </Link>
                 </div>
                 <Input 
@@ -66,8 +66,8 @@ export default function SignInPage() {
               <div className="text-center">
                 <p className="text-sm text-muted-foreground">
                   Don't have an account?{' '}
-                  <Link href="/signup" passHref legacyBehavior>
-                    <a className="font-medium text-primary hover:underline">Sign up here</a>
+                  <Link href="/signup" className="font-medium text-primary hover:underline">
+                    Sign up here
                   </Link>
                 </p>
               </div>
@@ -79,3 +79,4 @@ export default function SignInPage() {
     </div>
   );
 }
+

@@ -30,7 +30,7 @@ export default function SignUpPage() {
   return (
     <div className="flex flex-col min-h-screen bg-background">
       <MarketingHeader />
-      <main className="flex-1 flex items-center justify-center py-12 md:py-20">
+      <main className="flex-1 flex items-center justify-center py-12 md:py-20 bg-card">
          <Card className="w-full max-w-md shadow-xl">
           <CardHeader className="text-center">
             <CardTitle className="text-3xl font-headline text-foreground">Create Your Account</CardTitle>
@@ -98,3 +98,4 @@ export default function SignUpPage() {
     </div>
   );
 }
+
