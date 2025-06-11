@@ -12,7 +12,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { ArrowLeft, PlusCircle, Trash2, Image as ImageIcon, Move, Maximize2 } from 'lucide-react';
+import { ArrowLeft, PlusCircle, Trash2, Image as ImageIcon, Maximize2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface BoundaryBox {
@@ -49,19 +49,19 @@ const mockProductDetails: ProductDetails = {
 };
 
 interface ActiveDragState {
-  type: 'move' | 'resize_br'; // br for bottom-right
+  type: 'move' | 'resize_br' | 'resize_bl' | 'resize_tr' | 'resize_tl';
   boxId: string;
-  pointerStartX: number; // Initial mouse/touch X relative to viewport
-  pointerStartY: number; // Initial mouse/touch Y relative to viewport
-  initialBoxX: number;    // Box's X at drag start (percentage)
-  initialBoxY: number;    // Box's Y at drag start (percentage)
-  initialBoxWidth: number; // Box's width at drag start (percentage)
-  initialBoxHeight: number;// Box's height at drag start (percentage)
-  containerWidthPx: number; // Pixel width of the image container
-  containerHeightPx: number;// Pixel height of the image container
+  pointerStartX: number;
+  pointerStartY: number;
+  initialBoxX: number;
+  initialBoxY: number;
+  initialBoxWidth: number;
+  initialBoxHeight: number;
+  containerWidthPx: number;
+  containerHeightPx: number;
 }
 
-const MIN_BOX_SIZE_PERCENT = 5; // Minimum 5% width/height
+const MIN_BOX_SIZE_PERCENT = 5; 
 
 export default function ProductOptionsPage() {
   const params = useParams();
@@ -83,7 +83,7 @@ export default function ProductOptionsPage() {
             ...mockProductDetails, 
             id: productId, 
             name: `Product ${productId}`, 
-            imageUrl: `https://placehold.co/600x600.png`, // Ensure generic placeholders don't use text queries
+            imageUrl: `https://placehold.co/600x600.png`,
             aiHint: 'product image', 
             boundaryBoxes: [], 
           };
@@ -102,7 +102,7 @@ export default function ProductOptionsPage() {
   const handleInteractionStart = useCallback((
     e: React.MouseEvent<HTMLDivElement> | React.TouchEvent<HTMLDivElement>,
     boxId: string,
-    type: 'move' | 'resize_br'
+    type: ActiveDragState['type']
   ) => {
     e.preventDefault();
     e.stopPropagation();
@@ -144,29 +144,68 @@ export default function ProductOptionsPage() {
     let newWidth = activeDrag.initialBoxWidth;
     let newHeight = activeDrag.initialBoxHeight;
 
+    // Step 1: Calculate proposed new values based on drag type
     if (activeDrag.type === 'move') {
       newX = activeDrag.initialBoxX + deltaXPercent;
       newY = activeDrag.initialBoxY + deltaYPercent;
-    } else if (activeDrag.type === 'resize_br') {
+    } else if (activeDrag.type === 'resize_br') { // Bottom-Right
       newWidth = activeDrag.initialBoxWidth + deltaXPercent;
       newHeight = activeDrag.initialBoxHeight + deltaYPercent;
+    } else if (activeDrag.type === 'resize_bl') { // Bottom-Left
+      newX = activeDrag.initialBoxX + deltaXPercent;
+      newWidth = activeDrag.initialBoxWidth - deltaXPercent;
+      newHeight = activeDrag.initialBoxHeight + deltaYPercent;
+    } else if (activeDrag.type === 'resize_tr') { // Top-Right
+      newY = activeDrag.initialBoxY + deltaYPercent;
+      newWidth = activeDrag.initialBoxWidth + deltaXPercent;
+      newHeight = activeDrag.initialBoxHeight - deltaYPercent;
+    } else if (activeDrag.type === 'resize_tl') { // Top-Left
+      newX = activeDrag.initialBoxX + deltaXPercent;
+      newY = activeDrag.initialBoxY + deltaYPercent;
+      newWidth = activeDrag.initialBoxWidth - deltaXPercent;
+      newHeight = activeDrag.initialBoxHeight - deltaYPercent;
     }
-    
-    // Apply constraints
+
+    // Step 2: Apply MIN_BOX_SIZE_PERCENT constraint to width and height
+    const originalProposedWidth = newWidth;
+    const originalProposedHeight = newHeight;
     newWidth = Math.max(MIN_BOX_SIZE_PERCENT, newWidth);
     newHeight = Math.max(MIN_BOX_SIZE_PERCENT, newHeight);
 
-    newX = Math.max(0, Math.min(newX, 100 - newWidth));
-    newY = Math.max(0, Math.min(newY, 100 - newHeight));
-    
-    // Re-check width/height based on new x/y (in case x/y were clamped)
+    // Step 3: Adjust X or Y if width/height was clamped by MIN_BOX_SIZE_PERCENT
+    if (activeDrag.type === 'resize_tl') {
+      if (newWidth !== originalProposedWidth) { 
+        newX = activeDrag.initialBoxX + activeDrag.initialBoxWidth - newWidth;
+      }
+      if (newHeight !== originalProposedHeight) { 
+        newY = activeDrag.initialBoxY + activeDrag.initialBoxHeight - newHeight;
+      }
+    } else if (activeDrag.type === 'resize_tr') {
+      if (newHeight !== originalProposedHeight) { 
+        newY = activeDrag.initialBoxY + activeDrag.initialBoxHeight - newHeight;
+      }
+    } else if (activeDrag.type === 'resize_bl') {
+      if (newWidth !== originalProposedWidth) { 
+        newX = activeDrag.initialBoxX + activeDrag.initialBoxWidth - newWidth;
+      }
+    }
+
+    // Step 4 & 6: Clamp X and then Width
+    newX = Math.max(0, Math.min(newX, 100 - MIN_BOX_SIZE_PERCENT));
     newWidth = Math.min(newWidth, 100 - newX);
-    newHeight = Math.min(newHeight, 100 - newY);
-
-    // Final check for min size after adjustments
     newWidth = Math.max(MIN_BOX_SIZE_PERCENT, newWidth);
-    newHeight = Math.max(MIN_BOX_SIZE_PERCENT, newHeight);
+    newX = Math.max(0, Math.min(newX, 100 - newWidth));
 
+
+    // Step 5 & 7: Clamp Y and then Height
+    newY = Math.max(0, Math.min(newY, 100 - MIN_BOX_SIZE_PERCENT));
+    newHeight = Math.min(newHeight, 100 - newY);
+    newHeight = Math.max(MIN_BOX_SIZE_PERCENT, newHeight);
+    newY = Math.max(0, Math.min(newY, 100 - newHeight));
+
+    if (isNaN(newX) || isNaN(newY) || isNaN(newWidth) || isNaN(newHeight)) {
+        return; 
+    }
 
     setProduct(prev => prev ? {
       ...prev,
@@ -292,14 +331,13 @@ export default function ProductOptionsPage() {
           let newBox = { ...box };
           const parsedValue = parseFloat(value);
 
-          if (isNaN(parsedValue)) return box; // If parsing fails, return original box
+          if (isNaN(parsedValue)) return box; 
 
           if (property === 'x') newBox.x = parsedValue;
           else if (property === 'y') newBox.y = parsedValue;
           else if (property === 'width') newBox.width = parsedValue;
           else if (property === 'height') newBox.height = parsedValue;
 
-          // Apply constraints
           newBox.width = Math.max(MIN_BOX_SIZE_PERCENT, newBox.width);
           newBox.height = Math.max(MIN_BOX_SIZE_PERCENT, newBox.height);
           newBox.x = Math.max(0, Math.min(newBox.x, 100 - newBox.width));
@@ -309,7 +347,6 @@ export default function ProductOptionsPage() {
           newBox.width = Math.max(MIN_BOX_SIZE_PERCENT, newBox.width);
           newBox.height = Math.max(MIN_BOX_SIZE_PERCENT, newBox.height);
           
-          // Ensure values are not NaN after constraints (e.g. if 100-newBox.width becomes negative due to huge width input)
           if (isNaN(newBox.x)) newBox.x = 0;
           if (isNaN(newBox.y)) newBox.y = 0;
           if (isNaN(newBox.width)) newBox.width = MIN_BOX_SIZE_PERCENT;
@@ -395,14 +432,44 @@ export default function ProductOptionsPage() {
                     onTouchStart={(e) => handleInteractionStart(e, box.id, 'move')}
                   >
                     {selectedBoundaryBoxId === box.id && (
-                      <div
-                        className="absolute -bottom-1.5 -right-1.5 w-4 h-4 bg-primary rounded-full border-2 border-background shadow-md cursor-nwse-resize hover:opacity-80 active:opacity-100"
-                        title="Resize Area"
-                        onMouseDown={(e) => handleInteractionStart(e, box.id, 'resize_br')}
-                        onTouchStart={(e) => handleInteractionStart(e, box.id, 'resize_br')}
-                      >
-                        <Maximize2 className="w-2.5 h-2.5 text-primary-foreground absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
-                      </div>
+                      <>
+                        {/* Top-Left Resize Handle */}
+                        <div
+                          className="absolute -top-1.5 -left-1.5 w-4 h-4 bg-primary rounded-full border-2 border-background shadow-md cursor-nwse-resize hover:opacity-80 active:opacity-100"
+                          title="Resize Area (Top-Left)"
+                          onMouseDown={(e) => handleInteractionStart(e, box.id, 'resize_tl')}
+                          onTouchStart={(e) => handleInteractionStart(e, box.id, 'resize_tl')}
+                        >
+                          <Maximize2 className="w-2.5 h-2.5 text-primary-foreground absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
+                        </div>
+                        {/* Top-Right Resize Handle */}
+                        <div
+                          className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-primary rounded-full border-2 border-background shadow-md cursor-nesw-resize hover:opacity-80 active:opacity-100"
+                          title="Resize Area (Top-Right)"
+                          onMouseDown={(e) => handleInteractionStart(e, box.id, 'resize_tr')}
+                          onTouchStart={(e) => handleInteractionStart(e, box.id, 'resize_tr')}
+                        >
+                          <Maximize2 className="w-2.5 h-2.5 text-primary-foreground absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
+                        </div>
+                        {/* Bottom-Left Resize Handle */}
+                        <div
+                          className="absolute -bottom-1.5 -left-1.5 w-4 h-4 bg-primary rounded-full border-2 border-background shadow-md cursor-nesw-resize hover:opacity-80 active:opacity-100"
+                          title="Resize Area (Bottom-Left)"
+                          onMouseDown={(e) => handleInteractionStart(e, box.id, 'resize_bl')}
+                          onTouchStart={(e) => handleInteractionStart(e, box.id, 'resize_bl')}
+                        >
+                          <Maximize2 className="w-2.5 h-2.5 text-primary-foreground absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
+                        </div>
+                        {/* Bottom-Right Resize Handle */}
+                        <div
+                          className="absolute -bottom-1.5 -right-1.5 w-4 h-4 bg-primary rounded-full border-2 border-background shadow-md cursor-nwse-resize hover:opacity-80 active:opacity-100"
+                          title="Resize Area (Bottom-Right)"
+                          onMouseDown={(e) => handleInteractionStart(e, box.id, 'resize_br')}
+                          onTouchStart={(e) => handleInteractionStart(e, box.id, 'resize_br')}
+                        >
+                          <Maximize2 className="w-2.5 h-2.5 text-primary-foreground absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
+                        </div>
+                      </>
                     )}
                     <div className="absolute top-0.5 left-0.5 text-[8px] text-primary-foreground bg-primary/70 px-1 py-0.5 rounded-br-sm opacity-0 group-hover/box:opacity-100 group-[.is-selected]/box:opacity-100 transition-opacity select-none pointer-events-none">
                         {box.name}
@@ -411,7 +478,7 @@ export default function ProductOptionsPage() {
                 ))}
               </div>
               <p className="text-xs text-muted-foreground mt-2 text-center">
-                Click & drag to move areas. Use handles to resize.
+                Click & drag to move areas. Use corner handles to resize.
               </p>
             </CardContent>
           </Card>
@@ -457,19 +524,19 @@ export default function ProductOptionsPage() {
                           <div className="grid grid-cols-2 gap-x-3 gap-y-2">
                             <div>
                               <Label htmlFor={`box-x-${box.id}`} className="text-xs">X</Label>
-                              <Input type="number" step="0.1" min="0" max="100" id={`box-x-${box.id}`} value={box.x} onChange={(e) => handleBoundaryBoxPropertyChange(box.id, 'x', e.target.value)} className="h-8 text-xs w-full" onClick={(e) => e.stopPropagation()} />
+                              <Input type="number" step="0.1" min="0" max="100" id={`box-x-${box.id}`} value={box.x.toFixed(1)} onChange={(e) => handleBoundaryBoxPropertyChange(box.id, 'x', e.target.value)} className="h-8 text-xs w-full" onClick={(e) => e.stopPropagation()} />
                             </div>
                             <div>
                               <Label htmlFor={`box-y-${box.id}`} className="text-xs">Y</Label>
-                              <Input type="number" step="0.1" min="0" max="100" id={`box-y-${box.id}`} value={box.y} onChange={(e) => handleBoundaryBoxPropertyChange(box.id, 'y', e.target.value)} className="h-8 text-xs w-full" onClick={(e) => e.stopPropagation()} />
+                              <Input type="number" step="0.1" min="0" max="100" id={`box-y-${box.id}`} value={box.y.toFixed(1)} onChange={(e) => handleBoundaryBoxPropertyChange(box.id, 'y', e.target.value)} className="h-8 text-xs w-full" onClick={(e) => e.stopPropagation()} />
                             </div>
                             <div>
                               <Label htmlFor={`box-w-${box.id}`} className="text-xs">Width</Label>
-                              <Input type="number" step="0.1" min={MIN_BOX_SIZE_PERCENT.toString()} max="100" id={`box-w-${box.id}`} value={box.width} onChange={(e) => handleBoundaryBoxPropertyChange(box.id, 'width', e.target.value)} className="h-8 text-xs w-full" onClick={(e) => e.stopPropagation()} />
+                              <Input type="number" step="0.1" min={MIN_BOX_SIZE_PERCENT.toString()} max="100" id={`box-w-${box.id}`} value={box.width.toFixed(1)} onChange={(e) => handleBoundaryBoxPropertyChange(box.id, 'width', e.target.value)} className="h-8 text-xs w-full" onClick={(e) => e.stopPropagation()} />
                             </div>
                             <div>
                               <Label htmlFor={`box-h-${box.id}`} className="text-xs">Height</Label>
-                              <Input type="number" step="0.1" min={MIN_BOX_SIZE_PERCENT.toString()} max="100" id={`box-h-${box.id}`} value={box.height} onChange={(e) => handleBoundaryBoxPropertyChange(box.id, 'height', e.target.value)} className="h-8 text-xs w-full" onClick={(e) => e.stopPropagation()} />
+                              <Input type="number" step="0.1" min={MIN_BOX_SIZE_PERCENT.toString()} max="100" id={`box-h-${box.id}`} value={box.height.toFixed(1)} onChange={(e) => handleBoundaryBoxPropertyChange(box.id, 'height', e.target.value)} className="h-8 text-xs w-full" onClick={(e) => e.stopPropagation()} />
                             </div>
                           </div>
                         </div>
@@ -650,6 +717,3 @@ export default function ProductOptionsPage() {
     </div>
   );
 }
-
-
-    
