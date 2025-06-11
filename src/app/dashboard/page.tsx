@@ -1,37 +1,79 @@
 
 "use client";
 
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { PlusCircle, MoreHorizontal, Settings, Code, Trash2 } from "lucide-react";
+import { PlusCircle, MoreHorizontal, Settings, Code, Trash2, AlertTriangle, Loader2 } from "lucide-react";
 import Link from "next/link";
-import { useRouter } from 'next/navigation'; // Added useRouter
+import { useRouter } from 'next/navigation';
+import NextImage from 'next/image'; // Using NextImage
+import { fetchWooCommerceProducts } from "@/app/actions/woocommerceActions";
+import type { WCCustomProduct } from '@/types/woocommerce';
+import {format} from 'date-fns';
 
-interface MockProduct {
-  id: string;
+
+// Updated interface to better match expected data shape after fetching from WooCommerce
+interface DisplayProduct {
+  id: string; // Keep as string for consistency, WooCommerce ID is number
   name: string;
-  status: 'Customizable' | 'Draft' | 'Archived';
+  status: string; // WooCommerce status can be 'publish', 'draft', etc.
   lastEdited: string;
   imageUrl?: string;
-  aiHint?: string;
+  aiHint?: string; // This will be generic for WC products
 }
 
-const mockProducts: MockProduct[] = [
-  { id: 'prod_1', name: 'Classic T-Shirt', status: 'Customizable', lastEdited: '2024-07-28', imageUrl: 'https://placehold.co/100x100.png', aiHint: 't-shirt' },
-  { id: 'prod_2', name: 'Coffee Mug - Unfinished', status: 'Draft', lastEdited: '2024-07-25', imageUrl: 'https://placehold.co/100x100.png', aiHint: 'coffee mug' },
-  { id: 'prod_3', name: 'Customizable Phone Case', status: 'Customizable', lastEdited: '2024-07-22', imageUrl: 'https://placehold.co/100x100.png', aiHint: 'phone case' },
-  { id: 'prod_4', name: 'Archived Cap Design', status: 'Archived', lastEdited: '2024-06-15', imageUrl: 'https://placehold.co/100x100.png', aiHint: 'cap' },
-];
-
 export default function DashboardPage() {
-  const router = useRouter(); // Initialized router
+  const router = useRouter();
+  const [products, setProducts] = useState<DisplayProduct[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    async function loadProducts() {
+      setIsLoading(true);
+      setError(null);
+      const response = await fetchWooCommerceProducts();
+      if (response.error) {
+        setError(response.error);
+        setProducts([]); // Clear products on error
+      } else if (response.products) {
+        const displayProducts = response.products.map((p: WCCustomProduct) => ({
+          id: p.id.toString(),
+          name: p.name,
+          status: p.status === 'publish' ? 'Customizable' : p.status.charAt(0).toUpperCase() + p.status.slice(1), // Map 'publish' to 'Customizable'
+          lastEdited: p.date_modified ? format(new Date(p.date_modified), 'yyyy-MM-dd') : 'N/A',
+          imageUrl: p.images && p.images.length > 0 ? p.images[0].src : 'https://placehold.co/100x100/eee/ccc.png?text=No+Image',
+          aiHint: p.name ? p.name.toLowerCase().split(' ').slice(0,2).join(' ') : 'product image',
+        }));
+        setProducts(displayProducts);
+      }
+      setIsLoading(false);
+    }
+    loadProducts();
+  }, []);
 
   const handleAddNewProduct = () => {
-    alert("Add New Product functionality coming soon!");
+    // This should eventually lead to a page/modal to create a product configuration
+    // which might then be linked to a WooCommerce product or be a standalone customizable item.
+    alert("Add New Product (Configuration) functionality coming soon!");
   };
+
+  const getStatusBadgeVariant = (status: string): "default" | "secondary" | "outline" => {
+    if (status === 'Customizable') return 'default'; // Green
+    if (status === 'Draft') return 'secondary'; // Yellow
+    return 'outline'; // Grey
+  };
+  
+  const getStatusBadgeClassName = (status: string): string => {
+    if (status === 'Customizable') return 'bg-green-500/20 text-green-700 dark:text-green-400 border-green-500/30 hover:bg-green-500/30';
+    if (status === 'Draft') return 'bg-yellow-500/20 text-yellow-700 dark:text-yellow-400 border-yellow-500/30 hover:bg-yellow-500/30';
+    return 'bg-gray-500/20 text-gray-700 dark:text-gray-400 border-gray-500/30 hover:bg-gray-500/30';
+  };
+
 
   return (
     <div className="flex flex-col min-h-screen">
@@ -48,7 +90,7 @@ export default function DashboardPage() {
             </div>
             <Button onClick={handleAddNewProduct} className="bg-primary text-primary-foreground hover:bg-primary/90">
               <PlusCircle className="mr-2 h-5 w-5" />
-              Add New Product
+              Add Product Configuration
             </Button>
           </div>
 
@@ -56,11 +98,23 @@ export default function DashboardPage() {
             <CardHeader>
               <CardTitle className="font-headline text-xl text-card-foreground">Your Products</CardTitle>
               <CardDescription className="text-muted-foreground">
-                View, edit, and manage your customizable products.
+                View, edit, and manage your customizable products. Products are fetched from WooCommerce.
               </CardDescription>
             </CardHeader>
             <CardContent>
-              {mockProducts.length > 0 ? (
+              {isLoading ? (
+                <div className="flex items-center justify-center py-10">
+                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                  <p className="ml-2 text-muted-foreground">Loading products from WooCommerce...</p>
+                </div>
+              ) : error ? (
+                <div className="text-center py-10 text-destructive">
+                  <AlertTriangle className="mx-auto h-12 w-12 mb-2" />
+                  <p className="font-semibold">Error loading products:</p>
+                  <p className="text-sm">{error}</p>
+                  <p className="text-xs mt-2">Please check your WooCommerce API settings in .env and ensure your store is accessible.</p>
+                </div>
+              ) : products.length > 0 ? (
                 <div className="overflow-x-auto">
                   <Table>
                     <TableHeader>
@@ -68,18 +122,20 @@ export default function DashboardPage() {
                         <TableHead className="w-[80px] hidden sm:table-cell text-muted-foreground">Image</TableHead>
                         <TableHead className="text-muted-foreground">Name</TableHead>
                         <TableHead className="text-muted-foreground">Status</TableHead>
-                        <TableHead className="hidden md:table-cell text-muted-foreground">Last Edited</TableHead>
+                        <TableHead className="hidden md:table-cell text-muted-foreground">Last Edited (WooCommerce)</TableHead>
                         <TableHead className="text-right text-muted-foreground">Actions</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {mockProducts.map((product) => (
+                      {products.map((product) => (
                         <TableRow key={product.id} className="hover:bg-muted/50">
                           <TableCell className="hidden sm:table-cell">
-                            {product.imageUrl ? (
-                              <img
+                            {product.imageUrl && product.imageUrl !== 'https://placehold.co/100x100/eee/ccc.png?text=No+Image' ? (
+                              <NextImage
                                 src={product.imageUrl}
                                 alt={product.name}
+                                width={48} // specify width
+                                height={48} // specify height
                                 className="h-12 w-12 rounded-md object-cover border border-border"
                                 data-ai-hint={product.aiHint || "product thumbnail"}
                               />
@@ -92,16 +148,8 @@ export default function DashboardPage() {
                           <TableCell className="font-medium text-card-foreground">{product.name}</TableCell>
                           <TableCell>
                             <Badge
-                              variant={
-                                product.status === 'Customizable' ? 'default' :
-                                product.status === 'Draft' ? 'secondary' :
-                                'outline'
-                              }
-                              className={
-                                product.status === 'Customizable' ? 'bg-green-500/20 text-green-700 dark:text-green-400 border-green-500/30 hover:bg-green-500/30' :
-                                product.status === 'Draft' ? 'bg-yellow-500/20 text-yellow-700 dark:text-yellow-400 border-yellow-500/30 hover:bg-yellow-500/30' :
-                                'bg-gray-500/20 text-gray-700 dark:text-gray-400 border-gray-500/30 hover:bg-gray-500/30'
-                              }
+                              variant={getStatusBadgeVariant(product.status)}
+                              className={getStatusBadgeClassName(product.status)}
                             >
                               {product.status}
                             </Badge>
@@ -116,21 +164,21 @@ export default function DashboardPage() {
                                 </Button>
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end" className="bg-popover border-border">
-                                <DropdownMenuItem 
+                                <DropdownMenuItem
                                   onClick={() => router.push(`/dashboard/products/${product.id}/options`)}
                                   className="hover:bg-accent focus:bg-accent cursor-pointer"
                                 >
                                   <Settings className="mr-2 h-4 w-4" />
                                   Product Options
                                 </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => alert(`Embed code for ${product.name}`)} className="hover:bg-accent focus:bg-accent cursor-pointer">
+                                <DropdownMenuItem onClick={() => router.push(`/customizer?productId=${product.id}`)} className="hover:bg-accent focus:bg-accent cursor-pointer">
                                   <Code className="mr-2 h-4 w-4" />
-                                  Get Embed Code
+                                  Open Customizer
                                 </DropdownMenuItem>
-                                <DropdownMenuItem className="text-destructive hover:!bg-destructive/10 focus:!bg-destructive/10 focus:!text-destructive cursor-pointer" onClick={() => alert(`Archive ${product.name}`)}>
+                                {/* <DropdownMenuItem className="text-destructive hover:!bg-destructive/10 focus:!bg-destructive/10 focus:!text-destructive cursor-pointer" onClick={() => alert(`Archive ${product.name}`)}>
                                   <Trash2 className="mr-2 h-4 w-4" />
                                   Archive
-                                </DropdownMenuItem>
+                                </DropdownMenuItem> */}
                               </DropdownMenuContent>
                             </DropdownMenu>
                           </TableCell>
@@ -141,10 +189,10 @@ export default function DashboardPage() {
                 </div>
               ) : (
                 <div className="text-center py-10">
-                  <p className="text-muted-foreground mb-2">You haven't added any products yet.</p>
+                  <p className="text-muted-foreground mb-2">No products found in your WooCommerce store.</p>
                   <Button onClick={handleAddNewProduct} variant="outline" className="hover:bg-accent hover:text-accent-foreground">
                     <PlusCircle className="mr-2 h-4 w-4" />
-                    Add Your First Product
+                    Configure First Product
                   </Button>
                 </div>
               )}
