@@ -6,8 +6,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { PlusCircle, MoreHorizontal, Settings, Code, Trash2 } from "lucide-react"; // Added Settings
+import { PlusCircle, MoreHorizontal, Settings, Code, Trash2 } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from 'next/navigation'; // Added useRouter
 
 interface MockProduct {
   id: string;
@@ -26,6 +27,8 @@ const mockProducts: MockProduct[] = [
 ];
 
 export default function DashboardPage() {
+  const router = useRouter(); // Initialized router
+
   const handleAddNewProduct = () => {
     alert("Add New Product functionality coming soon!");
   };
@@ -113,11 +116,12 @@ export default function DashboardPage() {
                                 </Button>
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end" className="bg-popover border-border">
-                                <DropdownMenuItem asChild className="hover:bg-accent focus:bg-accent cursor-pointer">
-                                  <Link href={`/dashboard/products/${product.id}/options`}>
-                                    <Settings className="mr-2 h-4 w-4" />
-                                    Product Options
-                                  </Link>
+                                <DropdownMenuItem 
+                                  onClick={() => router.push(`/dashboard/products/${product.id}/options`)}
+                                  className="hover:bg-accent focus:bg-accent cursor-pointer"
+                                >
+                                  <Settings className="mr-2 h-4 w-4" />
+                                  Product Options
                                 </DropdownMenuItem>
                                 <DropdownMenuItem onClick={() => alert(`Embed code for ${product.name}`)} className="hover:bg-accent focus:bg-accent cursor-pointer">
                                   <Code className="mr-2 h-4 w-4" />
