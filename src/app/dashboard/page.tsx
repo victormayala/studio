@@ -9,7 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { PlusCircle, MoreHorizontal, Settings, Code, Trash2, AlertTriangle, Loader2, LogOut, Link as LinkIcon, KeyRound, Save, Package as PackageIcon, PlugZap, UserCircle } from "lucide-react"; // Added PackageIcon, PlugZap, UserCircle
+import { PlusCircle, MoreHorizontal, Settings, Code, Trash2, AlertTriangle, Loader2, LogOut, Link as LinkIcon, KeyRound, Save, Package as PackageIcon, PlugZap, UserCircle, XCircle } from "lucide-react"; // Added XCircle
 import Link from "next/link";
 import { useRouter } from 'next/navigation';
 import NextImage from 'next/image';
@@ -20,7 +20,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast"; 
 import AppHeader from "@/components/layout/AppHeader"; 
 import { UploadProvider } from "@/contexts/UploadContext";
-import { SidebarProvider, Sidebar, SidebarHeader, SidebarContent, SidebarFooter, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarInset } from "@/components/ui/sidebar"; // Added Sidebar components
+import { SidebarProvider, Sidebar, SidebarHeader, SidebarContent, SidebarFooter, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarInset } from "@/components/ui/sidebar";
 
 interface DisplayProduct {
   id: string;
@@ -46,6 +46,7 @@ export default function DashboardPage() {
   const [consumerKey, setConsumerKey] = useState('');
   const [consumerSecret, setConsumerSecret] = useState('');
   const [isSavingCredentials, setIsSavingCredentials] = useState(false);
+  const [isClearingCredentials, setIsClearingCredentials] = useState(false);
 
   const [activeTab, setActiveTab] = useState<ActiveDashboardTab>('products');
 
@@ -56,59 +57,60 @@ export default function DashboardPage() {
     }
   }, [user, authIsLoading, router]);
 
+  const loadProductsWithCredentials = useCallback(async (credentials?: { storeUrl: string; consumerKey: string; consumerSecret: string }) => {
+    setIsLoadingProducts(true);
+    setError(null);
+    
+    let response;
+    if (credentials && credentials.storeUrl && credentials.consumerKey && credentials.consumerSecret) {
+       toast({
+        title: "Using User Credentials",
+        description: "Fetching products using your saved WooCommerce store connection.",
+        duration: 3000,
+      });
+      response = await fetchWooCommerceProducts(credentials);
+    } else {
+      toast({
+        title: "Using Global Credentials",
+        description: "Attempting to fetch products using the application's default WooCommerce connection.",
+        duration: 3000,
+      });
+      response = await fetchWooCommerceProducts(); // Fallback to global .env credentials
+    }
+
+    if (response.error) {
+      setError(response.error);
+      setProducts([]);
+    } else if (response.products) {
+      const displayProducts = response.products.map((p: WCCustomProduct) => ({
+        id: p.id.toString(),
+        name: p.name,
+        status: p.status === 'publish' ? 'Customizable' : p.status.charAt(0).toUpperCase() + p.status.slice(1),
+        lastEdited: p.date_modified ? format(new Date(p.date_modified), 'yyyy-MM-dd') : 'N/A',
+        imageUrl: p.images && p.images.length > 0 ? p.images[0].src : 'https://placehold.co/100x100/eee/ccc.png?text=No+Image',
+        aiHint: p.name ? p.name.toLowerCase().split(' ').slice(0,2).join(' ') : 'product image',
+      }));
+      setProducts(displayProducts);
+    }
+    setIsLoadingProducts(false);
+  }, [toast]);
+
+
   useEffect(() => {
     if (user && activeTab === 'products') {
-      async function loadProducts() {
-        setIsLoadingProducts(true);
-        setError(null);
+      const userStoreUrl = localStorage.getItem(`wc_store_url_${user.id}`);
+      const userConsumerKey = localStorage.getItem(`wc_consumer_key_${user.id}`);
+      const userConsumerSecret = localStorage.getItem(`wc_consumer_secret_${user.id}`);
 
-        // Attempt to load user-specific credentials from localStorage
-        const userStoreUrl = localStorage.getItem(`wc_store_url_${user!.id}`);
-        const userConsumerKey = localStorage.getItem(`wc_consumer_key_${user!.id}`);
-        const userConsumerSecret = localStorage.getItem(`wc_consumer_secret_${user!.id}`);
-
-        let response;
-        if (userStoreUrl && userConsumerKey && userConsumerSecret) {
-          toast({
-            title: "Using User Credentials",
-            description: "Fetching products using your saved WooCommerce store connection.",
-            duration: 3000,
-          });
-          response = await fetchWooCommerceProducts({ 
-            storeUrl: userStoreUrl, 
-            consumerKey: userConsumerKey, 
-            consumerSecret: userConsumerSecret 
-          });
-        } else {
-          toast({
-            title: "Using Global Credentials",
-            description: "Fetching products using the application's default WooCommerce connection (if configured).",
-            duration: 3000,
-          });
-          response = await fetchWooCommerceProducts(); // Fallback to global .env credentials
-        }
-
-        if (response.error) {
-          setError(response.error);
-          setProducts([]);
-        } else if (response.products) {
-          const displayProducts = response.products.map((p: WCCustomProduct) => ({
-            id: p.id.toString(),
-            name: p.name,
-            status: p.status === 'publish' ? 'Customizable' : p.status.charAt(0).toUpperCase() + p.status.slice(1),
-            lastEdited: p.date_modified ? format(new Date(p.date_modified), 'yyyy-MM-dd') : 'N/A',
-            imageUrl: p.images && p.images.length > 0 ? p.images[0].src : 'https://placehold.co/100x100/eee/ccc.png?text=No+Image',
-            aiHint: p.name ? p.name.toLowerCase().split(' ').slice(0,2).join(' ') : 'product image',
-          }));
-          setProducts(displayProducts);
-        }
-        setIsLoadingProducts(false);
+      if (userStoreUrl && userConsumerKey && userConsumerSecret) {
+        loadProductsWithCredentials({ storeUrl: userStoreUrl, consumerKey: userConsumerKey, consumerSecret: userConsumerSecret });
+      } else {
+        loadProductsWithCredentials(); // No user-specific creds, try global
       }
-      loadProducts();
     } else if (activeTab !== 'products') {
-      setIsLoadingProducts(false);
+      setIsLoadingProducts(false); // Not on products tab, no need to load
     }
-  }, [user, activeTab, toast]); 
+  }, [user, activeTab, loadProductsWithCredentials]); 
 
   const handleAddNewProduct = () => {
     alert("Add New Product (Configuration) functionality coming soon!");
@@ -130,7 +132,6 @@ export default function DashboardPage() {
     e.preventDefault();
     setIsSavingCredentials(true);
     
-    // Basic validation
     if (!storeUrl.trim() || !consumerKey.trim() || !consumerSecret.trim()) {
         toast({
             title: "Missing Fields",
@@ -150,9 +151,7 @@ export default function DashboardPage() {
         return;
     }
 
-
-    // Simulate API call to validate/save credentials
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate API call
 
     if (user) {
       try {
@@ -161,45 +160,10 @@ export default function DashboardPage() {
         localStorage.setItem(`wc_consumer_secret_${user.id}`, consumerSecret); 
         toast({
           title: "Credentials Saved",
-          description: "Your WooCommerce credentials have been saved locally for this session. Products will refresh if you are on the 'Products' tab.",
+          description: "Your WooCommerce credentials have been saved locally. Products will refresh if you are on the 'Products' tab.",
         });
-        // If currently on products tab, trigger a reload of products
         if (activeTab === 'products') {
-            // This forces the useEffect for product loading to re-run
-            // A more sophisticated approach might involve a dedicated refresh function
-            // or making `activeTab` a dependency that changes in a way to trigger reload.
-            // For now, we can briefly switch tabs or rely on next render if activeTab is already 'products'.
-            // To ensure it re-fetches, we can temporarily set activeTab to something else and back,
-            // or add a new state variable that a product fetching useEffect depends on.
-            // For simplicity here, let's assume the user might navigate or the existing useEffect dependency `user` is enough.
-            // A more direct re-fetch would be ideal in a real app.
-            // Example: setProducts([]); setIsLoadingProducts(true); // then let useEffect run again
-            // For now, we'll rely on the user potentially switching tabs or an app refresh.
-            // A better way: trigger the product load effect directly.
-             async function reloadProductsAfterSave() {
-                setIsLoadingProducts(true);
-                setError(null);
-                const response = await fetchWooCommerceProducts({ storeUrl, consumerKey, consumerSecret });
-                 if (response.error) {
-                  setError(response.error);
-                  setProducts([]);
-                } else if (response.products) {
-                  const displayProducts = response.products.map((p: WCCustomProduct) => ({
-                    id: p.id.toString(),
-                    name: p.name,
-                    status: p.status === 'publish' ? 'Customizable' : p.status.charAt(0).toUpperCase() + p.status.slice(1),
-                    lastEdited: p.date_modified ? format(new Date(p.date_modified), 'yyyy-MM-dd') : 'N/A',
-                    imageUrl: p.images && p.images.length > 0 ? p.images[0].src : 'https://placehold.co/100x100/eee/ccc.png?text=No+Image',
-                    aiHint: p.name ? p.name.toLowerCase().split(' ').slice(0,2).join(' ') : 'product image',
-                  }));
-                  setProducts(displayProducts);
-                }
-                setIsLoadingProducts(false);
-            }
-            if (activeTab === 'products') {
-                 reloadProductsAfterSave();
-            }
-
+             loadProductsWithCredentials({ storeUrl, consumerKey, consumerSecret });
         }
       } catch (error) {
          toast({
@@ -211,6 +175,35 @@ export default function DashboardPage() {
     }
     setIsSavingCredentials(false);
   };
+  
+  const handleClearCredentials = async () => {
+    setIsClearingCredentials(true);
+    if (user) {
+        try {
+            localStorage.removeItem(`wc_store_url_${user.id}`);
+            localStorage.removeItem(`wc_consumer_key_${user.id}`);
+            localStorage.removeItem(`wc_consumer_secret_${user.id}`);
+            setStoreUrl('');
+            setConsumerKey('');
+            setConsumerSecret('');
+            toast({
+                title: "Credentials Cleared",
+                description: "Your saved WooCommerce credentials have been removed.",
+            });
+            if (activeTab === 'products') {
+                loadProductsWithCredentials(); // Re-fetch with global credentials (or show error if none)
+            }
+        } catch (error) {
+            toast({
+                title: "Error Clearing Credentials",
+                description: "Could not clear credentials from local storage.",
+                variant: "destructive",
+            });
+        }
+    }
+    setIsClearingCredentials(false);
+  };
+
 
   useEffect(() => {
     if (user) {
@@ -240,7 +233,7 @@ export default function DashboardPage() {
       <div className="flex flex-col min-h-screen">
         <AppHeader />
         <SidebarProvider defaultOpen>
-          <div className="flex flex-1"> {/* Container for sidebar and content */}
+          <div className="flex flex-1"> 
             <Sidebar className="h-full shadow-md border-r">
               <SidebarHeader className="p-4 border-b">
                 <h2 className="font-headline text-lg font-semibold text-foreground">Navigation</h2>
@@ -311,7 +304,7 @@ export default function DashboardPage() {
                         {isLoadingProducts ? (
                           <div className="flex items-center justify-center py-10">
                             <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                            <p className="ml-2 text-muted-foreground">Loading products from WooCommerce...</p>
+                            <p className="ml-2 text-muted-foreground">Loading products...</p>
                           </div>
                         ) : error ? (
                           <div className="text-center py-10 text-destructive">
@@ -455,14 +448,30 @@ export default function DashboardPage() {
                               className="bg-input/50"
                             />
                           </div>
-                          <Button type="submit" className="w-full sm:w-auto" disabled={isSavingCredentials}>
-                            {isSavingCredentials ? (
-                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                            ) : (
-                              <Save className="mr-2 h-4 w-4" />
-                            )}
-                            Save Credentials
-                          </Button>
+                          <div className="flex flex-col sm:flex-row gap-2">
+                            <Button type="submit" className="w-full sm:w-auto" disabled={isSavingCredentials || isClearingCredentials}>
+                              {isSavingCredentials ? (
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                              ) : (
+                                <Save className="mr-2 h-4 w-4" />
+                              )}
+                              Save Credentials
+                            </Button>
+                             <Button 
+                                type="button" 
+                                variant="destructive" 
+                                className="w-full sm:w-auto" 
+                                onClick={handleClearCredentials}
+                                disabled={isSavingCredentials || isClearingCredentials || (!storeUrl && !consumerKey && !consumerSecret))}
+                            >
+                              {isClearingCredentials ? (
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                              ) : (
+                                <XCircle className="mr-2 h-4 w-4" />
+                              )}
+                              Clear Saved Credentials
+                            </Button>
+                          </div>
                         </form>
                       </CardContent>
                     </Card>
@@ -501,3 +510,4 @@ export default function DashboardPage() {
     </UploadProvider>
   );
 }
+
