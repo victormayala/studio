@@ -1,6 +1,8 @@
+
 import type {Metadata} from 'next';
 import './globals.css';
 import { Toaster } from "@/components/ui/toaster";
+import { AuthProvider } from '@/contexts/AuthContext'; // Added AuthProvider
 
 export const metadata: Metadata = {
   title: 'CSTMZR - Your Product Customization Platform',
@@ -22,7 +24,9 @@ export default function RootLayout({
       </head>
       {/* Changed from font-body to font-sans to use the new default */}
       <body className="font-sans antialiased" suppressHydrationWarning={true}>
-        {children}
+        <AuthProvider> {/* Added AuthProvider */}
+          {children}
+        </AuthProvider>
         <Toaster />
       </body>
     </html>

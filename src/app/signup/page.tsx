@@ -9,21 +9,39 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import Link from 'next/link';
 import { useState } from 'react';
+import { useAuth } from '@/contexts/AuthContext'; // Added
+import { useToast } from '@/hooks/use-toast'; // Added
+import { Loader2 } from 'lucide-react'; // Added
 
 export default function SignUpPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const { signUp, isLoading } = useAuth(); // Changed
+  const { toast } = useToast(); // Added
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => { // Changed to async
     e.preventDefault();
+    if (isLoading) return;
     if (password !== confirmPassword) {
-      alert("Passwords do not match!");
+      toast({ // Changed alert to toast
+        title: "Passwords Mismatch",
+        description: "The passwords you entered do not match.",
+        variant: "destructive",
+      });
       return;
     }
-    // Placeholder for sign-up logic
-    alert(`Attempting to sign up with Email: ${email}`);
-    // In a real app, you'd call an auth API here
+    try {
+      await signUp(email, password);
+      // Navigation is handled by AuthContext
+    } catch (error) {
+      console.error("Sign up error:", error);
+      toast({
+        title: "Sign Up Failed",
+        description: (error instanceof Error ? error.message : "An unexpected error occurred. Please try again."),
+        variant: "destructive",
+      });
+    }
   };
 
 
@@ -48,6 +66,7 @@ export default function SignUpPage() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   className="bg-input/50"
+                  disabled={isLoading}
                 />
               </div>
               <div className="space-y-2">
@@ -59,6 +78,7 @@ export default function SignUpPage() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   className="bg-input/50"
+                  disabled={isLoading}
                 />
               </div>
                <div className="space-y-2">
@@ -70,10 +90,11 @@ export default function SignUpPage() {
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   className="bg-input/50"
+                  disabled={isLoading}
                 />
               </div>
-              <Button type="submit" className="w-full bg-primary text-primary-foreground hover:bg-primary/90" size="lg">
-                Sign Up
+              <Button type="submit" className="w-full bg-primary text-primary-foreground hover:bg-primary/90" size="lg" disabled={isLoading}>
+                {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "Sign Up"}
               </Button>
               <div className="text-center">
                  <p className="text-xs text-muted-foreground px-2">
@@ -98,4 +119,3 @@ export default function SignUpPage() {
     </div>
   );
 }
-

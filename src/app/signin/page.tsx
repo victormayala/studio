@@ -9,16 +9,30 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import Link from 'next/link';
 import { useState } from 'react';
+import { useAuth } from '@/contexts/AuthContext'; // Added
+import { useToast } from '@/hooks/use-toast'; // Added
+import { Loader2 } from 'lucide-react'; // Added
 
 export default function SignInPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const { signIn, isLoading } = useAuth(); // Changed
+  const { toast } = useToast(); // Added
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => { // Changed to async
     e.preventDefault();
-    // Placeholder for sign-in logic
-    alert(`Attempting to sign in with Email: ${email}`);
-    // In a real app, you'd call an auth API here
+    if (isLoading) return;
+    try {
+      await signIn(email, password);
+      // Navigation is handled by AuthContext
+    } catch (error) {
+      console.error("Sign in error:", error);
+      toast({
+        title: "Sign In Failed",
+        description: (error instanceof Error ? error.message : "An unexpected error occurred. Please try again."),
+        variant: "destructive",
+      });
+    }
   };
 
   return (
@@ -42,6 +56,7 @@ export default function SignInPage() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   className="bg-input/50"
+                  disabled={isLoading}
                 />
               </div>
               <div className="space-y-2">
@@ -58,10 +73,11 @@ export default function SignInPage() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   className="bg-input/50"
+                  disabled={isLoading}
                 />
               </div>
-              <Button type="submit" className="w-full bg-primary text-primary-foreground hover:bg-primary/90" size="lg">
-                Sign In
+              <Button type="submit" className="w-full bg-primary text-primary-foreground hover:bg-primary/90" size="lg" disabled={isLoading}>
+                {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "Sign In"}
               </Button>
               <div className="text-center">
                 <p className="text-sm text-muted-foreground">
@@ -79,4 +95,3 @@ export default function SignInPage() {
     </div>
   );
 }
-
