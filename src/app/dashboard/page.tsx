@@ -9,7 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { PlusCircle, MoreHorizontal, Settings, Code, Trash2, AlertTriangle, Loader2, LogOut, Link as LinkIcon, KeyRound, Save } from "lucide-react";
+import { PlusCircle, MoreHorizontal, Settings, Code, Trash2, AlertTriangle, Loader2, LogOut, Link as LinkIcon, KeyRound, Save, Package as PackageIcon, PlugZap, UserCircle } from "lucide-react"; // Added PackageIcon, PlugZap, UserCircle
 import Link from "next/link";
 import { useRouter } from 'next/navigation';
 import NextImage from 'next/image';
@@ -20,6 +20,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast"; 
 import AppHeader from "@/components/layout/AppHeader"; 
 import { UploadProvider } from "@/contexts/UploadContext";
+import { SidebarProvider, Sidebar, SidebarHeader, SidebarContent, SidebarFooter, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarInset } from "@/components/ui/sidebar"; // Added Sidebar components
 
 interface DisplayProduct {
   id: string;
@@ -30,6 +31,8 @@ interface DisplayProduct {
   aiHint?: string;
 }
 
+type ActiveDashboardTab = 'products' | 'storeIntegration' | 'settings' | 'profile';
+
 export default function DashboardPage() {
   const router = useRouter();
   const { user, isLoading: authIsLoading, signOut } = useAuth(); 
@@ -39,11 +42,12 @@ export default function DashboardPage() {
   const [isLoadingProducts, setIsLoadingProducts] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // State for WooCommerce connection form
   const [storeUrl, setStoreUrl] = useState('');
   const [consumerKey, setConsumerKey] = useState('');
   const [consumerSecret, setConsumerSecret] = useState('');
   const [isSavingCredentials, setIsSavingCredentials] = useState(false);
+
+  const [activeTab, setActiveTab] = useState<ActiveDashboardTab>('products');
 
 
   useEffect(() => {
@@ -53,9 +57,7 @@ export default function DashboardPage() {
   }, [user, authIsLoading, router]);
 
   useEffect(() => {
-    if (user) { 
-      // TODO: In a future step, load saved credentials for this user
-      // For now, we'll fetch products using global .env credentials
+    if (user && activeTab === 'products') { // Only load products if user exists and products tab is active
       async function loadProducts() {
         setIsLoadingProducts(true);
         setError(null);
@@ -77,8 +79,11 @@ export default function DashboardPage() {
         setIsLoadingProducts(false);
       }
       loadProducts();
+    } else if (activeTab !== 'products') {
+      // If not on products tab, ensure products aren't unnecessarily showing loading
+      setIsLoadingProducts(false);
     }
-  }, [user]); 
+  }, [user, activeTab]); 
 
   const handleAddNewProduct = () => {
     alert("Add New Product (Configuration) functionality coming soon!");
@@ -96,34 +101,22 @@ export default function DashboardPage() {
     return 'bg-gray-500/20 text-gray-700 dark:text-gray-400 border-gray-500/30 hover:bg-gray-500/30';
   };
 
-  const handleSignOut = async () => {
-    try {
-      await signOut();
-      toast({ title: "Signed Out", description: "You have been successfully signed out." });
-    } catch (error) {
-      console.error("Sign out error:", error);
-      toast({ title: "Sign Out Failed", description: "Could not sign you out. Please try again.", variant: "destructive" });
-    }
-  };
-
   const handleSaveCredentials = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSavingCredentials(true);
     console.log("Saving WooCommerce Credentials for user:", user?.email);
     console.log("Store URL:", storeUrl);
     console.log("Consumer Key:", consumerKey);
-    console.log("Consumer Secret:", consumerSecret ? '**********' : '(empty)'); // Avoid logging secret directly to console in real app
+    // Avoid logging secret directly to console in real app
+    console.log("Consumer Secret:", consumerSecret ? '**********' : '(empty)'); 
 
-    // Simulate API call
     await new Promise(resolve => setTimeout(resolve, 1000));
 
-    // TODO: In a real app, send these to a secure backend to be encrypted and stored.
-    // For now, we can mock saving to localStorage for this user session.
     if (user) {
       try {
         localStorage.setItem(`wc_store_url_${user.id}`, storeUrl);
         localStorage.setItem(`wc_consumer_key_${user.id}`, consumerKey);
-        localStorage.setItem(`wc_consumer_secret_${user.id}`, consumerSecret); // Caution with storing secrets client-side
+        localStorage.setItem(`wc_consumer_secret_${user.id}`, consumerSecret); 
         toast({
           title: "Credentials Saved (Mock)",
           description: "Your WooCommerce credentials have been saved locally for this session.",
@@ -139,7 +132,6 @@ export default function DashboardPage() {
     setIsSavingCredentials(false);
   };
 
-  // Effect to load saved credentials from localStorage when user changes
   useEffect(() => {
     if (user) {
       const savedUrl = localStorage.getItem(`wc_store_url_${user.id}`);
@@ -149,13 +141,11 @@ export default function DashboardPage() {
       if (savedKey) setConsumerKey(savedKey);
       if (savedSecret) setConsumerSecret(savedSecret);
     } else {
-      // Clear fields if no user
       setStoreUrl('');
       setConsumerKey('');
       setConsumerSecret('');
     }
   }, [user]);
-
 
   if (authIsLoading || (!user && !authIsLoading)) { 
     return (
@@ -168,193 +158,265 @@ export default function DashboardPage() {
   return (
     <UploadProvider>
       <div className="flex flex-col min-h-screen">
-        <AppHeader /> 
-        <main className="flex-1 p-4 md:p-6 lg:p-8 bg-muted/30">
-          <div className="container mx-auto space-y-8">
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-              <div>
-                <h1 className="text-3xl font-bold tracking-tight font-headline text-foreground">
-                  Your Dashboard
-                </h1>
-                <p className="text-muted-foreground">
-                  Manage your customizable products. Welcome, {user?.email}!
-                </p>
-              </div>
-              <div className="flex items-center gap-2">
-                <Button onClick={handleAddNewProduct} className="bg-primary text-primary-foreground hover:bg-primary/90">
-                  <PlusCircle className="mr-2 h-5 w-5" />
-                  Add Product Configuration
-                </Button>
-              </div>
-            </div>
+        <AppHeader />
+        <SidebarProvider defaultOpen>
+          <div className="flex flex-1"> {/* Container for sidebar and content */}
+            <Sidebar className="h-full shadow-md border-r">
+              <SidebarHeader className="p-4 border-b">
+                <h2 className="font-headline text-lg font-semibold text-foreground">Navigation</h2>
+              </SidebarHeader>
+              <SidebarContent className="flex flex-col p-0">
+                <div className="p-2">
+                  <SidebarMenu>
+                    <SidebarMenuItem>
+                      <SidebarMenuButton onClick={() => setActiveTab('products')} isActive={activeTab === 'products'} className="w-full justify-start">
+                        <PackageIcon className="mr-2 h-5 w-5" /> Products
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                    <SidebarMenuItem>
+                      <SidebarMenuButton onClick={() => setActiveTab('storeIntegration')} isActive={activeTab === 'storeIntegration'} className="w-full justify-start">
+                        <PlugZap className="mr-2 h-5 w-5" /> Store Integration
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  </SidebarMenu>
+                </div>
+              </SidebarContent>
+              <SidebarFooter className="p-4 border-t mt-auto">
+                <SidebarMenu>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton onClick={() => setActiveTab('settings')} isActive={activeTab === 'settings'} className="w-full justify-start">
+                      <Settings className="mr-2 h-5 w-5" /> Settings
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton onClick={() => setActiveTab('profile')} isActive={activeTab === 'profile'} className="w-full justify-start">
+                      <UserCircle className="mr-2 h-5 w-5" /> Profile
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                </SidebarMenu>
+              </SidebarFooter>
+            </Sidebar>
 
-            <Card className="shadow-lg border-border bg-card">
-              <CardHeader>
-                <CardTitle className="font-headline text-xl text-card-foreground">WooCommerce Store Connection</CardTitle>
-                <CardDescription className="text-muted-foreground">
-                  Connect your WooCommerce store to fetch and manage products. These credentials will be used for your account.
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <form onSubmit={handleSaveCredentials} className="space-y-6">
-                  <div className="space-y-2">
-                    <Label htmlFor="storeUrl" className="flex items-center">
-                      <LinkIcon className="mr-2 h-4 w-4 text-muted-foreground" /> Store URL
-                    </Label>
-                    <Input
-                      id="storeUrl"
-                      type="url"
-                      placeholder="https://yourstore.com"
-                      value={storeUrl}
-                      onChange={(e) => setStoreUrl(e.target.value)}
-                      required
-                      className="bg-input/50"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="consumerKey" className="flex items-center">
-                      <KeyRound className="mr-2 h-4 w-4 text-muted-foreground" /> Consumer Key
-                    </Label>
-                    <Input
-                      id="consumerKey"
-                      type="text"
-                      placeholder="ck_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
-                      value={consumerKey}
-                      onChange={(e) => setConsumerKey(e.target.value)}
-                      required
-                      className="bg-input/50"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="consumerSecret" className="flex items-center">
-                       <KeyRound className="mr-2 h-4 w-4 text-muted-foreground" /> Consumer Secret
-                    </Label>
-                    <Input
-                      id="consumerSecret"
-                      type="password" 
-                      placeholder="cs_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
-                      value={consumerSecret}
-                      onChange={(e) => setConsumerSecret(e.target.value)}
-                      required
-                      className="bg-input/50"
-                    />
-                  </div>
-                  <Button type="submit" className="w-full sm:w-auto" disabled={isSavingCredentials}>
-                    {isSavingCredentials ? (
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    ) : (
-                      <Save className="mr-2 h-4 w-4" />
+            <SidebarInset className="flex-1 overflow-hidden">
+              <main className="flex-1 p-4 md:p-6 lg:p-8 bg-muted/30 overflow-y-auto h-full">
+                <div className="container mx-auto space-y-8">
+                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                    <div>
+                      <h1 className="text-3xl font-bold tracking-tight font-headline text-foreground">
+                        Your Dashboard
+                      </h1>
+                      <p className="text-muted-foreground">
+                        Welcome, {user?.email}!
+                      </p>
+                    </div>
+                    {activeTab === 'products' && (
+                       <div className="flex items-center gap-2">
+                        <Button onClick={handleAddNewProduct} className="bg-primary text-primary-foreground hover:bg-primary/90">
+                          <PlusCircle className="mr-2 h-5 w-5" />
+                          Add Product Configuration
+                        </Button>
+                      </div>
                     )}
-                    Save Credentials
-                  </Button>
-                </form>
-              </CardContent>
-            </Card>
+                  </div>
 
-            <Card className="shadow-lg border-border bg-card">
-              <CardHeader>
-                <CardTitle className="font-headline text-xl text-card-foreground">Your Products</CardTitle>
-                <CardDescription className="text-muted-foreground">
-                  View, edit, and manage your customizable products. Products are fetched from your connected WooCommerce store.
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                {isLoadingProducts ? (
-                  <div className="flex items-center justify-center py-10">
-                    <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                    <p className="ml-2 text-muted-foreground">Loading products from WooCommerce...</p>
-                  </div>
-                ) : error ? (
-                  <div className="text-center py-10 text-destructive">
-                    <AlertTriangle className="mx-auto h-12 w-12 mb-2" />
-                    <p className="font-semibold">Error loading products:</p>
-                    <p className="text-sm">{error}</p>
-                    <p className="text-xs mt-2">Please check your WooCommerce API settings above and ensure your store is accessible.</p>
-                  </div>
-                ) : products.length > 0 ? (
-                  <div className="overflow-x-auto">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead className="w-[80px] hidden sm:table-cell text-muted-foreground">Image</TableHead>
-                          <TableHead className="text-muted-foreground">Name</TableHead>
-                          <TableHead className="text-muted-foreground">Status</TableHead>
-                          <TableHead className="hidden md:table-cell text-muted-foreground">Last Edited (WooCommerce)</TableHead>
-                          <TableHead className="text-right text-muted-foreground">Actions</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {products.map((product) => (
-                          <TableRow key={product.id} className="hover:bg-muted/50">
-                            <TableCell className="hidden sm:table-cell">
-                              {product.imageUrl && product.imageUrl !== 'https://placehold.co/100x100/eee/ccc.png?text=No+Image' ? (
-                                <NextImage
-                                  src={product.imageUrl}
-                                  alt={product.name}
-                                  width={48}
-                                  height={48}
-                                  className="h-12 w-12 rounded-md object-cover border border-border"
-                                  data-ai-hint={product.aiHint || "product thumbnail"}
-                                />
-                              ) : (
-                                <div className="h-12 w-12 rounded-md bg-muted flex items-center justify-center text-muted-foreground text-xs border border-border">
-                                  No Image
-                                </div>
-                              )}
-                            </TableCell>
-                            <TableCell className="font-medium text-card-foreground">{product.name}</TableCell>
-                            <TableCell>
-                              <Badge
-                                variant={getStatusBadgeVariant(product.status)}
-                                className={getStatusBadgeClassName(product.status)}
-                              >
-                                {product.status}
-                              </Badge>
-                            </TableCell>
-                            <TableCell className="hidden md:table-cell text-muted-foreground">{product.lastEdited}</TableCell>
-                            <TableCell className="text-right">
-                              <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                  <Button variant="ghost" className="h-8 w-8 p-0 text-muted-foreground hover:bg-accent hover:text-accent-foreground">
-                                    <span className="sr-only">Open menu</span>
-                                    <MoreHorizontal className="h-4 w-4" />
-                                  </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end" className="bg-popover border-border">
-                                  <DropdownMenuItem
-                                    onClick={() => router.push(`/dashboard/products/${product.id}/options`)}
-                                    className="hover:bg-accent focus:bg-accent cursor-pointer"
-                                  >
-                                    <Settings className="mr-2 h-4 w-4" />
-                                    Product Options
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem onClick={() => router.push(`/customizer?productId=${product.id}`)} className="hover:bg-accent focus:bg-accent cursor-pointer">
-                                    <Code className="mr-2 h-4 w-4" />
-                                    Open Customizer
-                                  </DropdownMenuItem>
-                                </DropdownMenuContent>
-                              </DropdownMenu>
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </div>
-                ) : (
-                  <div className="text-center py-10">
-                    <p className="text-muted-foreground mb-2">No products found in your WooCommerce store.</p>
-                    <Button onClick={handleAddNewProduct} variant="outline" className="hover:bg-accent hover:text-accent-foreground">
-                      <PlusCircle className="mr-2 h-4 w-4" />
-                      Configure First Product
-                    </Button>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+                  {activeTab === 'products' && (
+                    <Card className="shadow-lg border-border bg-card">
+                      <CardHeader>
+                        <CardTitle className="font-headline text-xl text-card-foreground">Your Products</CardTitle>
+                        <CardDescription className="text-muted-foreground">
+                          View, edit, and manage your customizable products. Products are fetched from your connected WooCommerce store.
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        {isLoadingProducts ? (
+                          <div className="flex items-center justify-center py-10">
+                            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                            <p className="ml-2 text-muted-foreground">Loading products from WooCommerce...</p>
+                          </div>
+                        ) : error ? (
+                          <div className="text-center py-10 text-destructive">
+                            <AlertTriangle className="mx-auto h-12 w-12 mb-2" />
+                            <p className="font-semibold">Error loading products:</p>
+                            <p className="text-sm">{error}</p>
+                            <p className="text-xs mt-2">Please check your WooCommerce API settings under 'Store Integration' and ensure your store is accessible.</p>
+                          </div>
+                        ) : products.length > 0 ? (
+                          <div className="overflow-x-auto">
+                            <Table>
+                              <TableHeader>
+                                <TableRow>
+                                  <TableHead className="w-[80px] hidden sm:table-cell text-muted-foreground">Image</TableHead>
+                                  <TableHead className="text-muted-foreground">Name</TableHead>
+                                  <TableHead className="text-muted-foreground">Status</TableHead>
+                                  <TableHead className="hidden md:table-cell text-muted-foreground">Last Edited (WooCommerce)</TableHead>
+                                  <TableHead className="text-right text-muted-foreground">Actions</TableHead>
+                                </TableRow>
+                              </TableHeader>
+                              <TableBody>
+                                {products.map((product) => (
+                                  <TableRow key={product.id} className="hover:bg-muted/50">
+                                    <TableCell className="hidden sm:table-cell">
+                                      {product.imageUrl && product.imageUrl !== 'https://placehold.co/100x100/eee/ccc.png?text=No+Image' ? (
+                                        <NextImage
+                                          src={product.imageUrl}
+                                          alt={product.name}
+                                          width={48}
+                                          height={48}
+                                          className="h-12 w-12 rounded-md object-cover border border-border"
+                                          data-ai-hint={product.aiHint || "product thumbnail"}
+                                        />
+                                      ) : (
+                                        <div className="h-12 w-12 rounded-md bg-muted flex items-center justify-center text-muted-foreground text-xs border border-border">
+                                          No Image
+                                        </div>
+                                      )}
+                                    </TableCell>
+                                    <TableCell className="font-medium text-card-foreground">{product.name}</TableCell>
+                                    <TableCell>
+                                      <Badge
+                                        variant={getStatusBadgeVariant(product.status)}
+                                        className={getStatusBadgeClassName(product.status)}
+                                      >
+                                        {product.status}
+                                      </Badge>
+                                    </TableCell>
+                                    <TableCell className="hidden md:table-cell text-muted-foreground">{product.lastEdited}</TableCell>
+                                    <TableCell className="text-right">
+                                      <DropdownMenu>
+                                        <DropdownMenuTrigger asChild>
+                                          <Button variant="ghost" className="h-8 w-8 p-0 text-muted-foreground hover:bg-accent hover:text-accent-foreground">
+                                            <span className="sr-only">Open menu</span>
+                                            <MoreHorizontal className="h-4 w-4" />
+                                          </Button>
+                                        </DropdownMenuTrigger>
+                                        <DropdownMenuContent align="end" className="bg-popover border-border">
+                                          <DropdownMenuItem
+                                            onClick={() => router.push(`/dashboard/products/${product.id}/options`)}
+                                            className="hover:bg-accent focus:bg-accent cursor-pointer"
+                                          >
+                                            <Settings className="mr-2 h-4 w-4" />
+                                            Product Options
+                                          </DropdownMenuItem>
+                                          <DropdownMenuItem onClick={() => router.push(`/customizer?productId=${product.id}`)} className="hover:bg-accent focus:bg-accent cursor-pointer">
+                                            <Code className="mr-2 h-4 w-4" />
+                                            Open Customizer
+                                          </DropdownMenuItem>
+                                        </DropdownMenuContent>
+                                      </DropdownMenu>
+                                    </TableCell>
+                                  </TableRow>
+                                ))}
+                              </TableBody>
+                            </Table>
+                          </div>
+                        ) : (
+                          <div className="text-center py-10">
+                            <p className="text-muted-foreground mb-2">No products found in your WooCommerce store.</p>
+                            <Button onClick={handleAddNewProduct} variant="outline" className="hover:bg-accent hover:text-accent-foreground">
+                              <PlusCircle className="mr-2 h-4 w-4" />
+                              Configure First Product
+                            </Button>
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                  )}
+
+                  {activeTab === 'storeIntegration' && (
+                    <Card className="shadow-lg border-border bg-card">
+                      <CardHeader>
+                        <CardTitle className="font-headline text-xl text-card-foreground">WooCommerce Store Connection</CardTitle>
+                        <CardDescription className="text-muted-foreground">
+                          Connect your WooCommerce store to fetch and manage products. These credentials will be used for your account.
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        <form onSubmit={handleSaveCredentials} className="space-y-6">
+                          <div className="space-y-2">
+                            <Label htmlFor="storeUrl" className="flex items-center">
+                              <LinkIcon className="mr-2 h-4 w-4 text-muted-foreground" /> Store URL
+                            </Label>
+                            <Input
+                              id="storeUrl"
+                              type="url"
+                              placeholder="https://yourstore.com"
+                              value={storeUrl}
+                              onChange={(e) => setStoreUrl(e.target.value)}
+                              required
+                              className="bg-input/50"
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="consumerKey" className="flex items-center">
+                              <KeyRound className="mr-2 h-4 w-4 text-muted-foreground" /> Consumer Key
+                            </Label>
+                            <Input
+                              id="consumerKey"
+                              type="text"
+                              placeholder="ck_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+                              value={consumerKey}
+                              onChange={(e) => setConsumerKey(e.target.value)}
+                              required
+                              className="bg-input/50"
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="consumerSecret" className="flex items-center">
+                              <KeyRound className="mr-2 h-4 w-4 text-muted-foreground" /> Consumer Secret
+                            </Label>
+                            <Input
+                              id="consumerSecret"
+                              type="password" 
+                              placeholder="cs_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+                              value={consumerSecret}
+                              onChange={(e) => setConsumerSecret(e.target.value)}
+                              required
+                              className="bg-input/50"
+                            />
+                          </div>
+                          <Button type="submit" className="w-full sm:w-auto" disabled={isSavingCredentials}>
+                            {isSavingCredentials ? (
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            ) : (
+                              <Save className="mr-2 h-4 w-4" />
+                            )}
+                            Save Credentials
+                          </Button>
+                        </form>
+                      </CardContent>
+                    </Card>
+                  )}
+
+                  {activeTab === 'settings' && (
+                    <Card className="shadow-lg border-border bg-card">
+                      <CardHeader>
+                        <CardTitle className="font-headline text-xl text-card-foreground">Settings</CardTitle>
+                        <CardDescription className="text-muted-foreground">Application settings and preferences.</CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        <p className="text-muted-foreground">Settings content will go here. (Coming Soon)</p>
+                      </CardContent>
+                    </Card>
+                  )}
+
+                  {activeTab === 'profile' && (
+                     <Card className="shadow-lg border-border bg-card">
+                       <CardHeader>
+                        <CardTitle className="font-headline text-xl text-card-foreground">User Profile</CardTitle>
+                        <CardDescription className="text-muted-foreground">Manage your account details.</CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        <p className="text-muted-foreground">Email: {user?.email}</p>
+                        <p className="mt-4 text-muted-foreground">More profile options will be available here. (Coming Soon)</p>
+                      </CardContent>
+                    </Card>
+                  )}
+                </div>
+              </main>
+            </SidebarInset>
           </div>
-        </main>
+        </SidebarProvider>
       </div>
     </UploadProvider>
   );
 }
-
