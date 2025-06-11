@@ -31,7 +31,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const mockSessionUser = localStorage.getItem('mockUser');
     if (mockSessionUser) {
-      setUser(JSON.parse(mockSessionUser));
+      try {
+        const parsedUser = JSON.parse(mockSessionUser);
+        // Basic validation of the parsed user object could be added here
+        // For example, check if it has an 'id' and 'email' property
+        if (parsedUser && typeof parsedUser.id === 'string' && typeof parsedUser.email === 'string') {
+          setUser(parsedUser);
+        } else {
+          localStorage.removeItem('mockUser'); // Clear invalid data
+        }
+      } catch (error) {
+        console.error("Failed to parse mockUser from localStorage", error);
+        localStorage.removeItem('mockUser'); // Clear corrupted data
+      }
     }
     setIsLoading(false);
   }, []);
@@ -42,7 +54,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await new Promise(resolve => setTimeout(resolve, 500));
     const mockUser: User = { id: 'mock-user-id-' + Date.now(), email };
     setUser(mockUser);
-    localStorage.setItem('mockUser', JSON.stringify(mockUser));
+    try {
+      localStorage.setItem('mockUser', JSON.stringify(mockUser));
+    } catch (error) {
+      console.error("Failed to set mockUser in localStorage", error);
+    }
     setIsLoading(false);
     router.push('/dashboard');
   }, [router]);
@@ -53,7 +69,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await new Promise(resolve => setTimeout(resolve, 500));
     const mockUser: User = { id: 'mock-user-id-' + Date.now(), email };
     setUser(mockUser);
-    localStorage.setItem('mockUser', JSON.stringify(mockUser));
+    try {
+      localStorage.setItem('mockUser', JSON.stringify(mockUser));
+    } catch (error) {
+      console.error("Failed to set mockUser in localStorage", error);
+    }
     setIsLoading(false);
     router.push('/dashboard');
   }, [router]);
@@ -63,7 +83,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Simulate API call
     await new Promise(resolve => setTimeout(resolve, 500));
     setUser(null);
-    localStorage.removeItem('mockUser');
+    try {
+      localStorage.removeItem('mockUser');
+    } catch (error) {
+      console.error("Failed to remove mockUser from localStorage", error);
+    }
     setIsLoading(false);
     // Redirect to sign-in, but ensure it's not already on a public page that doesn't require redirect
     if (pathname.startsWith('/dashboard') || pathname.startsWith('/customizer')) {
