@@ -57,11 +57,37 @@ export default function DashboardPage() {
   }, [user, authIsLoading, router]);
 
   useEffect(() => {
-    if (user && activeTab === 'products') { // Only load products if user exists and products tab is active
+    if (user && activeTab === 'products') {
       async function loadProducts() {
         setIsLoadingProducts(true);
         setError(null);
-        const response = await fetchWooCommerceProducts();
+
+        // Attempt to load user-specific credentials from localStorage
+        const userStoreUrl = localStorage.getItem(`wc_store_url_${user!.id}`);
+        const userConsumerKey = localStorage.getItem(`wc_consumer_key_${user!.id}`);
+        const userConsumerSecret = localStorage.getItem(`wc_consumer_secret_${user!.id}`);
+
+        let response;
+        if (userStoreUrl && userConsumerKey && userConsumerSecret) {
+          toast({
+            title: "Using User Credentials",
+            description: "Fetching products using your saved WooCommerce store connection.",
+            duration: 3000,
+          });
+          response = await fetchWooCommerceProducts({ 
+            storeUrl: userStoreUrl, 
+            consumerKey: userConsumerKey, 
+            consumerSecret: userConsumerSecret 
+          });
+        } else {
+          toast({
+            title: "Using Global Credentials",
+            description: "Fetching products using the application's default WooCommerce connection (if configured).",
+            duration: 3000,
+          });
+          response = await fetchWooCommerceProducts(); // Fallback to global .env credentials
+        }
+
         if (response.error) {
           setError(response.error);
           setProducts([]);
@@ -80,10 +106,9 @@ export default function DashboardPage() {
       }
       loadProducts();
     } else if (activeTab !== 'products') {
-      // If not on products tab, ensure products aren't unnecessarily showing loading
       setIsLoadingProducts(false);
     }
-  }, [user, activeTab]); 
+  }, [user, activeTab, toast]); 
 
   const handleAddNewProduct = () => {
     alert("Add New Product (Configuration) functionality coming soon!");
@@ -104,12 +129,29 @@ export default function DashboardPage() {
   const handleSaveCredentials = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSavingCredentials(true);
-    console.log("Saving WooCommerce Credentials for user:", user?.email);
-    console.log("Store URL:", storeUrl);
-    console.log("Consumer Key:", consumerKey);
-    // Avoid logging secret directly to console in real app
-    console.log("Consumer Secret:", consumerSecret ? '**********' : '(empty)'); 
+    
+    // Basic validation
+    if (!storeUrl.trim() || !consumerKey.trim() || !consumerSecret.trim()) {
+        toast({
+            title: "Missing Fields",
+            description: "Please fill in all WooCommerce credential fields.",
+            variant: "destructive",
+        });
+        setIsSavingCredentials(false);
+        return;
+    }
+    if (!storeUrl.startsWith('http://') && !storeUrl.startsWith('https://')) {
+        toast({
+            title: "Invalid Store URL",
+            description: "Store URL must start with http:// or https://.",
+            variant: "destructive",
+        });
+        setIsSavingCredentials(false);
+        return;
+    }
 
+
+    // Simulate API call to validate/save credentials
     await new Promise(resolve => setTimeout(resolve, 1000));
 
     if (user) {
@@ -118,9 +160,47 @@ export default function DashboardPage() {
         localStorage.setItem(`wc_consumer_key_${user.id}`, consumerKey);
         localStorage.setItem(`wc_consumer_secret_${user.id}`, consumerSecret); 
         toast({
-          title: "Credentials Saved (Mock)",
-          description: "Your WooCommerce credentials have been saved locally for this session.",
+          title: "Credentials Saved",
+          description: "Your WooCommerce credentials have been saved locally for this session. Products will refresh if you are on the 'Products' tab.",
         });
+        // If currently on products tab, trigger a reload of products
+        if (activeTab === 'products') {
+            // This forces the useEffect for product loading to re-run
+            // A more sophisticated approach might involve a dedicated refresh function
+            // or making `activeTab` a dependency that changes in a way to trigger reload.
+            // For now, we can briefly switch tabs or rely on next render if activeTab is already 'products'.
+            // To ensure it re-fetches, we can temporarily set activeTab to something else and back,
+            // or add a new state variable that a product fetching useEffect depends on.
+            // For simplicity here, let's assume the user might navigate or the existing useEffect dependency `user` is enough.
+            // A more direct re-fetch would be ideal in a real app.
+            // Example: setProducts([]); setIsLoadingProducts(true); // then let useEffect run again
+            // For now, we'll rely on the user potentially switching tabs or an app refresh.
+            // A better way: trigger the product load effect directly.
+             async function reloadProductsAfterSave() {
+                setIsLoadingProducts(true);
+                setError(null);
+                const response = await fetchWooCommerceProducts({ storeUrl, consumerKey, consumerSecret });
+                 if (response.error) {
+                  setError(response.error);
+                  setProducts([]);
+                } else if (response.products) {
+                  const displayProducts = response.products.map((p: WCCustomProduct) => ({
+                    id: p.id.toString(),
+                    name: p.name,
+                    status: p.status === 'publish' ? 'Customizable' : p.status.charAt(0).toUpperCase() + p.status.slice(1),
+                    lastEdited: p.date_modified ? format(new Date(p.date_modified), 'yyyy-MM-dd') : 'N/A',
+                    imageUrl: p.images && p.images.length > 0 ? p.images[0].src : 'https://placehold.co/100x100/eee/ccc.png?text=No+Image',
+                    aiHint: p.name ? p.name.toLowerCase().split(' ').slice(0,2).join(' ') : 'product image',
+                  }));
+                  setProducts(displayProducts);
+                }
+                setIsLoadingProducts(false);
+            }
+            if (activeTab === 'products') {
+                 reloadProductsAfterSave();
+            }
+
+        }
       } catch (error) {
          toast({
           title: "Error Saving Credentials",
@@ -238,7 +318,7 @@ export default function DashboardPage() {
                             <AlertTriangle className="mx-auto h-12 w-12 mb-2" />
                             <p className="font-semibold">Error loading products:</p>
                             <p className="text-sm">{error}</p>
-                            <p className="text-xs mt-2">Please check your WooCommerce API settings under 'Store Integration' and ensure your store is accessible.</p>
+                            <p className="text-xs mt-2">Please check your WooCommerce API settings under 'Store Integration' and ensure your store is accessible. Also verify the global .env credentials if no user-specific ones are set.</p>
                           </div>
                         ) : products.length > 0 ? (
                           <div className="overflow-x-auto">
@@ -311,7 +391,8 @@ export default function DashboardPage() {
                           </div>
                         ) : (
                           <div className="text-center py-10">
-                            <p className="text-muted-foreground mb-2">No products found in your WooCommerce store.</p>
+                            <p className="text-muted-foreground mb-2">No products found using the current WooCommerce connection.</p>
+                             <p className="text-xs text-muted-foreground mb-4">If you've just saved credentials, try navigating away from and back to the 'Products' tab to refresh.</p>
                             <Button onClick={handleAddNewProduct} variant="outline" className="hover:bg-accent hover:text-accent-foreground">
                               <PlusCircle className="mr-2 h-4 w-4" />
                               Configure First Product

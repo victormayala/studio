@@ -8,14 +8,29 @@ interface FetchWooCommerceProductsResponse {
   error?: string;
 }
 
-export async function fetchWooCommerceProducts(): Promise<FetchWooCommerceProductsResponse> {
-  const storeUrl = process.env.WOOCOMMERCE_STORE_URL;
-  const consumerKey = process.env.WOOCOMMERCE_CONSUMER_KEY;
-  const consumerSecret = process.env.WOOCOMMERCE_CONSUMER_SECRET;
+interface WooCommerceCredentials {
+  storeUrl: string;
+  consumerKey: string;
+  consumerSecret: string;
+}
+
+export async function fetchWooCommerceProducts(credentials?: WooCommerceCredentials): Promise<FetchWooCommerceProductsResponse> {
+  const storeUrl = credentials?.storeUrl || process.env.WOOCOMMERCE_STORE_URL;
+  const consumerKey = credentials?.consumerKey || process.env.WOOCOMMERCE_CONSUMER_KEY;
+  const consumerSecret = credentials?.consumerSecret || process.env.WOOCOMMERCE_CONSUMER_SECRET;
 
   if (!storeUrl || !consumerKey || !consumerSecret) {
-    console.error('WooCommerce API credentials are not set in .env');
-    return { error: 'Server configuration error: WooCommerce API credentials missing.' };
+    const missingFields = [];
+    if (!storeUrl) missingFields.push('Store URL');
+    if (!consumerKey) missingFields.push('Consumer Key');
+    if (!consumerSecret) missingFields.push('Consumer Secret');
+    
+    const message = credentials 
+      ? `User-specific WooCommerce API credentials missing: ${missingFields.join(', ')}.`
+      : `Global WooCommerce API credentials (WOOCOMMERCE_STORE_URL, WOOCOMMERCE_CONSUMER_KEY, WOOCOMMERCE_CONSUMER_SECRET) are not set in .env.`;
+    
+    console.error(message);
+    return { error: `Server configuration error: ${message}` };
   }
 
   const apiUrl = `${storeUrl}/wp-json/wc/v3/products`;
