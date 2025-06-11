@@ -7,34 +7,64 @@ import type { MouseEvent as ReactMouseEvent, TouchEvent as ReactTouchEvent } fro
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { InteractiveCanvasImage } from './InteractiveCanvasImage';
 import { InteractiveCanvasText } from './InteractiveCanvasText';
-import { InteractiveCanvasShape } from './InteractiveCanvasShape'; // Added import
+import { InteractiveCanvasShape } from './InteractiveCanvasShape';
 
-const defaultProduct = {
-  id: 'tshirt-white',
-  name: 'Plain White T-shirt',
+// This interface should ideally be imported from a shared types definition
+interface BoundaryBox {
+  id: string;
+  name: string;
+  x: number; // percentage from left (top-left corner)
+  y: number; // percentage from top (top-left corner)
+  width: number; // percentage width
+  height: number; // percentage height
+}
+
+const defaultProductBase = {
+  name: 'Plain White T-shirt (Default)',
   imageUrl: 'https://placehold.co/700x700.png',
   imageAlt: 'Plain white T-shirt ready for customization',
   width: 700,
   height: 700,
-  aiHint: 't-shirt mockup'
+  aiHint: 't-shirt mockup',
+  boundaryBoxes: [] as BoundaryBox[],
 };
 
 const BASE_IMAGE_DIMENSION = 200;
 const BASE_TEXT_DIMENSION_APPROX = 50; 
-const BASE_SHAPE_DIMENSION = 100; // Default base size for shapes
+const BASE_SHAPE_DIMENSION = 100;
 
-export default function DesignCanvas() {
-  const productToDisplay = defaultProduct;
+interface DesignCanvasProps {
+  productImageUrl?: string;
+  productImageAlt?: string;
+  productImageAiHint?: string;
+  productDefinedBoundaryBoxes?: BoundaryBox[];
+}
+
+export default function DesignCanvas({ 
+  productImageUrl,
+  productImageAlt,
+  productImageAiHint,
+  productDefinedBoundaryBoxes 
+}: DesignCanvasProps) {
+
+  const productToDisplay = {
+    ...defaultProductBase,
+    imageUrl: productImageUrl || defaultProductBase.imageUrl,
+    imageAlt: productImageAlt || defaultProductBase.imageAlt,
+    aiHint: productImageAiHint || defaultProductBase.aiHint,
+    // Boundary boxes are now passed as props
+  };
+  
   const {
     canvasImages, selectCanvasImage, selectedCanvasImageId, updateCanvasImage, removeCanvasImage,
     canvasTexts, selectCanvasText, selectedCanvasTextId, updateCanvasText, removeCanvasText,
-    canvasShapes, selectCanvasShape, selectedCanvasShapeId, updateCanvasShape, removeCanvasShape, // Added shape context items
+    canvasShapes, selectCanvasShape, selectedCanvasShapeId, updateCanvasShape, removeCanvasShape,
   } = useUploads();
 
   const [activeDrag, setActiveDrag] = useState<{
     type: 'rotate' | 'resize' | 'move';
     itemId: string;
-    itemType: 'image' | 'text' | 'shape'; // Added 'shape'
+    itemType: 'image' | 'text' | 'shape';
     startX: number;
     startY: number;
     initialRotation?: number;
@@ -57,10 +87,12 @@ export default function DesignCanvas() {
   };
 
   const handleCanvasClick = (e: ReactMouseEvent<HTMLDivElement>) => {
-    if (e.target === canvasRef.current) {
+    // Check if the click is directly on the canvas background, not on an interactive item or a boundary box
+    const target = e.target as HTMLElement;
+    if (target === canvasRef.current || target.classList.contains('product-image-container') || target.classList.contains('boundary-box-overlay')) {
         selectCanvasImage(null);
         selectCanvasText(null);
-        selectCanvasShape(null); // Deselect shape
+        selectCanvasShape(null);
     }
   };
 
@@ -80,8 +112,8 @@ export default function DesignCanvas() {
     handleDragStart(e, 'move', textItem, 'text');
   };
 
-  const handleShapeSelectAndDragStart = ( // Added for shapes
-    e: ReactMouseEvent<SVGElement> | ReactTouchEvent<SVGElement>, // Event target is SVG for shapes
+  const handleShapeSelectAndDragStart = (
+    e: ReactMouseEvent<SVGElement> | ReactTouchEvent<SVGElement>,
     shape: CanvasShape
   ) => {
     if (shape.isLocked) return;
@@ -91,8 +123,8 @@ export default function DesignCanvas() {
   const handleDragStart = (
     e: ReactMouseEvent<HTMLDivElement> | ReactTouchEvent<HTMLDivElement> | ReactMouseEvent<SVGElement> | ReactTouchEvent<SVGElement>,
     type: 'rotate' | 'resize' | 'move',
-    item: CanvasImage | CanvasText | CanvasShape, // Added CanvasShape
-    itemType: 'image' | 'text' | 'shape' // Added 'shape'
+    item: CanvasImage | CanvasText | CanvasShape,
+    itemType: 'image' | 'text' | 'shape'
   ) => {
     if (item.isLocked && type !== 'move') return;
     if (item.isLocked && type === 'move') return;
@@ -134,10 +166,9 @@ export default function DesignCanvas() {
         itemInitialHeight = Math.max(BASE_TEXT_DIMENSION_APPROX / 2, textItem.fontSize);
     } else if (itemType === 'shape') {
         const shapeItem = item as CanvasShape;
-        itemInitialWidth = shapeItem.width; // Use actual base width/height from shape data
+        itemInitialWidth = shapeItem.width;
         itemInitialHeight = shapeItem.height;
     }
-
 
     setActiveDrag({
       type,
@@ -194,7 +225,7 @@ export default function DesignCanvas() {
 
       const scaleRatio = distFromCenter / initialDistFromCenter;
       let newScale = initialScale * scaleRatio;
-      newScale = Math.max(0.1, Math.min(newScale, itemType === 'image' ? 10 : (itemType === 'text' ? 20 : 10))); // Max scale for shapes also 10
+      newScale = Math.max(0.1, Math.min(newScale, itemType === 'image' ? 10 : (itemType === 'text' ? 20 : 10)));
       
       if (itemType === 'image') updateCanvasImage(itemId, { scale: newScale });
       else if (itemType === 'text') updateCanvasText(itemId, { scale: newScale });
@@ -265,15 +296,14 @@ export default function DesignCanvas() {
     else if (itemType === 'shape') removeCanvasShape(itemId);
   };
 
-
   return (
     <div
       ref={canvasRef}
-      className="w-full h-full flex items-center justify-center bg-card border border-dashed border-border rounded-lg shadow-inner p-4 min-h-[500px] lg:min-h-[700px] relative overflow-hidden"
+      className="w-full h-full flex items-center justify-center bg-card border border-dashed border-border rounded-lg shadow-inner p-4 min-h-[500px] lg:min-h-[700px] relative overflow-hidden select-none"
       onClick={handleCanvasClick}
       onTouchStart={handleCanvasClick as any} 
     >
-      <div className="text-center product-image-container">
+      <div className="text-center product-image-container"> {/* Added class for easier targeting */}
         <div
           className="relative"
           style={{ width: productToDisplay.width, height: productToDisplay.height }}
@@ -283,10 +313,31 @@ export default function DesignCanvas() {
             alt={productToDisplay.imageAlt}
             width={productToDisplay.width}
             height={productToDisplay.height}
-            className="rounded-md object-contain"
+            className="rounded-md object-contain pointer-events-none" // pointer-events-none for base image
             data-ai-hint={productToDisplay.aiHint}
             priority
           />
+
+          {/* Render Product-Defined Boundary Boxes as visual guides */}
+          {productDefinedBoundaryBoxes && productDefinedBoundaryBoxes.map(box => (
+            <div
+              key={`defined-${box.id}`}
+              className="absolute border-2 border-dashed border-primary/50 pointer-events-none boundary-box-overlay"
+              style={{
+                left: `${box.x}%`,
+                top: `${box.y}%`,
+                width: `${box.width}%`,
+                height: `${box.height}%`,
+                zIndex: 0, // Ensure they are behind interactive items
+              }}
+              title={box.name}
+            >
+              <span className="absolute -top-5 left-0 text-xs text-primary/70 bg-background/50 px-1 rounded-t-sm">
+                {box.name}
+              </span>
+            </div>
+          ))}
+
 
           {canvasImages.map((img) => (
             <InteractiveCanvasImage
