@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useEffect, useState, useCallback } from "react"; // Ensured useCallback is imported
+import { useEffect, useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -75,7 +75,7 @@ export default function DashboardPage() {
         description: "Attempting to fetch products using the application's default WooCommerce connection.",
         duration: 3000,
       });
-      response = await fetchWooCommerceProducts(); // Fallback to global .env credentials
+      response = await fetchWooCommerceProducts(); 
     }
 
     if (response.error) {
@@ -93,7 +93,7 @@ export default function DashboardPage() {
       setProducts(displayProducts);
     }
     setIsLoadingProducts(false);
-  }, [toast]);
+  }, [toast, setIsLoadingProducts, setError, setProducts]);
 
 
   useEffect(() => {
@@ -105,10 +105,10 @@ export default function DashboardPage() {
       if (userStoreUrl && userConsumerKey && userConsumerSecret) {
         loadProductsWithCredentials({ storeUrl: userStoreUrl, consumerKey: userConsumerKey, consumerSecret: userConsumerSecret });
       } else {
-        loadProductsWithCredentials(); // No user-specific creds, try global
+        loadProductsWithCredentials(); 
       }
     } else if (activeTab !== 'products') {
-      setIsLoadingProducts(false); // Not on products tab, no need to load
+      setIsLoadingProducts(false); 
     }
   }, [user, activeTab, loadProductsWithCredentials]);
 
@@ -151,7 +151,7 @@ export default function DashboardPage() {
         return;
     }
 
-    await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate API call
+    await new Promise(resolve => setTimeout(resolve, 1000)); 
 
     if (user) {
       try {
@@ -191,7 +191,7 @@ export default function DashboardPage() {
                 description: "Your saved WooCommerce credentials have been removed.",
             });
             if (activeTab === 'products') {
-                loadProductsWithCredentials(); // Re-fetch with global credentials (or show error if none)
+                loadProductsWithCredentials(); 
             }
         } catch (error) {
             toast({
@@ -220,7 +220,7 @@ export default function DashboardPage() {
     }
   }, [user]);
 
-  if (authIsLoading || !user) { // Simplified condition
+  if (authIsLoading || !user) { 
     return (
       <div className="flex min-h-svh w-full items-center justify-center bg-background">
         <Loader2 className="h-10 w-10 animate-spin text-primary" />
@@ -510,3 +510,6 @@ export default function DashboardPage() {
     </UploadProvider>
   );
 }
+
+
+    
