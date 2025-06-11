@@ -13,7 +13,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Switch } from '@/components/ui/switch';
-import { ArrowLeft, PlusCircle, Trash2, Image as ImageIcon, Maximize2, LockAspectRatio } from 'lucide-react';
+import { ArrowLeft, PlusCircle, Trash2, Image as ImageIcon, Maximize2, Lock } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface BoundaryBox {
@@ -609,7 +609,7 @@ export default function ProductOptionsPage() {
                   aria-label="Lock aspect ratio"
                 />
                 <Label htmlFor="aspectRatioLock" className="text-xs whitespace-nowrap flex items-center">
-                  <LockAspectRatio className="w-3.5 h-3.5 mr-1.5 text-muted-foreground" />
+                  <Lock className="w-3.5 h-3.5 mr-1.5 text-muted-foreground" />
                   Lock Ratio
                 </Label>
               </div>
@@ -843,4 +843,3 @@ export default function ProductOptionsPage() {
     </div>
   );
 }
-
