@@ -12,8 +12,8 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { Switch } from '@/components/ui/switch';
-import { ArrowLeft, PlusCircle, Trash2, Image as ImageIcon, Maximize2, Lock } from 'lucide-react';
+// import { Switch } from '@/components/ui/switch'; // Removed Switch import
+import { ArrowLeft, PlusCircle, Trash2, Image as ImageIcon, Maximize2 } from 'lucide-react'; // Removed Lock import
 import { cn } from '@/lib/utils';
 
 interface BoundaryBox {
@@ -60,7 +60,7 @@ interface ActiveDragState {
   initialBoxHeight: number;
   containerWidthPx: number;
   containerHeightPx: number;
-  initialAspectRatio?: number; // For aspect ratio lock
+  // initialAspectRatio?: number; // Removed for aspect ratio lock
 }
 
 const MIN_BOX_SIZE_PERCENT = 5; 
@@ -77,7 +77,7 @@ export default function ProductOptionsPage() {
   const [selectedBoundaryBoxId, setSelectedBoundaryBoxId] = useState<string | null>(null);
   const imageWrapperRef = useRef<HTMLDivElement>(null);
   const [activeDrag, setActiveDrag] = useState<ActiveDragState | null>(null);
-  const [isAspectRatioLocked, setIsAspectRatioLocked] = useState<boolean>(false);
+  // const [isAspectRatioLocked, setIsAspectRatioLocked] = useState<boolean>(false); // Removed aspect ratio lock state
 
 
   useEffect(() => {
@@ -130,12 +130,13 @@ export default function ProductOptionsPage() {
       containerHeightPx: containerRect.height,
     };
 
-    if (type.startsWith('resize_') && isAspectRatioLocked && currentBox.width > 0 && currentBox.height > 0) {
-      dragState.initialAspectRatio = currentBox.width / currentBox.height;
-    }
+    // Removed aspect ratio lock logic
+    // if (type.startsWith('resize_') && isAspectRatioLocked && currentBox.width > 0 && currentBox.height > 0) {
+    //   dragState.initialAspectRatio = currentBox.width / currentBox.height;
+    // }
 
     setActiveDrag(dragState);
-  }, [product?.boundaryBoxes, isAspectRatioLocked]);
+  }, [product?.boundaryBoxes]); // Removed isAspectRatioLocked from dependencies
 
   const handleDragging = useCallback((e: MouseEvent | TouchEvent) => {
     if (!activeDrag || !product || !imageWrapperRef.current) return;
@@ -157,88 +158,24 @@ export default function ProductOptionsPage() {
       newX = activeDrag.initialBoxX + deltaXPercent;
       newY = activeDrag.initialBoxY + deltaYPercent;
     } else { // Resize operations
-        const aspectRatio = activeDrag.initialAspectRatio; // Will be undefined if lock is off
-
-        if (aspectRatio) { // Aspect Ratio Locked Resizing
-            const canvasRect = imageWrapperRef.current.getBoundingClientRect();
-            const pointerRelX = (pointerCoords.x - canvasRect.left) / canvasRect.width * 100;
-            const pointerRelY = (pointerCoords.y - canvasRect.top) / canvasRect.height * 100;
-
-            if (activeDrag.type === 'resize_br') {
-                const fixedX = activeDrag.initialBoxX;
-                const fixedY = activeDrag.initialBoxY;
-                let proposedW = pointerRelX - fixedX;
-                let proposedH = pointerRelY - fixedY;
-
-                if ((proposedW / proposedH) > aspectRatio) { // Width leads
-                    newWidth = proposedW;
-                    newHeight = newWidth / aspectRatio;
-                } else { // Height leads
-                    newHeight = proposedH;
-                    newWidth = newHeight * aspectRatio;
-                }
-                newX = fixedX; newY = fixedY;
-            } else if (activeDrag.type === 'resize_bl') {
-                const fixedX = activeDrag.initialBoxX + activeDrag.initialBoxWidth;
-                const fixedY = activeDrag.initialBoxY;
-                let proposedW = fixedX - pointerRelX;
-                let proposedH = pointerRelY - fixedY;
-                
-                if ((proposedW / proposedH) > aspectRatio) {
-                    newWidth = proposedW;
-                    newHeight = newWidth / aspectRatio;
-                } else {
-                    newHeight = proposedH;
-                    newWidth = newHeight * aspectRatio;
-                }
-                newX = fixedX - newWidth; newY = fixedY;
-            } else if (activeDrag.type === 'resize_tr') {
-                const fixedX = activeDrag.initialBoxX;
-                const fixedY = activeDrag.initialBoxY + activeDrag.initialBoxHeight;
-                let proposedW = pointerRelX - fixedX;
-                let proposedH = fixedY - pointerRelY;
-
-                if ((proposedW / proposedH) > aspectRatio) {
-                    newWidth = proposedW;
-                    newHeight = newWidth / aspectRatio;
-                } else {
-                    newHeight = proposedH;
-                    newWidth = newHeight * aspectRatio;
-                }
-                newX = fixedX; newY = fixedY - newHeight;
-            } else if (activeDrag.type === 'resize_tl') {
-                const fixedX = activeDrag.initialBoxX + activeDrag.initialBoxWidth;
-                const fixedY = activeDrag.initialBoxY + activeDrag.initialBoxHeight;
-                let proposedW = fixedX - pointerRelX;
-                let proposedH = fixedY - pointerRelY;
-                
-                if ((proposedW / proposedH) > aspectRatio) {
-                    newWidth = proposedW;
-                    newHeight = newWidth / aspectRatio;
-                } else {
-                    newHeight = proposedH;
-                    newWidth = newHeight * aspectRatio;
-                }
-                newX = fixedX - newWidth; newY = fixedY - newHeight;
-            }
-        } else { // Original Unlocked Resizing Logic
-            if (activeDrag.type === 'resize_br') {
-              newWidth = activeDrag.initialBoxWidth + deltaXPercent;
-              newHeight = activeDrag.initialBoxHeight + deltaYPercent;
-            } else if (activeDrag.type === 'resize_bl') {
-              newX = activeDrag.initialBoxX + deltaXPercent;
-              newWidth = activeDrag.initialBoxWidth - deltaXPercent;
-              newHeight = activeDrag.initialBoxHeight + deltaYPercent;
-            } else if (activeDrag.type === 'resize_tr') {
-              newY = activeDrag.initialBoxY + deltaYPercent;
-              newWidth = activeDrag.initialBoxWidth + deltaXPercent;
-              newHeight = activeDrag.initialBoxHeight - deltaYPercent;
-            } else if (activeDrag.type === 'resize_tl') {
-              newX = activeDrag.initialBoxX + deltaXPercent;
-              newY = activeDrag.initialBoxY + deltaYPercent;
-              newWidth = activeDrag.initialBoxWidth - deltaXPercent;
-              newHeight = activeDrag.initialBoxHeight - deltaYPercent;
-            }
+        // Removed aspect ratio locked resizing logic
+        // Original Unlocked Resizing Logic remains
+        if (activeDrag.type === 'resize_br') {
+          newWidth = activeDrag.initialBoxWidth + deltaXPercent;
+          newHeight = activeDrag.initialBoxHeight + deltaYPercent;
+        } else if (activeDrag.type === 'resize_bl') {
+          newX = activeDrag.initialBoxX + deltaXPercent;
+          newWidth = activeDrag.initialBoxWidth - deltaXPercent;
+          newHeight = activeDrag.initialBoxHeight + deltaYPercent;
+        } else if (activeDrag.type === 'resize_tr') {
+          newY = activeDrag.initialBoxY + deltaYPercent;
+          newWidth = activeDrag.initialBoxWidth + deltaXPercent;
+          newHeight = activeDrag.initialBoxHeight - deltaYPercent;
+        } else if (activeDrag.type === 'resize_tl') {
+          newX = activeDrag.initialBoxX + deltaXPercent;
+          newY = activeDrag.initialBoxY + deltaYPercent;
+          newWidth = activeDrag.initialBoxWidth - deltaXPercent;
+          newHeight = activeDrag.initialBoxHeight - deltaYPercent;
         }
     }
 
@@ -249,33 +186,22 @@ export default function ProductOptionsPage() {
     let clampedWidth = Math.max(MIN_BOX_SIZE_PERCENT, newWidth);
     let clampedHeight = Math.max(MIN_BOX_SIZE_PERCENT, newHeight);
 
-    if (activeDrag.initialAspectRatio && activeDrag.type.startsWith('resize_')) { // Re-apply aspect ratio if clamped by min size
-        if (clampedWidth !== originalProposedWidth) { // Width was clamped
-            clampedHeight = clampedWidth / activeDrag.initialAspectRatio;
-            clampedHeight = Math.max(MIN_BOX_SIZE_PERCENT, clampedHeight); // Ensure height also meets min after AR adjust
-            clampedWidth = clampedHeight * activeDrag.initialAspectRatio; // Re-adjust width if height was clamped again
-        } else if (clampedHeight !== originalProposedHeight) { // Height was clamped
-            clampedWidth = clampedHeight * activeDrag.initialAspectRatio;
-            clampedWidth = Math.max(MIN_BOX_SIZE_PERCENT, clampedWidth); // Ensure width also meets min
-            clampedHeight = clampedWidth / activeDrag.initialAspectRatio; // Re-adjust height
-        }
-    }
+    // Removed aspect ratio re-application logic after min size clamp
+    // if (activeDrag.initialAspectRatio && activeDrag.type.startsWith('resize_')) { ... }
+
     newWidth = clampedWidth;
     newHeight = clampedHeight;
 
-    // Adjust X or Y if width/height was clamped by MIN_BOX_SIZE_PERCENT (or aspect ratio adjustment)
+    // Adjust X or Y if width/height was clamped by MIN_BOX_SIZE_PERCENT
     if (activeDrag.type === 'resize_tl') {
       if (newWidth !== originalProposedWidth) newX = activeDrag.initialBoxX + activeDrag.initialBoxWidth - newWidth;
       if (newHeight !== originalProposedHeight) newY = activeDrag.initialBoxY + activeDrag.initialBoxHeight - newHeight;
     } else if (activeDrag.type === 'resize_tr') {
       if (newHeight !== originalProposedHeight) newY = activeDrag.initialBoxY + activeDrag.initialBoxHeight - newHeight;
-      if (newWidth === originalProposedWidth && activeDrag.initialAspectRatio) { /* No X change if height was primary */ }
-      else if (newWidth !== originalProposedWidth) { /* X doesn't change if width was primary from BR/TR logic, only Y */ }
-
+      // X doesn't change if width was primary from BR/TR logic, only Y 
     } else if (activeDrag.type === 'resize_bl') {
       if (newWidth !== originalProposedWidth) newX = activeDrag.initialBoxX + activeDrag.initialBoxWidth - newWidth;
-      if (newHeight === originalProposedHeight && activeDrag.initialAspectRatio) { /* No Y change */ }
-      else if (newHeight !== originalProposedHeight) { /* Y doesn't change */ }
+      // Y doesn't change
     }
     
     // Clamp X and then Width
@@ -290,13 +216,8 @@ export default function ProductOptionsPage() {
     newHeight = Math.max(MIN_BOX_SIZE_PERCENT, newHeight); // Ensure min height after boundary clamp
     newY = Math.max(0, Math.min(newY, 100 - newHeight)); // Re-clamp Y based on final height
     
-    if (activeDrag.initialAspectRatio && activeDrag.type.startsWith('resize_')) {
-        // Final pass for aspect ratio after all clamping, may slightly deform if boundary is hit
-        // This is a compromise: prioritize boundaries over perfect AR at edges.
-        // To maintain AR perfectly, the clamping would need to adjust both dimensions and position simultaneously.
-        // For now, we allow slight deformation at boundary collision.
-    }
-
+    // Removed final aspect ratio pass
+    // if (activeDrag.initialAspectRatio && activeDrag.type.startsWith('resize_')) { ... }
 
     if (isNaN(newX) || isNaN(newY) || isNaN(newWidth) || isNaN(newHeight)) {
         console.warn("NaN detected in boundary box calculation, skipping update");
@@ -601,18 +522,7 @@ export default function ProductOptionsPage() {
                 <CardTitle className="font-headline text-lg">Customization Areas</CardTitle>
                 <CardDescription>Define printable/customizable regions. (Max 3)</CardDescription>
               </div>
-              <div className="flex items-center space-x-2 pt-1">
-                <Switch
-                  id="aspectRatioLock"
-                  checked={isAspectRatioLocked}
-                  onCheckedChange={setIsAspectRatioLocked}
-                  aria-label="Lock aspect ratio"
-                />
-                <Label htmlFor="aspectRatioLock" className="text-xs whitespace-nowrap flex items-center">
-                  <Lock className="w-3.5 h-3.5 mr-1.5 text-muted-foreground" />
-                  Lock Ratio
-                </Label>
-              </div>
+              {/* Removed Aspect Ratio Lock Switch and Label */}
             </CardHeader>
             <CardContent>
               {product.boundaryBoxes.length > 0 && (
@@ -843,3 +753,6 @@ export default function ProductOptionsPage() {
     </div>
   );
 }
+
+
+      
