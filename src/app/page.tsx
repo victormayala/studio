@@ -39,7 +39,7 @@ export default function MarketingHomePage() {
                     width={1200}
                     height={600}
                     className="rounded-lg shadow-2xl mx-auto border"
-                    data-ai-hint="product customizer interface"
+                    data-ai-hint="customizer interface"
                     priority
                 />
             </div>
@@ -135,3 +135,4 @@ export default function MarketingHomePage() {
     </div>
   );
 }
+

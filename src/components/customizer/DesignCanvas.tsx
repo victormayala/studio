@@ -16,7 +16,7 @@ const defaultProduct = {
   imageAlt: 'Plain white T-shirt ready for customization',
   width: 700,
   height: 700,
-  aiHint: 'white t-shirt mockup'
+  aiHint: 't-shirt mockup'
 };
 
 const BASE_IMAGE_DIMENSION = 200;
@@ -341,3 +341,4 @@ export default function DesignCanvas() {
     </div>
   );
 }
+

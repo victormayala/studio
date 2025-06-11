@@ -44,7 +44,7 @@ const mockProductDetails: ProductDetails = {
   colors: ['#FFFFFF', '#000000', '#FF0000'],
   sizes: ['S', 'M', 'L', 'XL'],
   imageUrl: 'https://placehold.co/600x600.png',
-  aiHint: 't-shirt mockup front',
+  aiHint: 't-shirt mockup',
   boundaryBoxes: [],
 };
 
@@ -83,7 +83,8 @@ export default function ProductOptionsPage() {
             ...mockProductDetails, 
             id: productId, 
             name: `Product ${productId}`, 
-            imageUrl: `https://placehold.co/600x600.png?text=Product+${productId}`,
+            imageUrl: `https://placehold.co/600x600.png`,
+            aiHint: 'product image', // Generic hint for fallback
             boundaryBoxes: [], 
           };
       setProduct(foundProduct);
@@ -571,3 +572,4 @@ export default function ProductOptionsPage() {
     </div>
   );
 }
+
