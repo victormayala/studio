@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react"; // Ensured useCallback is imported
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -9,16 +9,16 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { PlusCircle, MoreHorizontal, Settings, Code, Trash2, AlertTriangle, Loader2, LogOut, Link as LinkIcon, KeyRound, Save, Package as PackageIcon, PlugZap, UserCircle, XCircle } from "lucide-react"; // Added XCircle
+import { PlusCircle, MoreHorizontal, Settings, Code, Trash2, AlertTriangle, Loader2, LogOut, Link as LinkIcon, KeyRound, Save, Package as PackageIcon, PlugZap, UserCircle, XCircle } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from 'next/navigation';
 import NextImage from 'next/image';
 import { fetchWooCommerceProducts } from "@/app/actions/woocommerceActions";
 import type { WCCustomProduct } from '@/types/woocommerce';
 import {format} from 'date-fns';
-import { useAuth } from "@/contexts/AuthContext"; 
-import { useToast } from "@/hooks/use-toast"; 
-import AppHeader from "@/components/layout/AppHeader"; 
+import { useAuth } from "@/contexts/AuthContext";
+import { useToast } from "@/hooks/use-toast";
+import AppHeader from "@/components/layout/AppHeader";
 import { UploadProvider } from "@/contexts/UploadContext";
 import { SidebarProvider, Sidebar, SidebarHeader, SidebarContent, SidebarFooter, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarInset } from "@/components/ui/sidebar";
 
@@ -35,8 +35,8 @@ type ActiveDashboardTab = 'products' | 'storeIntegration' | 'settings' | 'profil
 
 export default function DashboardPage() {
   const router = useRouter();
-  const { user, isLoading: authIsLoading, signOut } = useAuth(); 
-  const { toast } = useToast(); 
+  const { user, isLoading: authIsLoading, signOut } = useAuth();
+  const { toast } = useToast();
 
   const [products, setProducts] = useState<DisplayProduct[]>([]);
   const [isLoadingProducts, setIsLoadingProducts] = useState(true);
@@ -53,14 +53,14 @@ export default function DashboardPage() {
 
   useEffect(() => {
     if (!authIsLoading && !user) {
-      router.replace('/signin'); 
+      router.replace('/signin');
     }
   }, [user, authIsLoading, router]);
 
   const loadProductsWithCredentials = useCallback(async (credentials?: { storeUrl: string; consumerKey: string; consumerSecret: string }) => {
     setIsLoadingProducts(true);
     setError(null);
-    
+
     let response;
     if (credentials && credentials.storeUrl && credentials.consumerKey && credentials.consumerSecret) {
        toast({
@@ -110,7 +110,7 @@ export default function DashboardPage() {
     } else if (activeTab !== 'products') {
       setIsLoadingProducts(false); // Not on products tab, no need to load
     }
-  }, [user, activeTab, loadProductsWithCredentials]); 
+  }, [user, activeTab, loadProductsWithCredentials]);
 
   const handleAddNewProduct = () => {
     alert("Add New Product (Configuration) functionality coming soon!");
@@ -121,7 +121,7 @@ export default function DashboardPage() {
     if (status === 'Draft') return 'secondary';
     return 'outline';
   };
-  
+
   const getStatusBadgeClassName = (status: string): string => {
     if (status === 'Customizable') return 'bg-green-500/20 text-green-700 dark:text-green-400 border-green-500/30 hover:bg-green-500/30';
     if (status === 'Draft') return 'bg-yellow-500/20 text-yellow-700 dark:text-yellow-400 border-yellow-500/30 hover:bg-yellow-500/30';
@@ -131,7 +131,7 @@ export default function DashboardPage() {
   const handleSaveCredentials = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSavingCredentials(true);
-    
+
     if (!storeUrl.trim() || !consumerKey.trim() || !consumerSecret.trim()) {
         toast({
             title: "Missing Fields",
@@ -157,7 +157,7 @@ export default function DashboardPage() {
       try {
         localStorage.setItem(`wc_store_url_${user.id}`, storeUrl);
         localStorage.setItem(`wc_consumer_key_${user.id}`, consumerKey);
-        localStorage.setItem(`wc_consumer_secret_${user.id}`, consumerSecret); 
+        localStorage.setItem(`wc_consumer_secret_${user.id}`, consumerSecret);
         toast({
           title: "Credentials Saved",
           description: "Your WooCommerce credentials have been saved locally. Products will refresh if you are on the 'Products' tab.",
@@ -175,7 +175,7 @@ export default function DashboardPage() {
     }
     setIsSavingCredentials(false);
   };
-  
+
   const handleClearCredentials = async () => {
     setIsClearingCredentials(true);
     if (user) {
@@ -220,7 +220,7 @@ export default function DashboardPage() {
     }
   }, [user]);
 
-  if (authIsLoading || (!user && !authIsLoading)) { 
+  if (authIsLoading || (!user && !authIsLoading)) {
     return (
       <div className="flex min-h-svh w-full items-center justify-center bg-background">
         <Loader2 className="h-10 w-10 animate-spin text-primary" />
@@ -233,7 +233,7 @@ export default function DashboardPage() {
       <div className="flex flex-col min-h-screen">
         <AppHeader />
         <SidebarProvider defaultOpen>
-          <div className="flex flex-1"> 
+          <div className="flex flex-1">
             <Sidebar className="h-full shadow-md border-r">
               <SidebarHeader className="p-4 border-b">
                 <h2 className="font-headline text-lg font-semibold text-foreground">Navigation</h2>
@@ -440,7 +440,7 @@ export default function DashboardPage() {
                             </Label>
                             <Input
                               id="consumerSecret"
-                              type="password" 
+                              type="password"
                               placeholder="cs_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
                               value={consumerSecret}
                               onChange={(e) => setConsumerSecret(e.target.value)}
@@ -457,10 +457,10 @@ export default function DashboardPage() {
                               )}
                               Save Credentials
                             </Button>
-                             <Button 
-                                type="button" 
-                                variant="destructive" 
-                                className="w-full sm:w-auto" 
+                             <Button
+                                type="button"
+                                variant="destructive"
+                                className="w-full sm:w-auto"
                                 onClick={handleClearCredentials}
                                 disabled={isSavingCredentials || isClearingCredentials || (!storeUrl && !consumerKey && !consumerSecret))}
                             >
@@ -511,3 +511,4 @@ export default function DashboardPage() {
   );
 }
 
+    
