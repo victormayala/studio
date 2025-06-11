@@ -220,7 +220,7 @@ export default function DashboardPage() {
     }
   }, [user]);
 
-  if (authIsLoading || (!user && !authIsLoading)) {
+  if (authIsLoading || !user) { // Simplified condition
     return (
       <div className="flex min-h-svh w-full items-center justify-center bg-background">
         <Loader2 className="h-10 w-10 animate-spin text-primary" />
@@ -510,5 +510,3 @@ export default function DashboardPage() {
     </UploadProvider>
   );
 }
-
-    
