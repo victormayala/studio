@@ -83,8 +83,8 @@ export default function ProductOptionsPage() {
             ...mockProductDetails, 
             id: productId, 
             name: `Product ${productId}`, 
-            imageUrl: `https://placehold.co/600x600.png`,
-            aiHint: 'product image', // Generic hint for fallback
+            imageUrl: `https://placehold.co/600x600.png`, // Ensure generic placeholders don't use text queries
+            aiHint: 'product image', 
             boundaryBoxes: [], 
           };
       setProduct(foundProduct);
@@ -129,7 +129,7 @@ export default function ProductOptionsPage() {
   }, [product?.boundaryBoxes]);
 
   const handleDragging = useCallback((e: MouseEvent | TouchEvent) => {
-    if (!activeDrag || !product) return;
+    if (!activeDrag || !product || !imageWrapperRef.current) return;
     e.preventDefault();
 
     const pointerCoords = getPointerCoords(e);
@@ -147,16 +147,26 @@ export default function ProductOptionsPage() {
     if (activeDrag.type === 'move') {
       newX = activeDrag.initialBoxX + deltaXPercent;
       newY = activeDrag.initialBoxY + deltaYPercent;
-      // Clamp position
-      newX = Math.max(0, Math.min(newX, 100 - newWidth));
-      newY = Math.max(0, Math.min(newY, 100 - newHeight));
     } else if (activeDrag.type === 'resize_br') {
       newWidth = activeDrag.initialBoxWidth + deltaXPercent;
       newHeight = activeDrag.initialBoxHeight + deltaYPercent;
-      // Clamp size (min size and max based on container boundaries)
-      newWidth = Math.max(MIN_BOX_SIZE_PERCENT, Math.min(newWidth, 100 - newX));
-      newHeight = Math.max(MIN_BOX_SIZE_PERCENT, Math.min(newHeight, 100 - newY));
     }
+    
+    // Apply constraints
+    newWidth = Math.max(MIN_BOX_SIZE_PERCENT, newWidth);
+    newHeight = Math.max(MIN_BOX_SIZE_PERCENT, newHeight);
+
+    newX = Math.max(0, Math.min(newX, 100 - newWidth));
+    newY = Math.max(0, Math.min(newY, 100 - newHeight));
+    
+    // Re-check width/height based on new x/y (in case x/y were clamped)
+    newWidth = Math.min(newWidth, 100 - newX);
+    newHeight = Math.min(newHeight, 100 - newY);
+
+    // Final check for min size after adjustments
+    newWidth = Math.max(MIN_BOX_SIZE_PERCENT, newWidth);
+    newHeight = Math.max(MIN_BOX_SIZE_PERCENT, newHeight);
+
 
     setProduct(prev => prev ? {
       ...prev,
@@ -267,6 +277,52 @@ export default function ProductOptionsPage() {
     setProduct({ ...product, boundaryBoxes: updatedBoxes });
   };
 
+  const handleBoundaryBoxPropertyChange = (
+    boxId: string,
+    property: keyof Pick<BoundaryBox, 'x' | 'y' | 'width' | 'height'>,
+    value: string
+  ) => {
+    if (!product) return;
+
+    setProduct(prevProduct => {
+      if (!prevProduct) return null;
+
+      const newBoxes = prevProduct.boundaryBoxes.map(box => {
+        if (box.id === boxId) {
+          let newBox = { ...box };
+          const parsedValue = parseFloat(value);
+
+          if (isNaN(parsedValue)) return box; // If parsing fails, return original box
+
+          if (property === 'x') newBox.x = parsedValue;
+          else if (property === 'y') newBox.y = parsedValue;
+          else if (property === 'width') newBox.width = parsedValue;
+          else if (property === 'height') newBox.height = parsedValue;
+
+          // Apply constraints
+          newBox.width = Math.max(MIN_BOX_SIZE_PERCENT, newBox.width);
+          newBox.height = Math.max(MIN_BOX_SIZE_PERCENT, newBox.height);
+          newBox.x = Math.max(0, Math.min(newBox.x, 100 - newBox.width));
+          newBox.y = Math.max(0, Math.min(newBox.y, 100 - newBox.height));
+          newBox.width = Math.min(newBox.width, 100 - newBox.x);
+          newBox.height = Math.min(newBox.height, 100 - newBox.y);
+          newBox.width = Math.max(MIN_BOX_SIZE_PERCENT, newBox.width);
+          newBox.height = Math.max(MIN_BOX_SIZE_PERCENT, newBox.height);
+          
+          // Ensure values are not NaN after constraints (e.g. if 100-newBox.width becomes negative due to huge width input)
+          if (isNaN(newBox.x)) newBox.x = 0;
+          if (isNaN(newBox.y)) newBox.y = 0;
+          if (isNaN(newBox.width)) newBox.width = MIN_BOX_SIZE_PERCENT;
+          if (isNaN(newBox.height)) newBox.height = MIN_BOX_SIZE_PERCENT;
+
+          return newBox;
+        }
+        return box;
+      });
+      return { ...prevProduct, boundaryBoxes: newBoxes };
+    });
+  };
+
 
   return (
     <div className="container mx-auto p-4 md:p-6 lg:p-8 bg-background min-h-screen">
@@ -296,7 +352,7 @@ export default function ProductOptionsPage() {
               <div 
                 ref={imageWrapperRef} 
                 className="relative w-full aspect-square border rounded-md overflow-hidden group bg-muted/20 select-none"
-                onMouseDown={(e) => { // Deselect if clicking on background
+                onMouseDown={(e) => { 
                   if (e.target === imageWrapperRef.current) {
                     setSelectedBoundaryBoxId(null);
                   }
@@ -322,7 +378,7 @@ export default function ProductOptionsPage() {
                   <div
                     key={box.id}
                     className={cn(
-                      "absolute transition-colors duration-100 ease-in-out group/box", // group/box for handle visibility
+                      "absolute transition-colors duration-100 ease-in-out group/box", 
                       selectedBoundaryBoxId === box.id 
                         ? 'border-primary ring-2 ring-primary ring-offset-1 bg-primary/10' 
                         : 'border-dashed border-muted-foreground/50 hover:border-primary/70 hover:bg-primary/5',
@@ -333,12 +389,11 @@ export default function ProductOptionsPage() {
                       top: `${box.y}%`,
                       width: `${box.width}%`,
                       height: `${box.height}%`,
-                      zIndex: selectedBoundaryBoxId === box.id ? 10 : 1, // Bring selected to front
+                      zIndex: selectedBoundaryBoxId === box.id ? 10 : 1,
                     }}
                     onMouseDown={(e) => handleInteractionStart(e, box.id, 'move')}
                     onTouchStart={(e) => handleInteractionStart(e, box.id, 'move')}
                   >
-                    {/* Resize Handle (Bottom-Right) */}
                     {selectedBoundaryBoxId === box.id && (
                       <div
                         className="absolute -bottom-1.5 -right-1.5 w-4 h-4 bg-primary rounded-full border-2 border-background shadow-md cursor-nwse-resize hover:opacity-80 active:opacity-100"
@@ -349,7 +404,6 @@ export default function ProductOptionsPage() {
                         <Maximize2 className="w-2.5 h-2.5 text-primary-foreground absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
                       </div>
                     )}
-                     {/* Display box name inside, useful for identification */}
                     <div className="absolute top-0.5 left-0.5 text-[8px] text-primary-foreground bg-primary/70 px-1 py-0.5 rounded-br-sm opacity-0 group-hover/box:opacity-100 group-[.is-selected]/box:opacity-100 transition-opacity select-none pointer-events-none">
                         {box.name}
                     </div>
@@ -397,10 +451,34 @@ export default function ProductOptionsPage() {
                           <Trash2 className="h-4 w-4" />
                         </Button>
                       </div>
-                      <div className="text-xs text-muted-foreground space-y-0.5">
-                        <p><strong>X:</strong> {box.x.toFixed(1)}% | <strong>Y:</strong> {box.y.toFixed(1)}%</p>
-                        <p><strong>W:</strong> {box.width.toFixed(1)}% | <strong>H:</strong> {box.height.toFixed(1)}%</p>
-                      </div>
+                      {selectedBoundaryBoxId === box.id ? (
+                        <div className="mt-3 pt-3 border-t border-border/50">
+                          <h4 className="text-xs font-medium mb-1.5 text-muted-foreground">Edit Dimensions (%):</h4>
+                          <div className="grid grid-cols-2 gap-x-3 gap-y-2">
+                            <div>
+                              <Label htmlFor={`box-x-${box.id}`} className="text-xs">X</Label>
+                              <Input type="number" step="0.1" min="0" max="100" id={`box-x-${box.id}`} value={box.x} onChange={(e) => handleBoundaryBoxPropertyChange(box.id, 'x', e.target.value)} className="h-8 text-xs w-full" onClick={(e) => e.stopPropagation()} />
+                            </div>
+                            <div>
+                              <Label htmlFor={`box-y-${box.id}`} className="text-xs">Y</Label>
+                              <Input type="number" step="0.1" min="0" max="100" id={`box-y-${box.id}`} value={box.y} onChange={(e) => handleBoundaryBoxPropertyChange(box.id, 'y', e.target.value)} className="h-8 text-xs w-full" onClick={(e) => e.stopPropagation()} />
+                            </div>
+                            <div>
+                              <Label htmlFor={`box-w-${box.id}`} className="text-xs">Width</Label>
+                              <Input type="number" step="0.1" min={MIN_BOX_SIZE_PERCENT.toString()} max="100" id={`box-w-${box.id}`} value={box.width} onChange={(e) => handleBoundaryBoxPropertyChange(box.id, 'width', e.target.value)} className="h-8 text-xs w-full" onClick={(e) => e.stopPropagation()} />
+                            </div>
+                            <div>
+                              <Label htmlFor={`box-h-${box.id}`} className="text-xs">Height</Label>
+                              <Input type="number" step="0.1" min={MIN_BOX_SIZE_PERCENT.toString()} max="100" id={`box-h-${box.id}`} value={box.height} onChange={(e) => handleBoundaryBoxPropertyChange(box.id, 'height', e.target.value)} className="h-8 text-xs w-full" onClick={(e) => e.stopPropagation()} />
+                            </div>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="text-xs text-muted-foreground space-y-0.5">
+                          <p><strong>X:</strong> {box.x.toFixed(1)}% | <strong>Y:</strong> {box.y.toFixed(1)}%</p>
+                          <p><strong>W:</strong> {box.width.toFixed(1)}% | <strong>H:</strong> {box.height.toFixed(1)}%</p>
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -573,3 +651,5 @@ export default function ProductOptionsPage() {
   );
 }
 
+
+    
