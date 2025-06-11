@@ -36,8 +36,12 @@ type ActiveDashboardTab = 'products' | 'storeIntegration' | 'settings' | 'profil
 export default function DashboardPage() {
   const router = useRouter();
   const { user, isLoading: authIsLoading, signOut } = useAuth();
-  const { toast } = useToast();
+  const { toast } = useToast(); // Keep toast as it might be used by remaining UI or if we uncomment sections
 
+  const [activeTab, setActiveTab] = useState<ActiveDashboardTab>('products');
+
+  // Temporarily commented out for debugging parsing error
+  /*
   const [products, setProducts] = useState<DisplayProduct[]>([]);
   const [isLoadingProducts, setIsLoadingProducts] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -47,8 +51,6 @@ export default function DashboardPage() {
   const [consumerSecret, setConsumerSecret] = useState('');
   const [isSavingCredentials, setIsSavingCredentials] = useState(false);
   const [isClearingCredentials, setIsClearingCredentials] = useState(false);
-
-  const [activeTab, setActiveTab] = useState<ActiveDashboardTab>('products');
 
 
   useEffect(() => {
@@ -75,7 +77,7 @@ export default function DashboardPage() {
         description: "Attempting to fetch products using the application's default WooCommerce connection.",
         duration: 3000,
       });
-      response = await fetchWooCommerceProducts(); 
+      response = await fetchWooCommerceProducts();
     }
 
     if (response.error) {
@@ -105,12 +107,12 @@ export default function DashboardPage() {
       if (userStoreUrl && userConsumerKey && userConsumerSecret) {
         loadProductsWithCredentials({ storeUrl: userStoreUrl, consumerKey: userConsumerKey, consumerSecret: userConsumerSecret });
       } else {
-        loadProductsWithCredentials(); 
+        loadProductsWithCredentials();
       }
     } else if (activeTab !== 'products') {
-      setIsLoadingProducts(false); 
+      setIsLoadingProducts(false);
     }
-  }, [user, activeTab, loadProductsWithCredentials]);
+  }, [user, activeTab, loadProductsWithCredentials, setIsLoadingProducts]);
 
   const handleAddNewProduct = () => {
     alert("Add New Product (Configuration) functionality coming soon!");
@@ -151,7 +153,7 @@ export default function DashboardPage() {
         return;
     }
 
-    await new Promise(resolve => setTimeout(resolve, 1000)); 
+    await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate API call
 
     if (user) {
       try {
@@ -191,7 +193,7 @@ export default function DashboardPage() {
                 description: "Your saved WooCommerce credentials have been removed.",
             });
             if (activeTab === 'products') {
-                loadProductsWithCredentials(); 
+                loadProductsWithCredentials(); // Will use global or show error
             }
         } catch (error) {
             toast({
@@ -206,6 +208,7 @@ export default function DashboardPage() {
 
 
   useEffect(() => {
+    // This effect populates the form fields from localStorage
     if (user) {
       const savedUrl = localStorage.getItem(`wc_store_url_${user.id}`);
       const savedKey = localStorage.getItem(`wc_consumer_key_${user.id}`);
@@ -214,13 +217,16 @@ export default function DashboardPage() {
       if (savedKey) setConsumerKey(savedKey);
       if (savedSecret) setConsumerSecret(savedSecret);
     } else {
+      // Clear fields if user logs out or no user
       setStoreUrl('');
       setConsumerKey('');
       setConsumerSecret('');
     }
-  }, [user]);
+  }, [user, setStoreUrl, setConsumerKey, setConsumerSecret]); // Dependencies include setters
+  */
 
-  if (authIsLoading || !user) { 
+  // Simplified loading state check
+  if (authIsLoading || !user) {
     return (
       <div className="flex min-h-svh w-full items-center justify-center bg-background">
         <Loader2 className="h-10 w-10 animate-spin text-primary" />
@@ -284,7 +290,7 @@ export default function DashboardPage() {
                     </div>
                     {activeTab === 'products' && (
                        <div className="flex items-center gap-2">
-                        <Button onClick={handleAddNewProduct} className="bg-primary text-primary-foreground hover:bg-primary/90">
+                        <Button /*onClick={handleAddNewProduct}*/ className="bg-primary text-primary-foreground hover:bg-primary/90">
                           <PlusCircle className="mr-2 h-5 w-5" />
                           Add Product Configuration
                         </Button>
@@ -301,7 +307,9 @@ export default function DashboardPage() {
                         </CardDescription>
                       </CardHeader>
                       <CardContent>
-                        {isLoadingProducts ? (
+                        {/* Temporarily simplified content for debugging */}
+                        <p className="text-muted-foreground text-center py-10">Product display is temporarily disabled for debugging.</p>
+                        {/* {isLoadingProducts ? (
                           <div className="flex items-center justify-center py-10">
                             <Loader2 className="h-8 w-8 animate-spin text-primary" />
                             <p className="ml-2 text-muted-foreground">Loading products...</p>
@@ -391,7 +399,7 @@ export default function DashboardPage() {
                               Configure First Product
                             </Button>
                           </div>
-                        )}
+                        )} */}
                       </CardContent>
                     </Card>
                   )}
@@ -405,7 +413,7 @@ export default function DashboardPage() {
                         </CardDescription>
                       </CardHeader>
                       <CardContent>
-                        <form onSubmit={handleSaveCredentials} className="space-y-6">
+                        <form /* onSubmit={handleSaveCredentials} */ className="space-y-6">
                           <div className="space-y-2">
                             <Label htmlFor="storeUrl" className="flex items-center">
                               <LinkIcon className="mr-2 h-4 w-4 text-muted-foreground" /> Store URL
@@ -414,8 +422,8 @@ export default function DashboardPage() {
                               id="storeUrl"
                               type="url"
                               placeholder="https://yourstore.com"
-                              value={storeUrl}
-                              onChange={(e) => setStoreUrl(e.target.value)}
+                              // value={storeUrl}
+                              // onChange={(e) => setStoreUrl(e.target.value)}
                               required
                               className="bg-input/50"
                             />
@@ -428,8 +436,8 @@ export default function DashboardPage() {
                               id="consumerKey"
                               type="text"
                               placeholder="ck_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
-                              value={consumerKey}
-                              onChange={(e) => setConsumerKey(e.target.value)}
+                              // value={consumerKey}
+                              // onChange={(e) => setConsumerKey(e.target.value)}
                               required
                               className="bg-input/50"
                             />
@@ -442,33 +450,33 @@ export default function DashboardPage() {
                               id="consumerSecret"
                               type="password"
                               placeholder="cs_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
-                              value={consumerSecret}
-                              onChange={(e) => setConsumerSecret(e.target.value)}
+                              // value={consumerSecret}
+                              // onChange={(e) => setConsumerSecret(e.target.value)}
                               required
                               className="bg-input/50"
                             />
                           </div>
                           <div className="flex flex-col sm:flex-row gap-2">
-                            <Button type="submit" className="w-full sm:w-auto" disabled={isSavingCredentials || isClearingCredentials}>
-                              {isSavingCredentials ? (
+                            <Button type="submit" className="w-full sm:w-auto" /* disabled={isSavingCredentials || isClearingCredentials} */>
+                              {/* {isSavingCredentials ? (
                                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                              ) : (
+                              ) : ( */}
                                 <Save className="mr-2 h-4 w-4" />
-                              )}
+                              {/* )} */}
                               Save Credentials
                             </Button>
                              <Button
                                 type="button"
                                 variant="destructive"
                                 className="w-full sm:w-auto"
-                                onClick={handleClearCredentials}
-                                disabled={isSavingCredentials || isClearingCredentials || (!storeUrl && !consumerKey && !consumerSecret))}
+                                // onClick={handleClearCredentials}
+                                // disabled={isSavingCredentials || isClearingCredentials || (!storeUrl && !consumerKey && !consumerSecret))}
                             >
-                              {isClearingCredentials ? (
+                              {/* {isClearingCredentials ? (
                                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                              ) : (
+                              ) : ( */}
                                 <XCircle className="mr-2 h-4 w-4" />
-                              )}
+                              {/* )} */}
                               Clear Saved Credentials
                             </Button>
                           </div>
@@ -510,6 +518,3 @@ export default function DashboardPage() {
     </UploadProvider>
   );
 }
-
-
-    
