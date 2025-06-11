@@ -7,7 +7,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { PlusCircle, MoreHorizontal, Settings, Code, Trash2, AlertTriangle, Loader2, LogOut } from "lucide-react"; // Added LogOut
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { PlusCircle, MoreHorizontal, Settings, Code, Trash2, AlertTriangle, Loader2, LogOut, Link as LinkIcon, KeyRound, Save } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from 'next/navigation';
 import NextImage from 'next/image';
@@ -17,7 +19,7 @@ import {format} from 'date-fns';
 import { useAuth } from "@/contexts/AuthContext"; 
 import { useToast } from "@/hooks/use-toast"; 
 import AppHeader from "@/components/layout/AppHeader"; 
-import { UploadProvider } from "@/contexts/UploadContext"; // Added
+import { UploadProvider } from "@/contexts/UploadContext";
 
 interface DisplayProduct {
   id: string;
@@ -37,6 +39,13 @@ export default function DashboardPage() {
   const [isLoadingProducts, setIsLoadingProducts] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // State for WooCommerce connection form
+  const [storeUrl, setStoreUrl] = useState('');
+  const [consumerKey, setConsumerKey] = useState('');
+  const [consumerSecret, setConsumerSecret] = useState('');
+  const [isSavingCredentials, setIsSavingCredentials] = useState(false);
+
+
   useEffect(() => {
     if (!authIsLoading && !user) {
       router.replace('/signin'); 
@@ -45,6 +54,8 @@ export default function DashboardPage() {
 
   useEffect(() => {
     if (user) { 
+      // TODO: In a future step, load saved credentials for this user
+      // For now, we'll fetch products using global .env credentials
       async function loadProducts() {
         setIsLoadingProducts(true);
         setError(null);
@@ -95,6 +106,57 @@ export default function DashboardPage() {
     }
   };
 
+  const handleSaveCredentials = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSavingCredentials(true);
+    console.log("Saving WooCommerce Credentials for user:", user?.email);
+    console.log("Store URL:", storeUrl);
+    console.log("Consumer Key:", consumerKey);
+    console.log("Consumer Secret:", consumerSecret ? '**********' : '(empty)'); // Avoid logging secret directly to console in real app
+
+    // Simulate API call
+    await new Promise(resolve => setTimeout(resolve, 1000));
+
+    // TODO: In a real app, send these to a secure backend to be encrypted and stored.
+    // For now, we can mock saving to localStorage for this user session.
+    if (user) {
+      try {
+        localStorage.setItem(`wc_store_url_${user.id}`, storeUrl);
+        localStorage.setItem(`wc_consumer_key_${user.id}`, consumerKey);
+        localStorage.setItem(`wc_consumer_secret_${user.id}`, consumerSecret); // Caution with storing secrets client-side
+        toast({
+          title: "Credentials Saved (Mock)",
+          description: "Your WooCommerce credentials have been saved locally for this session.",
+        });
+      } catch (error) {
+         toast({
+          title: "Error Saving Credentials",
+          description: "Could not save credentials locally.",
+          variant: "destructive",
+        });
+      }
+    }
+    setIsSavingCredentials(false);
+  };
+
+  // Effect to load saved credentials from localStorage when user changes
+  useEffect(() => {
+    if (user) {
+      const savedUrl = localStorage.getItem(`wc_store_url_${user.id}`);
+      const savedKey = localStorage.getItem(`wc_consumer_key_${user.id}`);
+      const savedSecret = localStorage.getItem(`wc_consumer_secret_${user.id}`);
+      if (savedUrl) setStoreUrl(savedUrl);
+      if (savedKey) setConsumerKey(savedKey);
+      if (savedSecret) setConsumerSecret(savedSecret);
+    } else {
+      // Clear fields if no user
+      setStoreUrl('');
+      setConsumerKey('');
+      setConsumerSecret('');
+    }
+  }, [user]);
+
+
   if (authIsLoading || (!user && !authIsLoading)) { 
     return (
       <div className="flex min-h-svh w-full items-center justify-center bg-background">
@@ -107,9 +169,9 @@ export default function DashboardPage() {
     <UploadProvider>
       <div className="flex flex-col min-h-screen">
         <AppHeader /> 
-        <main className="flex-1 p-4 md:p-6 lg:p-8 bg-card">
-          <div className="container mx-auto">
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
+        <main className="flex-1 p-4 md:p-6 lg:p-8 bg-muted/30">
+          <div className="container mx-auto space-y-8">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
               <div>
                 <h1 className="text-3xl font-bold tracking-tight font-headline text-foreground">
                   Your Dashboard
@@ -128,9 +190,72 @@ export default function DashboardPage() {
 
             <Card className="shadow-lg border-border bg-card">
               <CardHeader>
+                <CardTitle className="font-headline text-xl text-card-foreground">WooCommerce Store Connection</CardTitle>
+                <CardDescription className="text-muted-foreground">
+                  Connect your WooCommerce store to fetch and manage products. These credentials will be used for your account.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <form onSubmit={handleSaveCredentials} className="space-y-6">
+                  <div className="space-y-2">
+                    <Label htmlFor="storeUrl" className="flex items-center">
+                      <LinkIcon className="mr-2 h-4 w-4 text-muted-foreground" /> Store URL
+                    </Label>
+                    <Input
+                      id="storeUrl"
+                      type="url"
+                      placeholder="https://yourstore.com"
+                      value={storeUrl}
+                      onChange={(e) => setStoreUrl(e.target.value)}
+                      required
+                      className="bg-input/50"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="consumerKey" className="flex items-center">
+                      <KeyRound className="mr-2 h-4 w-4 text-muted-foreground" /> Consumer Key
+                    </Label>
+                    <Input
+                      id="consumerKey"
+                      type="text"
+                      placeholder="ck_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+                      value={consumerKey}
+                      onChange={(e) => setConsumerKey(e.target.value)}
+                      required
+                      className="bg-input/50"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="consumerSecret" className="flex items-center">
+                       <KeyRound className="mr-2 h-4 w-4 text-muted-foreground" /> Consumer Secret
+                    </Label>
+                    <Input
+                      id="consumerSecret"
+                      type="password" 
+                      placeholder="cs_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+                      value={consumerSecret}
+                      onChange={(e) => setConsumerSecret(e.target.value)}
+                      required
+                      className="bg-input/50"
+                    />
+                  </div>
+                  <Button type="submit" className="w-full sm:w-auto" disabled={isSavingCredentials}>
+                    {isSavingCredentials ? (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    ) : (
+                      <Save className="mr-2 h-4 w-4" />
+                    )}
+                    Save Credentials
+                  </Button>
+                </form>
+              </CardContent>
+            </Card>
+
+            <Card className="shadow-lg border-border bg-card">
+              <CardHeader>
                 <CardTitle className="font-headline text-xl text-card-foreground">Your Products</CardTitle>
                 <CardDescription className="text-muted-foreground">
-                  View, edit, and manage your customizable products. Products are fetched from WooCommerce.
+                  View, edit, and manage your customizable products. Products are fetched from your connected WooCommerce store.
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -144,7 +269,7 @@ export default function DashboardPage() {
                     <AlertTriangle className="mx-auto h-12 w-12 mb-2" />
                     <p className="font-semibold">Error loading products:</p>
                     <p className="text-sm">{error}</p>
-                    <p className="text-xs mt-2">Please check your WooCommerce API settings in .env and ensure your store is accessible.</p>
+                    <p className="text-xs mt-2">Please check your WooCommerce API settings above and ensure your store is accessible.</p>
                   </div>
                 ) : products.length > 0 ? (
                   <div className="overflow-x-auto">
@@ -232,3 +357,4 @@ export default function DashboardPage() {
     </UploadProvider>
   );
 }
+

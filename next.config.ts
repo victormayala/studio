@@ -22,7 +22,7 @@ const nextConfig: NextConfig = {
       // This might be your main store domain or a CDN domain.
       {
         protocol: 'https',
-        hostname: 'your-woocommerce-store.com', // Placeholder: User needs to change this
+        hostname: 'urmarketprints.com', // Placeholder: User needs to change this
         port: '',
         pathname: '/**',
       },
