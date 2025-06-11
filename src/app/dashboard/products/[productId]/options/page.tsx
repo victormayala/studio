@@ -15,6 +15,7 @@ import { Separator } from '@/components/ui/separator';
 // import { Switch } from '@/components/ui/switch'; // Removed Switch import
 import { ArrowLeft, PlusCircle, Trash2, Image as ImageIcon, Maximize2 } from 'lucide-react'; // Removed Lock import
 import { cn } from '@/lib/utils';
+import { useToast } from '@/hooks/use-toast';
 
 interface BoundaryBox {
   id: string;
@@ -60,7 +61,6 @@ interface ActiveDragState {
   initialBoxHeight: number;
   containerWidthPx: number;
   containerHeightPx: number;
-  // initialAspectRatio?: number; // Removed for aspect ratio lock
 }
 
 const MIN_BOX_SIZE_PERCENT = 5; 
@@ -68,6 +68,7 @@ const MIN_BOX_SIZE_PERCENT = 5;
 export default function ProductOptionsPage() {
   const params = useParams();
   const productId = params.productId as string;
+  const { toast } = useToast();
 
   const [product, setProduct] = useState<ProductDetails | null>(null);
   
@@ -77,11 +78,11 @@ export default function ProductOptionsPage() {
   const [selectedBoundaryBoxId, setSelectedBoundaryBoxId] = useState<string | null>(null);
   const imageWrapperRef = useRef<HTMLDivElement>(null);
   const [activeDrag, setActiveDrag] = useState<ActiveDragState | null>(null);
-  // const [isAspectRatioLocked, setIsAspectRatioLocked] = useState<boolean>(false); // Removed aspect ratio lock state
 
 
   useEffect(() => {
     if (productId) {
+      // In a real app, you'd fetch this from a backend based on productId
       const foundProduct = mockProductDetails.id === productId ? mockProductDetails : { 
             ...mockProductDetails, 
             id: productId, 
@@ -91,7 +92,7 @@ export default function ProductOptionsPage() {
             boundaryBoxes: [], 
           };
       setProduct(foundProduct);
-      setSelectedBoundaryBoxId(null);
+      setSelectedBoundaryBoxId(null); // Reset selection when product changes
     }
   }, [productId]);
 
@@ -129,14 +130,8 @@ export default function ProductOptionsPage() {
       containerWidthPx: containerRect.width,
       containerHeightPx: containerRect.height,
     };
-
-    // Removed aspect ratio lock logic
-    // if (type.startsWith('resize_') && isAspectRatioLocked && currentBox.width > 0 && currentBox.height > 0) {
-    //   dragState.initialAspectRatio = currentBox.width / currentBox.height;
-    // }
-
     setActiveDrag(dragState);
-  }, [product?.boundaryBoxes]); // Removed isAspectRatioLocked from dependencies
+  }, [product?.boundaryBoxes]); 
 
   const handleDragging = useCallback((e: MouseEvent | TouchEvent) => {
     if (!activeDrag || !product || !imageWrapperRef.current) return;
@@ -157,9 +152,10 @@ export default function ProductOptionsPage() {
     if (activeDrag.type === 'move') {
       newX = activeDrag.initialBoxX + deltaXPercent;
       newY = activeDrag.initialBoxY + deltaYPercent;
-    } else { // Resize operations
-        // Removed aspect ratio locked resizing logic
-        // Original Unlocked Resizing Logic remains
+    } else { 
+        const originalProposedWidth = newWidth;
+        const originalProposedHeight = newHeight;
+
         if (activeDrag.type === 'resize_br') {
           newWidth = activeDrag.initialBoxWidth + deltaXPercent;
           newHeight = activeDrag.initialBoxHeight + deltaYPercent;
@@ -177,48 +173,32 @@ export default function ProductOptionsPage() {
           newWidth = activeDrag.initialBoxWidth - deltaXPercent;
           newHeight = activeDrag.initialBoxHeight - deltaYPercent;
         }
-    }
 
-    // Apply MIN_BOX_SIZE_PERCENT constraint
-    const originalProposedWidth = newWidth;
-    const originalProposedHeight = newHeight;
+        let clampedWidth = Math.max(MIN_BOX_SIZE_PERCENT, newWidth);
+        let clampedHeight = Math.max(MIN_BOX_SIZE_PERCENT, newHeight);
+        newWidth = clampedWidth;
+        newHeight = clampedHeight;
 
-    let clampedWidth = Math.max(MIN_BOX_SIZE_PERCENT, newWidth);
-    let clampedHeight = Math.max(MIN_BOX_SIZE_PERCENT, newHeight);
-
-    // Removed aspect ratio re-application logic after min size clamp
-    // if (activeDrag.initialAspectRatio && activeDrag.type.startsWith('resize_')) { ... }
-
-    newWidth = clampedWidth;
-    newHeight = clampedHeight;
-
-    // Adjust X or Y if width/height was clamped by MIN_BOX_SIZE_PERCENT
-    if (activeDrag.type === 'resize_tl') {
-      if (newWidth !== originalProposedWidth) newX = activeDrag.initialBoxX + activeDrag.initialBoxWidth - newWidth;
-      if (newHeight !== originalProposedHeight) newY = activeDrag.initialBoxY + activeDrag.initialBoxHeight - newHeight;
-    } else if (activeDrag.type === 'resize_tr') {
-      if (newHeight !== originalProposedHeight) newY = activeDrag.initialBoxY + activeDrag.initialBoxHeight - newHeight;
-      // X doesn't change if width was primary from BR/TR logic, only Y 
-    } else if (activeDrag.type === 'resize_bl') {
-      if (newWidth !== originalProposedWidth) newX = activeDrag.initialBoxX + activeDrag.initialBoxWidth - newWidth;
-      // Y doesn't change
+        if (activeDrag.type === 'resize_tl') {
+          if (newWidth !== originalProposedWidth) newX = activeDrag.initialBoxX + activeDrag.initialBoxWidth - newWidth;
+          if (newHeight !== originalProposedHeight) newY = activeDrag.initialBoxY + activeDrag.initialBoxHeight - newHeight;
+        } else if (activeDrag.type === 'resize_tr') {
+          if (newHeight !== originalProposedHeight) newY = activeDrag.initialBoxY + activeDrag.initialBoxHeight - newHeight;
+        } else if (activeDrag.type === 'resize_bl') {
+          if (newWidth !== originalProposedWidth) newX = activeDrag.initialBoxX + activeDrag.initialBoxWidth - newWidth;
+        }
     }
     
-    // Clamp X and then Width
     newX = Math.max(0, Math.min(newX, 100 - MIN_BOX_SIZE_PERCENT));
     newWidth = Math.min(newWidth, 100 - newX);
-    newWidth = Math.max(MIN_BOX_SIZE_PERCENT, newWidth); // Ensure min width after boundary clamp
-    newX = Math.max(0, Math.min(newX, 100 - newWidth)); // Re-clamp X based on final width
+    newWidth = Math.max(MIN_BOX_SIZE_PERCENT, newWidth); 
+    newX = Math.max(0, Math.min(newX, 100 - newWidth)); 
 
-    // Clamp Y and then Height
     newY = Math.max(0, Math.min(newY, 100 - MIN_BOX_SIZE_PERCENT));
     newHeight = Math.min(newHeight, 100 - newY);
-    newHeight = Math.max(MIN_BOX_SIZE_PERCENT, newHeight); // Ensure min height after boundary clamp
-    newY = Math.max(0, Math.min(newY, 100 - newHeight)); // Re-clamp Y based on final height
+    newHeight = Math.max(MIN_BOX_SIZE_PERCENT, newHeight); 
+    newY = Math.max(0, Math.min(newY, 100 - newHeight)); 
     
-    // Removed final aspect ratio pass
-    // if (activeDrag.initialAspectRatio && activeDrag.type.startsWith('resize_')) { ... }
-
     if (isNaN(newX) || isNaN(newY) || isNaN(newWidth) || isNaN(newHeight)) {
         console.warn("NaN detected in boundary box calculation, skipping update");
         return; 
@@ -268,6 +248,15 @@ export default function ProductOptionsPage() {
 
   const handleAddColor = () => {
     if (!product) return;
+    // Basic hex validation (very simple)
+    if (!/^#[0-9A-F]{6}$/i.test(newColorHex)) {
+        toast({ title: "Invalid Color", description: "Please enter a valid hex color (e.g., #RRGGBB).", variant: "destructive" });
+        return;
+    }
+    if (product.colors.includes(newColorHex)) {
+        toast({ title: "Duplicate Color", description: "This color already exists.", variant: "destructive" });
+        return;
+    }
     const updatedProduct = { ...product, colors: [...product.colors, newColorHex] };
     setProduct(updatedProduct);
     setNewColorHex('#CCCCCC'); 
@@ -281,7 +270,16 @@ export default function ProductOptionsPage() {
   };
 
   const handleAddSize = () => {
-    if (!product || !newSize.trim()) return;
+    if (!product || !newSize.trim()) {
+        if (!newSize.trim()) {
+            toast({ title: "Invalid Size", description: "Size cannot be empty.", variant: "destructive" });
+        }
+        return;
+    }
+    if (product.sizes.includes(newSize.trim())) {
+        toast({ title: "Duplicate Size", description: "This size already exists.", variant: "destructive" });
+        return;
+    }
     const updatedProduct = { ...product, sizes: [...product.sizes, newSize.trim()] };
     setProduct(updatedProduct);
     setNewSize('');
@@ -294,11 +292,22 @@ export default function ProductOptionsPage() {
   };
   
   const handleSaveChanges = () => {
-    alert("Saving changes... (functionality not implemented)");
+    if (!product) return;
+    console.log("Saving Product Options:", JSON.stringify(product, null, 2));
+    toast({
+      title: "Product Options Logged",
+      description: "Current product options have been logged to the console (simulating save).",
+    });
+    // In a real app, you would send `product` to your backend API here.
   };
 
   const handleAddBoundaryBox = () => {
-    if (!product || product.boundaryBoxes.length >= 3) return;
+    if (!product || product.boundaryBoxes.length >= 3) {
+        if (product && product.boundaryBoxes.length >= 3) {
+             toast({ title: "Limit Reached", description: "Maximum of 3 customization areas allowed.", variant: "destructive" });
+        }
+        return;
+    }
     const newBox: BoundaryBox = {
       id: crypto.randomUUID(),
       name: `Area ${product.boundaryBoxes.length + 1}`,
@@ -355,11 +364,6 @@ export default function ProductOptionsPage() {
           else if (property === 'width') newBox.width = parsedValue;
           else if (property === 'height') newBox.height = parsedValue;
 
-          // Basic validation for individual property change
-          if (property === 'width' || property === 'height') {
-              newBox[property] = Math.max(MIN_BOX_SIZE_PERCENT, newBox[property]);
-          }
-          
           // Apply boundary constraints and min size collectively
           let tempX = newBox.x, tempY = newBox.y, tempW = newBox.width, tempH = newBox.height;
 
@@ -369,11 +373,10 @@ export default function ProductOptionsPage() {
           tempX = Math.max(0, Math.min(tempX, 100 - tempW));
           tempY = Math.max(0, Math.min(tempY, 100 - tempH));
           
-          // Re-check width/height based on clamped position
           tempW = Math.min(tempW, 100 - tempX);
           tempH = Math.min(tempH, 100 - tempY);
-          tempW = Math.max(MIN_BOX_SIZE_PERCENT, tempW); // Final min check
-          tempH = Math.max(MIN_BOX_SIZE_PERCENT, tempH); // Final min check
+          tempW = Math.max(MIN_BOX_SIZE_PERCENT, tempW); 
+          tempH = Math.max(MIN_BOX_SIZE_PERCENT, tempH); 
 
           newBox.x = tempX;
           newBox.y = tempY;
@@ -522,7 +525,6 @@ export default function ProductOptionsPage() {
                 <CardTitle className="font-headline text-lg">Customization Areas</CardTitle>
                 <CardDescription>Define printable/customizable regions. (Max 3)</CardDescription>
               </div>
-              {/* Removed Aspect Ratio Lock Switch and Label */}
             </CardHeader>
             <CardContent>
               {product.boundaryBoxes.length > 0 && (
@@ -753,6 +755,3 @@ export default function ProductOptionsPage() {
     </div>
   );
 }
-
-
-      
