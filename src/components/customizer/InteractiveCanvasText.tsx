@@ -86,8 +86,8 @@ export function InteractiveCanvasText({
       id={`canvas-text-${textItem.id}`}
       className={`absolute group
                   ${textItem.isLocked ? 'cursor-not-allowed' : 'cursor-grab'}
-                  ${isSelected && !textItem.isLocked ? 'ring-2 ring-secondary ring-offset-2 ring-offset-background' : ''}
-                  ${!textItem.isLocked ? 'hover:ring-1 hover:ring-secondary/50' : ''}
+                  ${isSelected && !textItem.isLocked ? 'ring-2 ring-primary ring-offset-2 ring-offset-background' : ''}
+                  ${!textItem.isLocked ? 'hover:ring-1 hover:ring-primary/50' : ''}
                   p-1 
                   `}
       style={style}
@@ -129,7 +129,7 @@ export function InteractiveCanvasText({
 
           
           <div
-            className="absolute -top-3 left-1/2 -translate-x-1/2 bg-secondary text-secondary-foreground rounded-full p-1 cursor-[grab] active:cursor-[grabbing] flex items-center justify-center"
+            className="absolute -top-3 left-1/2 -translate-x-1/2 bg-primary text-primary-foreground rounded-full p-1 cursor-[grab] active:cursor-[grabbing] flex items-center justify-center"
             style={{ width: HANDLE_SIZE, height: HANDLE_SIZE, zIndex: dynamicZIndex + 1 }}
             onMouseDown={(e) => onRotateHandleMouseDown(e, textItem)}
             onTouchStart={(e) => onRotateHandleMouseDown(e, textItem)}
@@ -140,7 +140,7 @@ export function InteractiveCanvasText({
 
           
           <div
-            className="absolute -bottom-3 -right-3 bg-secondary text-secondary-foreground rounded-full p-1 cursor-nwse-resize flex items-center justify-center"
+            className="absolute -bottom-3 -right-3 bg-primary text-primary-foreground rounded-full p-1 cursor-nwse-resize flex items-center justify-center"
             style={{ width: HANDLE_SIZE, height: HANDLE_SIZE, zIndex: dynamicZIndex + 1 }}
             onMouseDown={(e) => onResizeHandleMouseDown(e, textItem)}
             onTouchStart={(e) => onResizeHandleMouseDown(e, textItem)}

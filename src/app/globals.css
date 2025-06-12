@@ -1,3 +1,4 @@
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -14,8 +15,8 @@
     --popover-foreground: 0 0% 3.9%;
     --primary: 210 70% 50%; /* New Blue Primary */
     --primary-foreground: 0 0% 98%; /* Light color for contrast on primary */
-    --secondary: 44 100% 50%; /* Updated: #ffbd02 */
-    --secondary-foreground: 0 0% 3.9%; /* Updated: Dark text for contrast on yellow */
+    --secondary: 210 40% 96.1%; /* Default Shadcn light grayish-blue */
+    --secondary-foreground: 210 40% 9.8%; /* Default Shadcn dark text for secondary */
     --muted: 0 0% 96.1%;
     --muted-foreground: 0 0% 45.1%;
     --accent: 200 60% 55%; /* New Blue Accent */
@@ -52,8 +53,8 @@
     --popover-foreground: 0 0% 98%;
     --primary: 210 70% 65%; /* Lighter blue for dark mode */
     --primary-foreground: 210 70% 15%; /* Darker blue for contrast */
-    --secondary: 44 100% 50%; /* Updated: #ffbd02 */
-    --secondary-foreground: 0 0% 3.9%; /* Updated: Dark text for contrast on yellow */
+    --secondary: 217.2 32.6% 17.5%; /* Default Shadcn dark grayish-blue */
+    --secondary-foreground: 210 40% 98%; /* Default Shadcn light text for dark secondary */
     --muted: 0 0% 14.9%;
     --muted-foreground: 0 0% 63.9%;
     --accent: 200 60% 70%; /* Lighter blue accent for dark mode */

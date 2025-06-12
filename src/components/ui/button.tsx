@@ -14,11 +14,11 @@ const buttonVariants = cva(
         destructive:
           "bg-destructive text-destructive-foreground hover:bg-destructive/90 focus-visible:ring-2 focus-visible:ring-destructive focus-visible:ring-offset-2",
         outline:
-          "border border-input bg-background hover:bg-secondary/20 hover:text-secondary-foreground hover:border-secondary active:bg-secondary/30 focus-visible:ring-2 focus-visible:ring-secondary focus-visible:ring-offset-2",
+          "border border-input bg-background hover:bg-accent hover:text-accent-foreground active:bg-accent/80 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
         secondary:
-          "bg-secondary text-secondary-foreground hover:bg-secondary/90 active:bg-secondary focus-visible:ring-2 focus-visible:ring-secondary focus-visible:ring-offset-2",
-        ghost: "hover:bg-secondary/20 hover:text-secondary-foreground active:bg-secondary/30 focus-visible:ring-2 focus-visible:ring-secondary focus-visible:ring-offset-2",
-        link: "text-secondary underline-offset-4 hover:underline hover:text-secondary/80 focus-visible:ring-2 focus-visible:ring-secondary focus-visible:ring-offset-2",
+          "bg-secondary text-secondary-foreground hover:bg-secondary/80 active:bg-secondary/90 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+        ghost: "hover:bg-accent hover:text-accent-foreground active:bg-accent/80 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+        link: "text-primary underline-offset-4 hover:underline hover:text-primary/80 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
       },
       size: {
         default: "h-10 px-4 py-2",

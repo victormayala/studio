@@ -357,9 +357,9 @@ function CustomizerLayoutAndLogic() {
                       key={view.id}
                       onClick={() => setActiveViewId(view.id)}
                       className={cn(
-                        "rounded-lg border-2 p-1.5 transition-all hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-secondary focus:ring-offset-2",
+                        "rounded-lg border-2 p-1.5 transition-all hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2",
                         activeViewId === view.id 
-                          ? "border-secondary opacity-100 ring-2 ring-secondary ring-offset-background shadow-md" 
+                          ? "border-primary opacity-100 ring-2 ring-primary ring-offset-background shadow-md" 
                           : "border-transparent opacity-70 hover:border-muted-foreground/30 bg-muted/30 hover:bg-muted/50"
                       )}
                       title={`Select ${view.name} view`}

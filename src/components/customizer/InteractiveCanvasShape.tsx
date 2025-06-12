@@ -73,8 +73,8 @@ export function InteractiveCanvasShape({
     <div
       id={`canvas-shape-${shape.id}`}
       className={`absolute group
-                  ${isSelected && !shape.isLocked ? 'ring-2 ring-secondary ring-offset-2 ring-offset-background' : ''}
-                  ${!shape.isLocked ? 'hover:ring-1 hover:ring-secondary/50' : ''}
+                  ${isSelected && !shape.isLocked ? 'ring-2 ring-primary ring-offset-2 ring-offset-background' : ''}
+                  ${!shape.isLocked ? 'hover:ring-1 hover:ring-primary/50' : ''}
                   `}
       style={wrapperStyle}
       
@@ -124,7 +124,7 @@ export function InteractiveCanvasShape({
 
           
           <div
-            className="absolute -top-3 left-1/2 -translate-x-1/2 bg-secondary text-secondary-foreground rounded-full p-1 cursor-[grab] active:cursor-[grabbing] flex items-center justify-center"
+            className="absolute -top-3 left-1/2 -translate-x-1/2 bg-primary text-primary-foreground rounded-full p-1 cursor-[grab] active:cursor-[grabbing] flex items-center justify-center"
             style={{ width: HANDLE_SIZE, height: HANDLE_SIZE, zIndex: dynamicZIndex + 1 }}
             onMouseDown={(e) => onRotateHandleMouseDown(e, shape)}
             onTouchStart={(e) => onRotateHandleMouseDown(e, shape)}
@@ -135,7 +135,7 @@ export function InteractiveCanvasShape({
 
           
           <div
-            className="absolute -bottom-3 -right-3 bg-secondary text-secondary-foreground rounded-full p-1 cursor-nwse-resize flex items-center justify-center"
+            className="absolute -bottom-3 -right-3 bg-primary text-primary-foreground rounded-full p-1 cursor-nwse-resize flex items-center justify-center"
             style={{ width: HANDLE_SIZE, height: HANDLE_SIZE, zIndex: dynamicZIndex + 1 }}
             onMouseDown={(e) => onResizeHandleMouseDown(e, shape)}
             onTouchStart={(e) => onResizeHandleMouseDown(e, shape)}

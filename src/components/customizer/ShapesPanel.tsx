@@ -123,7 +123,7 @@ export default function ShapesPanel({ activeViewId }: ShapesPanelProps) {
                   onClick={() => handleAddShape(shape.type)}
                   title={`Add ${shape.label}`}
                 >
-                  <shape.icon className="w-8 h-8 text-secondary" />
+                  <shape.icon className="w-8 h-8 text-primary" />
                   <span className="text-xs text-foreground">{shape.label}</span>
                 </Button>
               ))}

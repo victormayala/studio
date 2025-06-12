@@ -153,7 +153,7 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
     <div className="space-y-6 py-2">
       
       <section className="space-y-4">
-        <h3 className="text-sm font-medium text-muted-foreground flex items-center"><Pilcrow className="mr-2 h-4 w-4 text-secondary" />Font</h3>
+        <h3 className="text-sm font-medium text-muted-foreground flex items-center"><Pilcrow className="mr-2 h-4 w-4 text-primary" />Font</h3>
         <div>
           <Label htmlFor="fontFamilySelect" className="text-xs mb-1 block">Font Family</Label>
           <Select
@@ -233,7 +233,7 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
       <Separator />
 
       <section className="space-y-4">
-        <h3 className="text-sm font-medium text-muted-foreground flex items-center"><TextCursorInput className="mr-2 h-4 w-4 text-secondary" />Spacing</h3>
+        <h3 className="text-sm font-medium text-muted-foreground flex items-center"><TextCursorInput className="mr-2 h-4 w-4 text-primary" />Spacing</h3>
         <div>
           <Label htmlFor="lineHeightSlider" className="text-xs mb-5 block">Line Height: {(currentStyle.lineHeight || 1.2).toFixed(1)}</Label>
           <Slider
@@ -263,7 +263,7 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
       <Separator />
 
       <section className="space-y-4">
-        <h3 className="text-sm font-medium text-muted-foreground flex items-center"><Pipette className="mr-2 h-4 w-4 text-secondary" />Color</h3>
+        <h3 className="text-sm font-medium text-muted-foreground flex items-center"><Pipette className="mr-2 h-4 w-4 text-primary" />Color</h3>
         <div className="flex items-center space-x-2">
           <Label htmlFor="textColorSwatch" className="text-xs shrink-0">Fill Color</Label>
           <Input
@@ -304,7 +304,7 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
       <Separator />
 
       <section className="space-y-4">
-        <h3 className="text-sm font-medium text-muted-foreground flex items-center mb-2"><Settings2 className="mr-2 h-4 w-4 text-secondary" />Effects</h3>
+        <h3 className="text-sm font-medium text-muted-foreground flex items-center mb-2"><Settings2 className="mr-2 h-4 w-4 text-primary" />Effects</h3>
         
         <div className="space-y-3">
           <div className="flex items-center justify-between">

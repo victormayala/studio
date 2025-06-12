@@ -554,7 +554,7 @@ export default function ProductOptionsPage() {
       {error && productOptions && <ShadCnAlert variant="destructive" className="mb-6"><AlertTriangle className="h-4 w-4" /><ShadCnAlertTitle>Product Data Error</ShadCnAlertTitle><ShadCnAlertDescription>{error}</ShadCnAlertDescription></ShadCnAlert>}
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-        <div className="md:col-span-2 space-y-6">
+         <div className="md:col-span-2 space-y-6">
           <Card className="shadow-md">
             <CardHeader><CardTitle className="font-headline text-lg">Base Product Information</CardTitle><CardDescription>From WooCommerce (Read-only).</CardDescription></CardHeader>
             <CardContent className="space-y-4">
@@ -580,7 +580,7 @@ export default function ProductOptionsPage() {
                     </div>
                     <div className="space-y-3 max-h-96 overflow-y-auto pr-2">
                       {variations.map((variation) => (
-                        <div key={variation.id} className={cn("p-3 border rounded-md flex items-start gap-3 transition-colors", selectedVariationIdsForCstmzr.includes(variation.id.toString()) ? "bg-secondary/10 border-secondary" : "bg-muted/30 hover:bg-muted/50")}>
+                        <div key={variation.id} className={cn("p-3 border rounded-md flex items-start gap-3 transition-colors", selectedVariationIdsForCstmzr.includes(variation.id.toString()) ? "bg-primary/10 border-primary" : "bg-muted/30 hover:bg-muted/50")}>
                           <Checkbox id={`variation-${variation.id}`} checked={selectedVariationIdsForCstmzr.includes(variation.id.toString())} onCheckedChange={(c) => handleVariationSelectionChange(variation.id.toString(), c as boolean)} className="mt-1 flex-shrink-0" />
                           <div className="relative h-16 w-16 rounded-md overflow-hidden border bg-card flex-shrink-0"><NextImage src={variation.image?.src || (productOptions.views[0]?.imageUrl) || 'https://placehold.co/100x100.png'} alt={variation.image?.alt || productOptions.name} fill className="object-contain" data-ai-hint={variation.image?.alt ? variation.image.alt.split(" ").slice(0,2).join(" ") : "variation image"}/></div>
                           <div className="flex-grow"><p className="text-sm font-medium text-foreground">{variation.attributes.map(attr => `${attr.name}: ${attr.option}`).join(' / ')}</p><p className="text-xs text-muted-foreground">SKU: {variation.sku || 'N/A'}</p><p className="text-xs text-muted-foreground">Price: ${parseFloat(variation.price).toFixed(2)}</p></div>
@@ -605,7 +605,7 @@ export default function ProductOptionsPage() {
             <CardContent className="space-y-6">
               
               <div>
-                 <h4 className="text-base font-semibold text-foreground mb-1">Image for: <span className="text-secondary">{currentActiveView?.name || "N/A"}</span></h4>
+                 <h4 className="text-base font-semibold text-foreground mb-1">Image for: <span className="text-primary">{currentActiveView?.name || "N/A"}</span></h4>
                  <p className="text-xs text-muted-foreground mb-3">Click & drag areas. Use handles to resize. Select a view below to change image.</p>
                 <div 
                   ref={imageWrapperRef} 
@@ -623,8 +623,8 @@ export default function ProductOptionsPage() {
                       className={cn(
                         "absolute transition-colors duration-100 ease-in-out group/box",
                         selectedBoundaryBoxId === box.id
-                          ? 'border-secondary ring-2 ring-secondary ring-offset-1 bg-secondary/10' 
-                          : 'border-2 border-dashed border-accent/70 hover:border-secondary hover:bg-secondary/10',
+                          ? 'border-primary ring-2 ring-primary ring-offset-1 bg-primary/10' 
+                          : 'border-2 border-dashed border-accent/70 hover:border-primary hover:bg-primary/10',
                         activeDrag?.boxId === box.id && activeDrag.type === 'move'
                           ? 'cursor-grabbing'
                           : 'cursor-grab'
@@ -634,12 +634,12 @@ export default function ProductOptionsPage() {
                       onTouchStart={(e) => handleInteractionStart(e, box.id, 'move')}
                     >
                       {selectedBoundaryBoxId === box.id && (<>
-                          <div className="absolute -top-1.5 -left-1.5 w-4 h-4 bg-secondary text-secondary-foreground rounded-full border-2 border-background shadow-md cursor-nwse-resize hover:opacity-80 active:opacity-100" title="Resize (Top-Left)" onMouseDown={(e) => handleInteractionStart(e, box.id, 'resize_tl')} onTouchStart={(e) => handleInteractionStart(e, box.id, 'resize_tl')}><Maximize2 className="w-2.5 h-2.5 text-secondary-foreground absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" /></div>
-                          <div className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-secondary text-secondary-foreground rounded-full border-2 border-background shadow-md cursor-nesw-resize hover:opacity-80 active:opacity-100" title="Resize (Top-Right)" onMouseDown={(e) => handleInteractionStart(e, box.id, 'resize_tr')} onTouchStart={(e) => handleInteractionStart(e, box.id, 'resize_tr')}><Maximize2 className="w-2.5 h-2.5 text-secondary-foreground absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" /></div>
-                          <div className="absolute -bottom-1.5 -left-1.5 w-4 h-4 bg-secondary text-secondary-foreground rounded-full border-2 border-background shadow-md cursor-nesw-resize hover:opacity-80 active:opacity-100" title="Resize (Bottom-Left)" onMouseDown={(e) => handleInteractionStart(e, box.id, 'resize_bl')} onTouchStart={(e) => handleInteractionStart(e, box.id, 'resize_bl')}><Maximize2 className="w-2.5 h-2.5 text-secondary-foreground absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" /></div>
-                          <div className="absolute -bottom-1.5 -right-1.5 w-4 h-4 bg-secondary text-secondary-foreground rounded-full border-2 border-background shadow-md cursor-nwse-resize hover:opacity-80 active:opacity-100" title="Resize (Bottom-Right)" onMouseDown={(e) => handleInteractionStart(e, box.id, 'resize_br')} onTouchStart={(e) => handleInteractionStart(e, box.id, 'resize_br')}><Maximize2 className="w-2.5 h-2.5 text-secondary-foreground absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" /></div>
+                          <div className="absolute -top-1.5 -left-1.5 w-4 h-4 bg-primary text-primary-foreground rounded-full border-2 border-background shadow-md cursor-nwse-resize hover:opacity-80 active:opacity-100" title="Resize (Top-Left)" onMouseDown={(e) => handleInteractionStart(e, box.id, 'resize_tl')} onTouchStart={(e) => handleInteractionStart(e, box.id, 'resize_tl')}><Maximize2 className="w-2.5 h-2.5 text-primary-foreground absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" /></div>
+                          <div className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-primary text-primary-foreground rounded-full border-2 border-background shadow-md cursor-nesw-resize hover:opacity-80 active:opacity-100" title="Resize (Top-Right)" onMouseDown={(e) => handleInteractionStart(e, box.id, 'resize_tr')} onTouchStart={(e) => handleInteractionStart(e, box.id, 'resize_tr')}><Maximize2 className="w-2.5 h-2.5 text-primary-foreground absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" /></div>
+                          <div className="absolute -bottom-1.5 -left-1.5 w-4 h-4 bg-primary text-primary-foreground rounded-full border-2 border-background shadow-md cursor-nesw-resize hover:opacity-80 active:opacity-100" title="Resize (Bottom-Left)" onMouseDown={(e) => handleInteractionStart(e, box.id, 'resize_bl')} onTouchStart={(e) => handleInteractionStart(e, box.id, 'resize_bl')}><Maximize2 className="w-2.5 h-2.5 text-primary-foreground absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" /></div>
+                          <div className="absolute -bottom-1.5 -right-1.5 w-4 h-4 bg-primary text-primary-foreground rounded-full border-2 border-background shadow-md cursor-nwse-resize hover:opacity-80 active:opacity-100" title="Resize (Bottom-Right)" onMouseDown={(e) => handleInteractionStart(e, box.id, 'resize_br')} onTouchStart={(e) => handleInteractionStart(e, box.id, 'resize_br')}><Maximize2 className="w-2.5 h-2.5 text-primary-foreground absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" /></div>
                       </>)}
-                      <div className="absolute top-0.5 left-0.5 text-[8px] text-secondary-foreground bg-secondary/70 px-1 py-0.5 rounded-br-sm opacity-0 group-hover/box:opacity-100 group-[.is-selected]/box:opacity-100 transition-opacity select-none pointer-events-none">{box.name}</div>
+                      <div className="absolute top-0.5 left-0.5 text-[8px] text-primary-foreground bg-primary/70 px-1 py-0.5 rounded-br-sm opacity-0 group-hover/box:opacity-100 group-[.is-selected]/box:opacity-100 transition-opacity select-none pointer-events-none">{box.name}</div>
                     </div>
                   ))}
                 </div>
@@ -647,7 +647,7 @@ export default function ProductOptionsPage() {
                     {productOptions.views.map(view => (
                     <Button 
                         key={view.id} 
-                        variant={activeViewId === view.id ? "secondary" : "outline"}
+                        variant={activeViewId === view.id ? "default" : "outline"}
                         onClick={() => handleSelectView(view.id)}
                         size="sm"
                         className="flex-grow sm:flex-grow-0"
@@ -671,7 +671,7 @@ export default function ProductOptionsPage() {
                 {currentActiveView && currentActiveView.boundaryBoxes.length > 0 && (
                   <div className="space-y-3">
                     {currentActiveView.boundaryBoxes.map((box) => (
-                      <div key={box.id} className={cn("p-3 border rounded-md transition-all", selectedBoundaryBoxId === box.id ? 'bg-secondary/10 border-secondary shadow-md' : 'bg-muted/30 hover:bg-muted/50', "cursor-pointer")} onClick={() => setSelectedBoundaryBoxId(box.id)}>
+                      <div key={box.id} className={cn("p-3 border rounded-md transition-all", selectedBoundaryBoxId === box.id ? 'bg-primary/10 border-primary shadow-md' : 'bg-muted/30 hover:bg-muted/50', "cursor-pointer")} onClick={() => setSelectedBoundaryBoxId(box.id)}>
                         <div className="flex justify-between items-center mb-1.5">
                           <Input value={box.name} onChange={(e) => handleBoundaryBoxNameChange(box.id, e.target.value)} className="text-sm font-semibold text-foreground h-8 flex-grow mr-2 bg-transparent border-0 focus-visible:ring-1 focus-visible:ring-ring p-1" onClick={(e) => e.stopPropagation()} />
                           <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); handleRemoveBoundaryBox(box.id);}} className="text-destructive hover:bg-destructive/10 hover:text-destructive h-7 w-7" title="Remove Area"><Trash2 className="h-4 w-4" /></Button>
@@ -717,7 +717,7 @@ export default function ProductOptionsPage() {
 
                 {currentActiveView && (
                   <div className="space-y-3 p-3 border rounded-md bg-muted/20">
-                    <h5 className="text-sm font-medium text-muted-foreground">Editing View: <span className="text-secondary font-semibold">{currentActiveView.name}</span></h5>
+                    <h5 className="text-sm font-medium text-muted-foreground">Editing View: <span className="text-primary font-semibold">{currentActiveView.name}</span></h5>
                     <div>
                       <Label htmlFor={`viewName-${currentActiveView.id}`} className="text-xs mb-5">View Name</Label>
                       <Input 
