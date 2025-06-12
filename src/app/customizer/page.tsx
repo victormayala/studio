@@ -95,6 +95,9 @@ function CustomizerLayoutAndLogic() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeTool, setActiveTool] = useState<string>(toolItems[0]?.id || "layers");
+  const [showGrid, setShowGrid] = useState(false);
+
+  const toggleGrid = () => setShowGrid(prev => !prev);
 
 
   const loadCustomizerData = useCallback(async () => {
@@ -333,6 +336,7 @@ function CustomizerLayoutAndLogic() {
               productImageAiHint={currentProductAiHint}
               productDefinedBoundaryBoxes={currentBoundaryBoxes}
               activeViewId={activeViewId}
+              showGrid={showGrid}
             />
             {productDetails && productDetails.views && productDetails.views.length > 0 && (
               <div className="mt-6 pt-4 w-full max-w-4xl border-t border-border">
@@ -370,7 +374,7 @@ function CustomizerLayoutAndLogic() {
               </div>
             )}
           </main>
-          <RightPanel /> 
+          <RightPanel showGrid={showGrid} toggleGrid={toggleGrid} /> 
         </div>
         <footer className="h-20 border-t bg-card shadow-md p-4 flex items-center justify-end gap-4 flex-shrink-0">
             <div className="text-lg font-semibold text-foreground">Total: $0.00</div>

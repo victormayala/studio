@@ -37,7 +37,8 @@ interface DesignCanvasProps {
   productImageAlt?: string;
   productImageAiHint?: string;
   productDefinedBoundaryBoxes?: BoundaryBox[];
-  activeViewId: string | null; // Added activeViewId
+  activeViewId: string | null;
+  showGrid: boolean; // New prop
 }
 
 export default function DesignCanvas({ 
@@ -45,7 +46,8 @@ export default function DesignCanvas({
   productImageAlt,
   productImageAiHint,
   productDefinedBoundaryBoxes = [],
-  activeViewId // Destructure activeViewId
+  activeViewId,
+  showGrid // Destructure new prop
 }: DesignCanvasProps) {
 
   const productToDisplay = {
@@ -399,6 +401,27 @@ export default function DesignCanvas({
             priority
           />
 
+          {productDefinedBoundaryBoxes && productDefinedBoundaryBoxes.length > 0 && showGrid && (
+            <div
+              style={{
+                position: 'absolute',
+                left: `${productDefinedBoundaryBoxes[0].x}%`,
+                top: `${productDefinedBoundaryBoxes[0].y}%`,
+                width: `${productDefinedBoundaryBoxes[0].width}%`,
+                height: `${productDefinedBoundaryBoxes[0].height}%`,
+                pointerEvents: 'none',
+                zIndex: 0,
+                overflow: 'hidden',
+                backgroundImage: `
+                  repeating-linear-gradient(to right, hsla(var(--border) / 0.2) 0, hsla(var(--border) / 0.2) 1px, transparent 1px, transparent 10%),
+                  repeating-linear-gradient(to bottom, hsla(var(--border) / 0.2) 0, hsla(var(--border) / 0.2) 1px, transparent 1px, transparent 10%)
+                `,
+                backgroundSize: '100% 100%',
+              }}
+              className="grid-overlay"
+            />
+          )}
+
           {productDefinedBoundaryBoxes && productDefinedBoundaryBoxes.map(box => (
             <div
               key={`defined-${box.id}`}
@@ -406,7 +429,7 @@ export default function DesignCanvas({
               style={{
                 left: `${box.x}%`, top: `${box.y}%`,
                 width: `${box.width}%`, height: `${box.height}%`,
-                zIndex: 0, 
+                zIndex: 1, // Ensure boundary box outline is above the grid but below items
               }}
               title={box.name}
             >
