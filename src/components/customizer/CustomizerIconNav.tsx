@@ -31,12 +31,14 @@ export default function CustomizerIconNav({ tools, activeTool, setActiveTool }: 
                 size="icon"
                 className={cn(
                   "h-12 w-12 rounded-lg flex flex-col items-center justify-center group", 
-                  activeTool === tool.id ? "bg-accent/20 text-accent" : "text-muted-foreground hover:bg-accent/10 hover:text-accent"
+                  activeTool === tool.id 
+                    ? "bg-accent/20 text-accent" // Active state: light accent bg, accent icon
+                    : "text-muted-foreground hover:bg-accent hover:text-primary-foreground" // Inactive state: default muted icon, on hover: accent bg, white icon
                 )}
                 onClick={() => setActiveTool(tool.id)}
                 aria-label={tool.label}
               >
-                <tool.icon className="h-6 w-6 transition-colors group-hover:text-accent" />
+                <tool.icon className="h-6 w-6 transition-colors" />
               </Button>
             </TooltipTrigger>
             <TooltipContent side="right" align="center">
