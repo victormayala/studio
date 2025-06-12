@@ -388,7 +388,7 @@ export default function DesignCanvas({
 
   return (
     <div
-      className="w-full h-full flex items-center justify-center bg-card border border-dashed border-border rounded-lg shadow-inner p-4 min-h-[500px] lg:min-h-[700px] relative overflow-hidden select-none product-image-outer-container"
+      className="w-full h-full flex items-center justify-center bg-card border border-dashed border-border rounded-lg shadow-inner p-4 relative overflow-hidden select-none product-image-outer-container"
       onClick={handleCanvasClick} 
       onTouchStart={handleCanvasClick as any} 
     >

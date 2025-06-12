@@ -306,32 +306,35 @@ function CustomizerLayoutAndLogic() {
   return (
       <div className="flex flex-col min-h-svh w-full bg-muted/20">
         <AppHeader />
-        <div className="flex flex-1 overflow-hidden">
+        <div className="flex flex-1 overflow-hidden"> {/* This is the main middle row */}
           <CustomizerIconNav 
             tools={toolItems} 
             activeTool={activeTool} 
             setActiveTool={setActiveTool} 
           />
 
+          {/* Left Tools Panel */}
           <div className="w-72 md:w-80 border-r bg-card shadow-sm flex flex-col overflow-hidden flex-shrink-0">
             <div className="p-4 border-b">
               <h2 className="font-headline text-lg font-semibold text-foreground">
                 {getToolPanelTitle(activeTool)}
               </h2>
             </div>
-            <ScrollArea className="flex-grow">
-              <div className="p-4">
+            <ScrollArea className="flex-grow"> {/* ScrollArea takes available space */}
+              <div className="p-4"> {/* Content padding inside ScrollArea */}
                {renderActiveToolPanelContent()}
               </div>
             </ScrollArea>
           </div>
           
+          {/* Central Canvas Area */}
           <main className="flex-1 p-4 md:p-6 flex flex-col items-center overflow-hidden"> 
             {error && productDetails?.id === defaultFallbackProduct.id && ( 
                <div className="w-full max-w-4xl p-3 mb-4 border border-destructive bg-destructive/10 rounded-md text-destructive text-sm flex-shrink-0">
                  <AlertTriangle className="inline h-4 w-4 mr-1" /> {error} Using default product view.
                </div>
             )}
+            {/* This div wraps the canvas and ensures it scales correctly and is centered */}
             <div className="flex-1 w-full flex flex-col items-center justify-center min-h-0">
               <DesignCanvas 
                 productImageUrl={currentProductImage}
@@ -342,6 +345,7 @@ function CustomizerLayoutAndLogic() {
                 showGrid={showGrid}
               />
             </div>
+            {/* Product Views Selection - should not cause overflow */}
             {productDetails && productDetails.views && productDetails.views.length > 0 && (
               <div className="mt-6 pt-4 w-full max-w-4xl border-t border-border flex-shrink-0">
                 <h4 className="text-base font-semibold mb-3 text-center text-foreground">
@@ -378,8 +382,10 @@ function CustomizerLayoutAndLogic() {
               </div>
             )}
           </main>
+          {/* Right Panel */}
           <RightPanel showGrid={showGrid} toggleGrid={toggleGrid} /> 
         </div>
+        {/* Footer */}
         <footer className="h-20 border-t bg-card shadow-md p-4 flex items-center justify-end gap-4 flex-shrink-0">
             <div className="text-lg font-semibold text-foreground">Total: $0.00</div>
             <Button size="lg" className="bg-primary text-primary-foreground hover:bg-primary/90" onClick={handleAddToCart}>
