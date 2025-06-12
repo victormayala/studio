@@ -219,6 +219,41 @@ export default function DashboardPage() {
         <AppHeader />
         <SidebarProvider defaultOpen>
           <div className="flex flex-1">
+            <Sidebar side="left" className="h-full shadow-md border-r">
+              <SidebarHeader className="p-4 border-b">
+                <h2 className="font-headline text-lg font-semibold text-foreground">Navigation</h2>
+              </SidebarHeader>
+              <SidebarContent className="flex flex-col p-0">
+                <div className="p-2">
+                  <SidebarMenu>
+                    <SidebarMenuItem>
+                      <SidebarMenuButton onClick={() => setActiveTab('products')} isActive={activeTab === 'products'} className="w-full justify-start">
+                        <PackageIcon className="mr-2 h-5 w-5" /> Products
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                    <SidebarMenuItem>
+                      <SidebarMenuButton onClick={() => setActiveTab('storeIntegration')} isActive={activeTab === 'storeIntegration'} className="w-full justify-start">
+                        <PlugZap className="mr-2 h-5 w-5" /> Store Integration
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  </SidebarMenu>
+                </div>
+              </SidebarContent>
+              <SidebarFooter className="p-4 border-t mt-auto">
+                <SidebarMenu>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton onClick={() => setActiveTab('settings')} isActive={activeTab === 'settings'} className="w-full justify-start">
+                      <Settings className="mr-2 h-5 w-5" /> Settings
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton onClick={() => setActiveTab('profile')} isActive={activeTab === 'profile'} className="w-full justify-start">
+                      <UserCircle className="mr-2 h-5 w-5" /> Profile
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                </SidebarMenu>
+              </SidebarFooter>
+            </Sidebar>
             <SidebarInset className="flex-1 overflow-hidden">
               <main className="flex-1 p-4 md:p-6 lg:p-8 bg-muted/30 overflow-y-auto h-full">
                 <div className="container mx-auto space-y-8">
@@ -446,41 +481,6 @@ export default function DashboardPage() {
                 </div>
               </main>
             </SidebarInset>
-            <Sidebar side="right" className="h-full shadow-md border-l">
-              <SidebarHeader className="p-4 border-b">
-                <h2 className="font-headline text-lg font-semibold text-foreground">Navigation</h2>
-              </SidebarHeader>
-              <SidebarContent className="flex flex-col p-0">
-                <div className="p-2">
-                  <SidebarMenu>
-                    <SidebarMenuItem>
-                      <SidebarMenuButton onClick={() => setActiveTab('products')} isActive={activeTab === 'products'} className="w-full justify-start">
-                        <PackageIcon className="mr-2 h-5 w-5" /> Products
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                    <SidebarMenuItem>
-                      <SidebarMenuButton onClick={() => setActiveTab('storeIntegration')} isActive={activeTab === 'storeIntegration'} className="w-full justify-start">
-                        <PlugZap className="mr-2 h-5 w-5" /> Store Integration
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  </SidebarMenu>
-                </div>
-              </SidebarContent>
-              <SidebarFooter className="p-4 border-t mt-auto">
-                <SidebarMenu>
-                  <SidebarMenuItem>
-                    <SidebarMenuButton onClick={() => setActiveTab('settings')} isActive={activeTab === 'settings'} className="w-full justify-start">
-                      <Settings className="mr-2 h-5 w-5" /> Settings
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                  <SidebarMenuItem>
-                    <SidebarMenuButton onClick={() => setActiveTab('profile')} isActive={activeTab === 'profile'} className="w-full justify-start">
-                      <UserCircle className="mr-2 h-5 w-5" /> Profile
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                </SidebarMenu>
-              </SidebarFooter>
-            </Sidebar>
           </div>
         </SidebarProvider>
       </div>
