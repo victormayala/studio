@@ -22,7 +22,8 @@ const defaultProductBase = {
   name: 'Plain White T-shirt (Default)',
   imageUrl: 'https://placehold.co/700x700.png',
   imageAlt: 'Plain white T-shirt ready for customization',
-  // width and height removed as they are no longer used for fixed sizing
+  width: 700, // Reverted
+  height: 700, // Reverted
   aiHint: 't-shirt mockup',
 };
 
@@ -55,6 +56,7 @@ export default function DesignCanvas({
     imageAlt: productImageAlt || defaultProductBase.imageAlt,
     aiHint: productImageAiHint || defaultProductBase.aiHint,
     name: productImageAlt || defaultProductBase.name, // Use alt as name if available
+    // width and height will use defaultProductBase values implicitly now
   };
   
   const {
@@ -392,20 +394,21 @@ export default function DesignCanvas({
 
   return (
     <div
-      className="w-full h-full flex flex-col items-center justify-center bg-card border border-dashed border-border rounded-lg shadow-inner p-4 relative overflow-hidden select-none product-image-outer-container"
+      className="w-full max-w-3xl mx-auto bg-card border border-dashed border-border rounded-lg shadow-inner p-4 relative overflow-hidden select-none product-image-outer-container min-h-[500px] lg:min-h-[700px]" // Reverted min-h
       onClick={handleCanvasClick} 
       onTouchStart={handleCanvasClick as any} 
     >
-      <div className="relative w-full flex-1 min-h-0 flex items-center justify-center product-canvas-wrapper"> {/* New wrapper for canvasRef */}
+      <div className="relative w-full h-full flex items-center justify-center product-canvas-wrapper"> {/* Reverted wrapper for canvasRef */}
         <div
           ref={canvasRef} 
-          className="relative product-image-canvas-area bg-muted/10 aspect-square max-w-full max-h-full" 
-          // Removed fixed style width/height
+          className="relative product-image-canvas-area bg-muted/10" 
+          style={{ width: productToDisplay.width, height: productToDisplay.height }} // Reverted fixed style width/height
         >
           <Image
             src={productToDisplay.imageUrl}
             alt={productToDisplay.imageAlt}
-            fill 
+            width={productToDisplay.width} // Reverted to fixed width
+            height={productToDisplay.height} // Reverted to fixed height
             className="rounded-md object-contain pointer-events-none select-none" 
             data-ai-hint={productToDisplay.aiHint}
             priority
@@ -488,7 +491,7 @@ export default function DesignCanvas({
           ))}
         </div>
       </div>
-      <div className="text-center pt-2 flex-shrink-0"> {/* Product name and instructions moved here */}
+      <div className="text-center pt-2"> {/* Reverted product name and instructions location */}
         <p className="mt-2 text-muted-foreground font-medium">{productToDisplay.name}</p>
         <p className="text-sm text-muted-foreground">
           {productDefinedBoundaryBoxes.length > 0 ? "Items will be kept within the dashed areas. " : ""}

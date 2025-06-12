@@ -328,14 +328,14 @@ function CustomizerLayoutAndLogic() {
           </div>
           
           {/* Central Canvas Area */}
-          <main className="flex-1 p-4 md:p-6 flex flex-col items-center overflow-hidden"> 
+          <main className="flex-1 p-4 md:p-6 flex flex-col items-center overflow-y-auto"> {/* Reverted overflow-hidden to overflow-y-auto */}
             {error && productDetails?.id === defaultFallbackProduct.id && ( 
                <div className="w-full max-w-4xl p-3 mb-4 border border-destructive bg-destructive/10 rounded-md text-destructive text-sm flex-shrink-0">
                  <AlertTriangle className="inline h-4 w-4 mr-1" /> {error} Using default product view.
                </div>
             )}
             {/* This div wraps the canvas and ensures it scales correctly and is centered */}
-            <div className="flex-1 w-full flex flex-col items-center justify-center min-h-0">
+            <div className="flex-grow w-full flex items-center justify-center"> {/* Reverted to flex-grow from flex-1 min-h-0 etc. */}
               <DesignCanvas 
                 productImageUrl={currentProductImage}
                 productImageAlt={`${currentProductName} - ${currentProductAlt}`}
