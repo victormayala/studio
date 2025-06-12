@@ -13,9 +13,11 @@ import { fetchWooCommerceProductById } from '@/app/actions/woocommerceActions';
 import { useAuth } from '@/contexts/AuthContext';
 import { Loader2, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import NextImage from 'next/image'; // Added for thumbnails
 import Link from 'next/link';
 import type { WCCustomProduct } from '@/types/woocommerce';
 import { useToast } from '@/hooks/use-toast';
+import { cn } from '@/lib/utils'; // Added for thumbnail styling
 
 // Interface for boundary boxes (consistent with options page)
 interface BoundaryBox {
@@ -27,30 +29,43 @@ interface BoundaryBox {
   height: number;
 }
 
-// Interface for options loaded from localStorage (consistent with options page)
-interface LocalStorageCustomizerOptions {
-  boundaryBoxes: BoundaryBox[];
-  cstmzrSelectedVariationIds: string[]; // We'll load this, though not actively used in canvas yet
-}
-
-// Combined product data structure for the customizer
-interface ProductForCustomizer {
+// Interface for a single product view
+interface ProductView {
   id: string;
   name: string;
   imageUrl: string;
   aiHint?: string;
   boundaryBoxes: BoundaryBox[];
-  // Add other relevant fields if needed, e.g., selectedVariationIds
+}
+
+// Interface for options loaded from localStorage
+interface LocalStorageCustomizerOptions {
+  views: ProductView[]; // Updated from boundaryBoxes
+  cstmzrSelectedVariationIds: string[];
+}
+
+// Combined product data structure for the customizer
+interface ProductForCustomizer {
+  id: string; // Product ID from WC
+  name: string; // Product Name from WC
+  views: ProductView[]; // Array of views
+  // No top-level imageUrl, aiHint, or boundaryBoxes anymore
 }
 
 const defaultFallbackProduct: ProductForCustomizer = {
   id: 'fallback_product',
   name: 'Product Customizer (Default)',
-  imageUrl: 'https://placehold.co/700x700.png',
-  aiHint: 'product mockup',
-  boundaryBoxes: [
-    { id: 'fallback_area_1', name: 'Default Area', x: 25, y: 25, width: 50, height: 50 },
-  ],
+  views: [
+    {
+      id: 'fallback_view_1',
+      name: 'Front View',
+      imageUrl: 'https://placehold.co/700x700.png',
+      aiHint: 'product mockup',
+      boundaryBoxes: [
+        { id: 'fallback_area_1', name: 'Default Area', x: 25, y: 25, width: 50, height: 50 },
+      ],
+    }
+  ]
 };
 
 export default function CustomizerPage() {
@@ -60,6 +75,7 @@ export default function CustomizerPage() {
   const { toast } = useToast();
 
   const [productDetails, setProductDetails] = useState<ProductForCustomizer | null>(null);
+  const [activeViewId, setActiveViewId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -71,9 +87,13 @@ export default function CustomizerPage() {
   };
 
   const loadCustomizerData = useCallback(async () => {
+    setIsLoading(true); // Set loading true at the start of data fetching
+    setError(null);
+    
     if (!productId) {
       setError("No product ID provided. Displaying default customizer.");
       setProductDetails(defaultFallbackProduct);
+      setActiveViewId(defaultFallbackProduct.views[0]?.id || null);
       setIsLoading(false);
       return;
     }
@@ -82,15 +102,11 @@ export default function CustomizerPage() {
       // Wait for auth state to resolve if productId is present
       return;
     }
-
-    setIsLoading(true);
-    setError(null);
-
+    
     let wcProduct: WCCustomProduct | undefined;
     let fetchError: string | undefined;
     let userCredentials;
 
-    // Attempt to get user-specific WooCommerce credentials from localStorage
     if (user) {
       try {
         const userStoreUrl = localStorage.getItem(`wc_store_url_${user.id}`);
@@ -101,7 +117,6 @@ export default function CustomizerPage() {
         }
       } catch (storageError) {
         console.warn("Customizer: Could not access localStorage for WC credentials:", storageError);
-        // Proceed without user credentials, will fallback to global
       }
     }
     
@@ -110,12 +125,13 @@ export default function CustomizerPage() {
     if (fetchError || !wcProduct) {
       setError(fetchError || `Failed to load product (ID: ${productId}). Displaying default.`);
       setProductDetails(defaultFallbackProduct);
+      setActiveViewId(defaultFallbackProduct.views[0]?.id || null);
       setIsLoading(false);
       toast({ title: "Product Load Error", description: fetchError || `Product ${productId} not found.`, variant: "destructive"});
       return;
     }
 
-    let loadedBoundaryBoxes: BoundaryBox[] = [];
+    let loadedViews: ProductView[] = [];
     // let loadedSelectedVariationIds: string[] = []; // For future use
 
     if (user) {
@@ -124,7 +140,7 @@ export default function CustomizerPage() {
         const savedOptions = localStorage.getItem(localStorageKey);
         if (savedOptions) {
           const parsedOptions = JSON.parse(savedOptions) as LocalStorageCustomizerOptions;
-          loadedBoundaryBoxes = parsedOptions.boundaryBoxes || [];
+          loadedViews = parsedOptions.views || [];
           // loadedSelectedVariationIds = parsedOptions.cstmzrSelectedVariationIds || [];
         }
       } catch (e) {
@@ -132,23 +148,26 @@ export default function CustomizerPage() {
         toast({ title: "Local Settings Error", description: "Could not load saved CSTMZR settings for this product. Using defaults.", variant: "info"});
       }
     } else {
-        // If no user is logged into CSTMZR, we might not load any specific boundary boxes
-        // or we could define a default set if that's desired for guest users.
-        // For now, it will default to empty if no user.
-        console.info("Customizer: No CSTMZR user logged in. Boundary boxes will default to empty unless globally defined for product.");
+        console.info("Customizer: No CSTMZR user logged in. Views will default.");
     }
 
-    const plainTextDescription = stripHtml(wcProduct.description || wcProduct.short_description || '');
-
+    const finalViews = loadedViews.length > 0 ? loadedViews : [
+      { // Default view if none saved for this product from Product Options page
+        id: `default_view_wc_${wcProduct.id}`,
+        name: "Front View",
+        imageUrl: wcProduct.images && wcProduct.images.length > 0 ? wcProduct.images[0].src : defaultFallbackProduct.views[0].imageUrl,
+        aiHint: wcProduct.images && wcProduct.images.length > 0 && wcProduct.images[0].alt ? wcProduct.images[0].alt.split(" ").slice(0,2).join(" ") : defaultFallbackProduct.views[0].aiHint,
+        boundaryBoxes: defaultFallbackProduct.views[0].boundaryBoxes, // Default boundary boxes for the default view
+      }
+    ];
+    
     setProductDetails({
       id: wcProduct.id.toString(),
       name: wcProduct.name || `Product ${productId}`,
-      imageUrl: wcProduct.images && wcProduct.images.length > 0 ? wcProduct.images[0].src : 'https://placehold.co/700x700.png',
-      aiHint: wcProduct.images && wcProduct.images.length > 0 && wcProduct.images[0].alt ? wcProduct.images[0].alt.split(" ").slice(0,2).join(" ") : 'product image',
-      boundaryBoxes: loadedBoundaryBoxes.length > 0 ? loadedBoundaryBoxes : defaultFallbackProduct.boundaryBoxes, // Fallback boundary if none loaded
-      // description: plainTextDescription, // Could be added if needed by customizer UI
+      views: finalViews,
     });
 
+    setActiveViewId(finalViews[0]?.id || null);
     setIsLoading(false);
   }, [productId, user, authLoading, toast]);
 
@@ -165,8 +184,16 @@ export default function CustomizerPage() {
       </div>
     );
   }
+  
+  const activeViewData = productDetails?.views.find(v => v.id === activeViewId);
+  
+  // Determine current product/view details for DesignCanvas, falling back to defaultFallbackProduct if needed
+  const currentProductImage = activeViewData?.imageUrl || defaultFallbackProduct.views[0].imageUrl;
+  const currentProductAlt = activeViewData?.name || defaultFallbackProduct.views[0].name;
+  const currentProductAiHint = activeViewData?.aiHint || defaultFallbackProduct.views[0].aiHint;
+  const currentBoundaryBoxes = activeViewData?.boundaryBoxes || defaultFallbackProduct.views[0].boundaryBoxes;
+  const currentProductName = productDetails?.name || defaultFallbackProduct.name;
 
-  const currentProduct = productDetails || defaultFallbackProduct;
 
   if (error && !productDetails) { // Show specific error page if product load fails critically
     return (
@@ -181,7 +208,6 @@ export default function CustomizerPage() {
     );
   }
 
-
   return (
     <UploadProvider>
       <SidebarProvider defaultOpen>
@@ -193,18 +219,54 @@ export default function CustomizerPage() {
           <SidebarInset className="flex flex-col flex-1 overflow-hidden">
             <AppHeader />
             <div className="flex flex-1 overflow-hidden">
-              <main className="flex-1 overflow-y-auto"> 
-                {error && productDetails === defaultFallbackProduct && ( // Show non-blocking error as toast or small message
-                   <div className="p-4 m-4 border border-destructive bg-destructive/10 rounded-md text-destructive text-sm">
+              <main className="flex-1 overflow-y-auto p-4 md:p-6 flex flex-col items-center"> 
+                {error && productDetails?.id === defaultFallbackProduct.id && ( // Show non-blocking error as toast or small message
+                   <div className="w-full max-w-4xl p-3 mb-4 border border-destructive bg-destructive/10 rounded-md text-destructive text-sm">
                      <AlertTriangle className="inline h-4 w-4 mr-1" /> {error} Using default product view.
                    </div>
                 )}
                 <DesignCanvas 
-                  productImageUrl={currentProduct.imageUrl}
-                  productImageAlt={currentProduct.name}
-                  productImageAiHint={currentProduct.aiHint}
-                  productDefinedBoundaryBoxes={currentProduct.boundaryBoxes}
+                  productImageUrl={currentProductImage}
+                  productImageAlt={`${currentProductName} - ${currentProductAlt}`}
+                  productImageAiHint={currentProductAiHint}
+                  productDefinedBoundaryBoxes={currentBoundaryBoxes}
                 />
+                {/* View Thumbnails Section */}
+                {productDetails && productDetails.views && productDetails.views.length > 0 && (
+                  <div className="mt-6 pt-4 w-full max-w-4xl border-t border-border">
+                    <h4 className="text-base font-semibold mb-3 text-center text-foreground">
+                      {productDetails.views.length > 1 ? "Product Views" : "Current View"}
+                    </h4>
+                    <div className="flex justify-center gap-3 flex-wrap">
+                      {productDetails.views.map(view => (
+                        <button
+                          key={view.id}
+                          onClick={() => setActiveViewId(view.id)}
+                          className={cn(
+                            "rounded-lg border-2 p-1.5 transition-all hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
+                            activeViewId === view.id 
+                              ? "border-primary opacity-100 ring-2 ring-primary ring-offset-background shadow-md" 
+                              : "border-transparent opacity-70 hover:border-muted-foreground/30 bg-muted/30 hover:bg-muted/50"
+                          )}
+                          title={`Select ${view.name} view`}
+                          aria-pressed={activeViewId === view.id}
+                        >
+                          <div className="relative h-16 w-16 sm:h-20 sm:w-20 bg-background rounded overflow-hidden shadow-sm">
+                            <NextImage
+                              src={view.imageUrl || 'https://placehold.co/80x80.png'}
+                              alt={`Thumbnail for ${view.name}`}
+                              fill
+                              sizes="(max-width: 640px) 5rem, 4rem"
+                              className="object-contain"
+                              data-ai-hint={view.aiHint || "product view thumbnail"}
+                            />
+                          </div>
+                          <p className="text-xs mt-1.5 text-center truncate w-16 sm:w-20 text-foreground">{view.name}</p>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </main>
               <RightPanel /> 
             </div>
