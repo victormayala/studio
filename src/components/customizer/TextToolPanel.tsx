@@ -160,7 +160,7 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
           <AccordionTrigger className="font-medium text-sm py-3 px-1">
             <Pilcrow className="mr-2 h-4 w-4" /> Font Settings
           </AccordionTrigger>
-          <AccordionContent className="space-y-4 pt-3 pb-1 px-1">
+          <AccordionContent className="space-y-6 pt-3 pb-1 px-1">
             <div>
               <Label htmlFor="fontFamilySelect" className="text-xs mb-1 block">Font Family</Label>
               <Select
@@ -478,3 +478,4 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
     </div>
   );
 }
+
