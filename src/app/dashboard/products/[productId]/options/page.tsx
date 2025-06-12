@@ -39,18 +39,13 @@ interface ProductOptionsData {
   type: 'simple' | 'variable' | 'grouped' | 'external'; 
   imageUrl: string;   
   aiHint?: string;     
-
-  cstmzrColors: string[];      
-  cstmzrSizes: string[];       
   boundaryBoxes: BoundaryBox[];
-  cstmzrSelectedVariationIds: string[]; // New: Store selected variation IDs
+  cstmzrSelectedVariationIds: string[]; 
 }
 
 interface LocalStorageOptions {
-  cstmzrColors: string[];
-  cstmzrSizes: string[];
   boundaryBoxes: BoundaryBox[];
-  cstmzrSelectedVariationIds: string[]; // New
+  cstmzrSelectedVariationIds: string[]; 
 }
 
 
@@ -86,9 +81,6 @@ export default function ProductOptionsPage() {
 
   const [selectedVariationIdsForCstmzr, setSelectedVariationIdsForCstmzr] = useState<string[]>([]);
 
-  const [newColorHex, setNewColorHex] = useState<string>('#CCCCCC');
-  const [newColorSwatch, setNewColorSwatch] = useState<string>('#CCCCCC');
-  const [newSize, setNewSize] = useState<string>('');
   const [selectedBoundaryBoxId, setSelectedBoundaryBoxId] = useState<string | null>(null);
   const imageWrapperRef = useRef<HTMLDivElement>(null);
   const [activeDrag, setActiveDrag] = useState<ActiveDragState | null>(null);
@@ -113,7 +105,7 @@ export default function ProductOptionsPage() {
     setError(null);
     setVariationsError(null);
     setVariations([]);
-    setSelectedVariationIdsForCstmzr([]); // Reset on fresh load
+    setSelectedVariationIdsForCstmzr([]); 
 
     let localOptions: LocalStorageOptions | null = null;
     const localStorageKey = `cstmzr_product_options_${user.id}_${productId}`;
@@ -171,13 +163,11 @@ export default function ProductOptionsPage() {
       type: wcProduct.type,
       imageUrl: wcProduct.images && wcProduct.images.length > 0 ? wcProduct.images[0].src : defaultImageUrl,
       aiHint: wcProduct.images && wcProduct.images.length > 0 && wcProduct.images[0].alt ? wcProduct.images[0].alt.split(" ").slice(0,2).join(" ") : defaultAiHint,
-      cstmzrColors: localOptions?.cstmzrColors || [],
-      cstmzrSizes: localOptions?.cstmzrSizes || [],
       boundaryBoxes: localOptions?.boundaryBoxes || [],
-      cstmzrSelectedVariationIds: localOptions?.cstmzrSelectedVariationIds || [], // Load selected IDs
+      cstmzrSelectedVariationIds: localOptions?.cstmzrSelectedVariationIds || [], 
     });
     setSelectedBoundaryBoxId(null); 
-    setSelectedVariationIdsForCstmzr(localOptions?.cstmzrSelectedVariationIds || []); // Also set the state for selected variation IDs
+    setSelectedVariationIdsForCstmzr(localOptions?.cstmzrSelectedVariationIds || []); 
 
     if (wcProduct.type === 'variable') {
       setIsLoadingVariations(true);
@@ -389,46 +379,6 @@ export default function ProductOptionsPage() {
       </div>
     );
   }
-
-  const handleAddColor = () => {
-    if (!productOptions) return;
-    if (!/^#[0-9A-F]{6}$/i.test(newColorHex)) {
-        toast({ title: "Invalid Color", description: "Please enter a valid hex color (e.g., #RRGGBB).", variant: "destructive" });
-        return;
-    }
-    if (productOptions.cstmzrColors.includes(newColorHex)) {
-        toast({ title: "Duplicate Color", description: "This color already exists.", variant: "destructive" });
-        return;
-    }
-    setProductOptions({ ...productOptions, cstmzrColors: [...productOptions.cstmzrColors, newColorHex] });
-    setNewColorHex('#CCCCCC'); 
-    setNewColorSwatch('#CCCCCC');
-  };
-
-  const handleRemoveColor = (colorToRemove: string) => {
-    if (!productOptions) return;
-    setProductOptions({ ...productOptions, cstmzrColors: productOptions.cstmzrColors.filter(c => c !== colorToRemove) });
-  };
-
-  const handleAddSize = () => {
-    if (!productOptions || !newSize.trim()) {
-        if (!newSize.trim()) {
-            toast({ title: "Invalid Size", description: "Size cannot be empty.", variant: "destructive" });
-        }
-        return;
-    }
-    if (productOptions.cstmzrSizes.includes(newSize.trim())) {
-        toast({ title: "Duplicate Size", description: "This size already exists.", variant: "destructive" });
-        return;
-    }
-    setProductOptions({ ...productOptions, cstmzrSizes: [...productOptions.cstmzrSizes, newSize.trim()] });
-    setNewSize('');
-  };
-
-  const handleRemoveSize = (sizeToRemove: string) => {
-     if (!productOptions) return;
-    setProductOptions({ ...productOptions, cstmzrSizes: productOptions.cstmzrSizes.filter(s => s !== sizeToRemove) });
-  };
   
   const handleSaveChanges = () => {
     if (!productOptions || !user) {
@@ -437,17 +387,15 @@ export default function ProductOptionsPage() {
     }
     const localStorageKey = `cstmzr_product_options_${user.id}_${productOptions.id}`;
     const dataToSave: LocalStorageOptions = {
-      cstmzrColors: productOptions.cstmzrColors,
-      cstmzrSizes: productOptions.cstmzrSizes,
       boundaryBoxes: productOptions.boundaryBoxes,
-      cstmzrSelectedVariationIds: selectedVariationIdsForCstmzr, // Save selected variation IDs
+      cstmzrSelectedVariationIds: selectedVariationIdsForCstmzr, 
     };
 
     try {
       localStorage.setItem(localStorageKey, JSON.stringify(dataToSave));
       toast({
         title: "CSTMZR Options Saved",
-        description: "Custom colors, sizes, areas, and variation selections have been saved locally.",
+        description: "Custom areas and variation selections have been saved locally.",
       });
     } catch (e) {
       console.error("Error saving to localStorage:", e);
@@ -867,8 +815,14 @@ export default function ProductOptionsPage() {
                       <Checkbox
                         id="selectAllVariations"
                         checked={allVariationsSelected}
-                        indeterminate={someVariationsSelected}
-                        onCheckedChange={(checked) => handleSelectAllVariations(checked as boolean)}
+                        onCheckedChange={(checkedState) => {
+                          if (checkedState === 'indeterminate') {
+                             handleSelectAllVariations(true); // If indeterminate, next click selects all
+                          } else {
+                            handleSelectAllVariations(checkedState as boolean);
+                          }
+                        }}
+                        data-state={someVariationsSelected && !allVariationsSelected ? 'indeterminate' : (allVariationsSelected ? 'checked' : 'unchecked')}
                       />
                       <Label htmlFor="selectAllVariations" className="text-sm font-medium">
                         {allVariationsSelected ? "Deselect All" : "Select All Variations for Customizer"}
@@ -945,111 +899,6 @@ export default function ProductOptionsPage() {
                 </CardContent>
             </Card>
           )}
-
-
-          <Card className="shadow-md">
-            <CardHeader>
-              <CardTitle className="font-headline text-lg">CSTMZR Color Options</CardTitle>
-              <CardDescription>Manage available custom color options for the customizer.</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2 mb-4">
-                <Label>Current Custom Colors:</Label>
-                {productOptions.cstmzrColors.length > 0 ? (
-                  <div className="flex flex-wrap gap-2">
-                    {productOptions.cstmzrColors.map((color, index) => (
-                      <Badge key={index} variant="secondary" className="relative group pr-7">
-                        <span className="inline-block w-3 h-3 rounded-full mr-1.5 border" style={{ backgroundColor: color }}></span>
-                        {color.toUpperCase()}
-                        <button 
-                            onClick={() => handleRemoveColor(color)} 
-                            className="absolute right-1 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive"
-                            title="Remove color"
-                        >
-                           <Trash2 className="w-3 h-3"/>
-                        </button>
-                      </Badge>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-sm text-muted-foreground">No custom colors added yet.</p>
-                )}
-              </div>
-              <Separator className="my-4" />
-              <div className="space-y-3">
-                <Label htmlFor="newColorHex">Add New Custom Color</Label>
-                <div className="flex items-center gap-2">
-                  <Input
-                    type="color"
-                    id="newColorSwatch"
-                    value={newColorSwatch}
-                    onChange={(e) => { setNewColorSwatch(e.target.value); setNewColorHex(e.target.value);}}
-                    className="p-0.5 h-10 w-12 border-input rounded-md"
-                  />
-                  <Input
-                    id="newColorHex"
-                    placeholder="#RRGGBB"
-                    value={newColorHex}
-                    onChange={(e) => setNewColorHex(e.target.value.toUpperCase())}
-                    onBlur={(e) => setNewColorSwatch(e.target.value)} 
-                    maxLength={7}
-                    className="flex-grow"
-                  />
-                  <Button onClick={handleAddColor} variant="outline" size="icon" className="shrink-0 hover:bg-accent hover:text-accent-foreground">
-                    <PlusCircle className="h-5 w-5" />
-                    <span className="sr-only">Add Color</span>
-                  </Button>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="shadow-md">
-            <CardHeader>
-              <CardTitle className="font-headline text-lg">CSTMZR Size Options</CardTitle>
-              <CardDescription>Manage available custom size options for the customizer.</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2 mb-4">
-                <Label>Current Custom Sizes:</Label>
-                {productOptions.cstmzrSizes.length > 0 ? (
-                  <div className="flex flex-wrap gap-2">
-                    {productOptions.cstmzrSizes.map((size, index) => (
-                       <Badge key={index} variant="secondary" className="relative group pr-7">
-                        {size}
-                         <button 
-                            onClick={() => handleRemoveSize(size)} 
-                            className="absolute right-1 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive"
-                            title="Remove size"
-                        >
-                           <Trash2 className="w-3 h-3"/>
-                        </button>
-                      </Badge>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-sm text-muted-foreground">No custom sizes added yet.</p>
-                )}
-              </div>
-              <Separator className="my-4" />
-              <div className="space-y-3">
-                <Label htmlFor="newSize">Add New Custom Size</Label>
-                <div className="flex items-center gap-2">
-                  <Input
-                    id="newSize"
-                    placeholder="e.g., XL, 12oz"
-                    value={newSize}
-                    onChange={(e) => setNewSize(e.target.value)}
-                     className="flex-grow"
-                  />
-                  <Button onClick={handleAddSize} variant="outline" size="icon" className="shrink-0 hover:bg-accent hover:text-accent-foreground">
-                    <PlusCircle className="h-5 w-5" />
-                     <span className="sr-only">Add Size</span>
-                  </Button>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
         </div>
       </div>
 
@@ -1061,4 +910,6 @@ export default function ProductOptionsPage() {
     </div>
   );
 }
+    
+
     
