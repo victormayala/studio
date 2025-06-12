@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect } from 'react'; // Added useEffect
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Button } from "@/components/ui/button";
 import { SidebarTrigger } from "@/components/ui/sidebar";
@@ -11,25 +11,39 @@ import { CodeXml, LayoutDashboard, Send, LogOut } from "lucide-react";
 import { useUploads } from '@/contexts/UploadContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
-import { usePathname, useSearchParams } from 'next/navigation'; // Added useSearchParams
+import { usePathname, useSearchParams } from 'next/navigation';
 
 export default function AppHeader() {
   const [isEmbedModalOpen, setIsEmbedModalOpen] = useState(false);
   const { canvasImages, canvasTexts, canvasShapes } = useUploads();
-  const { signOut, isLoading: authIsLoading, user } = useAuth();
+  const { user, signOut, isLoading: authIsLoading } = useAuth(); // user object is available
   const { toast } = useToast();
   const pathname = usePathname();
-  const searchParams = useSearchParams(); // For getting productId
+  const searchParams = useSearchParams();
 
-  const [currentProductId, setCurrentProductId] = useState<string | null>(null);
+  const [customizerShareUrlPath, setCustomizerShareUrlPath] = useState<string | null>(null);
 
   useEffect(() => {
     if (pathname.startsWith('/customizer')) {
-      setCurrentProductId(searchParams.get('productId'));
+      const productId = searchParams.get('productId');
+      if (productId) {
+        let urlPath = `/customizer?productId=${productId}`;
+        if (user?.id) {
+          urlPath += `&userId=${user.id}`;
+        }
+        setCustomizerShareUrlPath(urlPath);
+      } else {
+        // Generic customizer link if no productId
+        let urlPath = `/customizer`;
+        if (user?.id) {
+          urlPath += `?userId=${user.id}`; // Note: might need a '?' or '&' depending on if other params exist
+        }
+         setCustomizerShareUrlPath(urlPath);
+      }
     } else {
-      setCurrentProductId(null);
+      setCustomizerShareUrlPath(null);
     }
-  }, [pathname, searchParams]);
+  }, [pathname, searchParams, user]);
 
   const showSidebarTrigger = pathname.startsWith('/customizer');
 
@@ -43,16 +57,17 @@ export default function AppHeader() {
       return;
     }
 
+    const currentProductIdFromParams = searchParams.get('productId'); // Get it fresh for this action
+
     const designData = {
       images: canvasImages,
       texts: canvasTexts,
       shapes: canvasShapes,
-      productId: currentProductId, // Include productId if available
+      productId: currentProductIdFromParams, 
+      userId: user?.id, // Include userId in the posted message
     };
 
-    // More robust targetOrigin handling
-    let targetOrigin = '*'; // Default to wildcard for local dev or if origin is unknown
-    // Example for a production environment (replace with your actual logic or env var)
+    let targetOrigin = '*'; 
     if (process.env.NODE_ENV === 'production' && process.env.NEXT_PUBLIC_WORDPRESS_SITE_ORIGIN) {
         targetOrigin = process.env.NEXT_PUBLIC_WORDPRESS_SITE_ORIGIN;
     }
@@ -67,7 +82,7 @@ export default function AppHeader() {
        toast({
         title: "Not in an iframe",
         description: "This action is intended to be used when the customizer is embedded.",
-        variant: "info" // Changed to info as it's not strictly an error
+        variant: "info"
       });
       console.warn("AppHeader: 'Apply Design' clicked, but not in an iframe. Data:", designData);
     }
@@ -86,7 +101,7 @@ export default function AppHeader() {
     <header className="flex items-center justify-between h-16 border-b bg-card shadow-sm px-4 md:px-6">
       <div className="flex items-center gap-4">
         {showSidebarTrigger && <SidebarTrigger className="md:hidden" />}
-        <Link href={user ? "/dashboard" : "/customizer"} aria-label="Go to main app page">
+        <Link href={user ? "/dashboard" : "/"} aria-label="Go to main app page">
             <Logo />
         </Link>
       </div>
@@ -113,6 +128,7 @@ export default function AppHeader() {
             onClick={() => setIsEmbedModalOpen(true)} 
             variant="outline" 
             className="hover:bg-accent hover:text-accent-foreground"
+            disabled={!customizerShareUrlPath} // Disable if path isn't ready
           >
             <CodeXml className="mr-2 h-4 w-4" />
             Embed Code
@@ -133,7 +149,7 @@ export default function AppHeader() {
       <EmbedCodeModal 
         isOpen={isEmbedModalOpen} 
         onOpenChange={setIsEmbedModalOpen}
-        productId={currentProductId} 
+        customizerUrlPath={customizerShareUrlPath} 
       />
     </header>
   );

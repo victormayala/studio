@@ -19,10 +19,10 @@ import { useToast } from "@/hooks/use-toast";
 interface EmbedCodeModalProps {
   isOpen: boolean;
   onOpenChange: (isOpen: boolean) => void;
-  productId?: string | null; // Make productId optional
+  customizerUrlPath?: string | null; // Changed from productId to customizerUrlPath
 }
 
-export function EmbedCodeModal({ isOpen, onOpenChange, productId }: EmbedCodeModalProps) {
+export function EmbedCodeModal({ isOpen, onOpenChange, customizerUrlPath }: EmbedCodeModalProps) {
   const { toast } = useToast();
   const [copiedLink, setCopiedLink] = useState(false);
   const [copiedEmbed, setCopiedEmbed] = useState(false);
@@ -37,21 +37,21 @@ export function EmbedCodeModal({ isOpen, onOpenChange, productId }: EmbedCodeMod
   }, []);
 
   useEffect(() => {
-    if (productId && appDomain) {
-      const link = `${appDomain}/customizer?productId=${productId}`;
+    if (customizerUrlPath && appDomain) {
+      const link = `${appDomain}${customizerUrlPath.startsWith('/') ? '' : '/'}${customizerUrlPath}`;
       setUniqueLink(link);
       setEmbedCode(`<iframe src="${link}" width="100%" height="800px" frameborder="0" title="Product Customizer"></iframe>`);
     } else if (appDomain) {
+      // Fallback for a generic customizer link if no specific path is provided
       const genericLink = `${appDomain}/customizer`;
       setUniqueLink(genericLink);
       setEmbedCode(`<iframe src="${genericLink}" width="100%" height="800px" frameborder="0" title="Product Customizer"></iframe> 
-<!-- Note: For a product-specific customizer, ensure a productId is in the customizer URL when generating this code. -->`);
+<!-- Note: For a product/user-specific customizer, ensure relevant parameters are in the customizer URL path when generating this code. -->`);
     } else {
-      // Fallback or loading state if appDomain is not yet set
       setUniqueLink("Loading link...");
       setEmbedCode("<!-- Loading embed code... -->");
     }
-  }, [productId, appDomain]);
+  }, [customizerUrlPath, appDomain]);
 
   const handleCopy = async (textToCopy: string, type: 'link' | 'embed') => {
     try {
@@ -83,9 +83,10 @@ export function EmbedCodeModal({ isOpen, onOpenChange, productId }: EmbedCodeMod
         <DialogHeader>
           <DialogTitle className="font-headline">Share & Embed Your Customizer</DialogTitle>
           <DialogDescription>
-            {productId 
-              ? `Use the unique link or embed code for product ID: ${productId}.` 
-              : "Use the generic link or embed code. For a product-specific customizer, first navigate to it."}
+            {customizerUrlPath?.includes('productId') 
+              ? `Use this link or embed code for the specific product customizer.` 
+              : "Use this generic link or embed code. For a product-specific view, ensure the URL path includes a productId."}
+             {customizerUrlPath?.includes('userId') && " The link also includes a user identifier."}
           </DialogDescription>
         </DialogHeader>
         
