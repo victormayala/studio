@@ -2,22 +2,19 @@
 "use client";
 
 import AiAssistant from './AiAssistant';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
 export default function RightPanel() {
   return (
-    <Card className="w-72 md:w-80 lg:w-96 h-full flex-shrink-0 shadow-sm border-l flex flex-col">
-      <CardHeader className="border-b">
-        <CardTitle className="font-headline text-lg text-foreground">AI Design Assistant</CardTitle>
-      </CardHeader>
+    <div className="w-72 md:w-80 lg:w-96 h-full flex-shrink-0 shadow-sm border-l bg-card flex flex-col overflow-hidden">
+      <div className="p-4 border-b">
+        <h2 className="font-headline text-lg font-semibold text-foreground">AI Design Assistant</h2>
+      </div>
       <ScrollArea className="flex-grow">
-        <CardContent className="p-4">
+        <div className="p-4">
           <AiAssistant />
-        </CardContent>
+        </div>
       </ScrollArea>
-    </Card>
+    </div>
   );
 }
-
-    
