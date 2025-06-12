@@ -524,6 +524,48 @@ export default function ProductOptionsPage() {
       {error && productOptions && <ShadCnAlert variant="destructive" className="mb-6"><AlertTriangle className="h-4 w-4" /><ShadCnAlertTitle>Product Data Error</ShadCnAlertTitle><ShadCnAlertDescription>{error}</ShadCnAlertDescription></ShadCnAlert>}
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+        <div className="md:col-span-2 space-y-6">
+          <Card className="shadow-md">
+            <CardHeader><CardTitle className="font-headline text-lg">Base Product Information</CardTitle><CardDescription>From WooCommerce (Read-only).</CardDescription></CardHeader>
+            <CardContent className="space-y-4">
+              <div><Label htmlFor="productName">Product Name</Label><Input id="productName" value={productOptions.name} className="mt-1 bg-muted/50" readOnly /></div>
+              <div><Label htmlFor="productDescription">Description</Label><Textarea id="productDescription" value={productOptions.description} className="mt-1 bg-muted/50" rows={4} readOnly /></div>
+              <div className="grid grid-cols-2 gap-4">
+                <div><Label htmlFor="productPrice">Price ($)</Label><Input id="productPrice" type="number" value={productOptions.price} className="mt-1 bg-muted/50" readOnly /></div>
+                <div><Label htmlFor="productType">Type</Label><Input id="productType" value={productOptions.type.charAt(0).toUpperCase() + productOptions.type.slice(1)} className="mt-1 bg-muted/50" readOnly /></div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {productOptions.type === 'variable' && (
+            <Card className="shadow-md">
+              <CardHeader><div className="flex justify-between items-center"><div><CardTitle className="font-headline text-lg">Product Variations</CardTitle><CardDescription>{variations.length > 0 ? `Select variations for customization. (Total: ${variations.length})` : 'Variations from WooCommerce.'}</CardDescription></div></div></CardHeader>
+              <CardContent>
+                 {isLoadingVariations || (isRefreshing && isLoading) ? <div className="flex items-center justify-center py-6"><Loader2 className="h-6 w-6 animate-spin text-primary" /><p className="ml-2 text-muted-foreground">Loading variations...</p></div>
+                : variationsError ? <div className="text-center py-6"><AlertTriangle className="mx-auto h-10 w-10 text-destructive" /><p className="mt-3 text-destructive font-semibold">Error loading variations</p><p className="text-sm text-muted-foreground mt-1">{variationsError}</p></div>
+                : variations.length > 0 ? (<>
+                    <div className="mb-4 flex items-center space-x-2 p-2 border-b">
+                      <Checkbox id="selectAllVariations" checked={allVariationsSelected} onCheckedChange={(cs) => handleSelectAllVariations(cs === 'indeterminate' ? true : cs as boolean)} data-state={someVariationsSelected && !allVariationsSelected ? 'indeterminate' : (allVariationsSelected ? 'checked' : 'unchecked')} />
+                      <Label htmlFor="selectAllVariations" className="text-sm font-medium">{allVariationsSelected ? "Deselect All" : "Select All Variations"}</Label>
+                    </div>
+                    <div className="space-y-3 max-h-96 overflow-y-auto pr-2">
+                      {variations.map((variation) => (
+                        <div key={variation.id} className={cn("p-3 border rounded-md flex items-start gap-3 transition-colors", selectedVariationIdsForCstmzr.includes(variation.id.toString()) ? "bg-primary/10 border-primary" : "bg-muted/30 hover:bg-muted/50")}>
+                          <Checkbox id={`variation-${variation.id}`} checked={selectedVariationIdsForCstmzr.includes(variation.id.toString())} onCheckedChange={(c) => handleVariationSelectionChange(variation.id.toString(), c as boolean)} className="mt-1 flex-shrink-0" />
+                          <div className="relative h-16 w-16 rounded-md overflow-hidden border bg-card flex-shrink-0"><NextImage src={variation.image?.src || (productOptions.views[0]?.imageUrl) || 'https://placehold.co/100x100.png'} alt={variation.image?.alt || productOptions.name} fill className="object-contain" data-ai-hint={variation.image?.alt ? variation.image.alt.split(" ").slice(0,2).join(" ") : "variation image"}/></div>
+                          <div className="flex-grow"><p className="text-sm font-medium text-foreground">{variation.attributes.map(attr => `${attr.name}: ${attr.option}`).join(' / ')}</p><p className="text-xs text-muted-foreground">SKU: {variation.sku || 'N/A'}</p><p className="text-xs text-muted-foreground">Price: ${parseFloat(variation.price).toFixed(2)}</p></div>
+                          <Badge variant={variation.stock_status === 'instock' ? 'default' : (variation.stock_status === 'onbackorder' ? 'secondary' : 'destructive')} className={cn("self-start", variation.stock_status === 'instock' && 'bg-green-500/10 text-green-700 border-green-500/30', variation.stock_status === 'onbackorder' && 'bg-yellow-500/10 text-yellow-700 border-yellow-500/30', variation.stock_status === 'outofstock' && 'bg-red-500/10 text-red-700 border-red-500/30')}>{variation.stock_status === 'instock' ? 'In Stock' : variation.stock_status === 'onbackorder' ? 'On Backorder' : 'Out of Stock'}{variation.stock_quantity !== null && ` (${variation.stock_quantity})`}</Badge>
+                        </div>))}
+                    </div></>
+                ) : <div className="text-center py-6"><LayersIcon className="mx-auto h-10 w-10 text-muted-foreground" /><p className="mt-3 text-muted-foreground">No variations found for this product.</p></div>}
+              </CardContent>
+            </Card>
+          )}
+          {productOptions.type !== 'variable' && (
+            <Card className="shadow-md"><CardHeader><CardTitle className="font-headline text-lg">Product Variations</CardTitle></CardHeader><CardContent className="text-center py-8 text-muted-foreground"><Shirt className="mx-auto h-10 w-10 mb-2" />This is a simple product and does not have variations.</CardContent></Card>
+          )}
+        </div>
+
         <div className="md:col-span-1 space-y-6">
            <Card className="shadow-md">
             <CardHeader>
@@ -607,10 +649,10 @@ export default function ProductOptionsPage() {
                         {selectedBoundaryBoxId === box.id ? (
                           <div className="mt-3 pt-3 border-t border-border/50"><h4 className="text-xs font-medium mb-1.5 text-muted-foreground">Edit Dimensions (%):</h4>
                             <div className="grid grid-cols-2 gap-x-3 gap-y-2">
-                              <div><Label htmlFor={`box-x-${box.id}`} className="text-xs">X</Label><Input type="number" step="0.1" min="0" max="100" id={`box-x-${box.id}`} value={box.x.toFixed(1)} onChange={(e) => handleBoundaryBoxPropertyChange(box.id, 'x', e.target.value)} className="h-8 text-xs w-full bg-background" onClick={(e) => e.stopPropagation()} /></div>
-                              <div><Label htmlFor={`box-y-${box.id}`} className="text-xs">Y</Label><Input type="number" step="0.1" min="0" max="100" id={`box-y-${box.id}`} value={box.y.toFixed(1)} onChange={(e) => handleBoundaryBoxPropertyChange(box.id, 'y', e.target.value)} className="h-8 text-xs w-full bg-background" onClick={(e) => e.stopPropagation()} /></div>
-                              <div><Label htmlFor={`box-w-${box.id}`} className="text-xs">Width</Label><Input type="number" step="0.1" min={MIN_BOX_SIZE_PERCENT.toString()} max="100" id={`box-w-${box.id}`} value={box.width.toFixed(1)} onChange={(e) => handleBoundaryBoxPropertyChange(box.id, 'width', e.target.value)} className="h-8 text-xs w-full bg-background" onClick={(e) => e.stopPropagation()} /></div>
-                              <div><Label htmlFor={`box-h-${box.id}`} className="text-xs">Height</Label><Input type="number" step="0.1" min={MIN_BOX_SIZE_PERCENT.toString()} max="100" id={`box-h-${box.id}`} value={box.height.toFixed(1)} onChange={(e) => handleBoundaryBoxPropertyChange(box.id, 'height', e.target.value)} className="h-8 text-xs w-full bg-background" onClick={(e) => e.stopPropagation()} /></div>
+                              <div><Label htmlFor={`box-x-${box.id}`} className="text-xs mb-5">X</Label><Input type="number" step="0.1" min="0" max="100" id={`box-x-${box.id}`} value={box.x.toFixed(1)} onChange={(e) => handleBoundaryBoxPropertyChange(box.id, 'x', e.target.value)} className="h-8 text-xs w-full bg-background" onClick={(e) => e.stopPropagation()} /></div>
+                              <div><Label htmlFor={`box-y-${box.id}`} className="text-xs mb-5">Y</Label><Input type="number" step="0.1" min="0" max="100" id={`box-y-${box.id}`} value={box.y.toFixed(1)} onChange={(e) => handleBoundaryBoxPropertyChange(box.id, 'y', e.target.value)} className="h-8 text-xs w-full bg-background" onClick={(e) => e.stopPropagation()} /></div>
+                              <div><Label htmlFor={`box-w-${box.id}`} className="text-xs mb-5">Width</Label><Input type="number" step="0.1" min={MIN_BOX_SIZE_PERCENT.toString()} max="100" id={`box-w-${box.id}`} value={box.width.toFixed(1)} onChange={(e) => handleBoundaryBoxPropertyChange(box.id, 'width', e.target.value)} className="h-8 text-xs w-full bg-background" onClick={(e) => e.stopPropagation()} /></div>
+                              <div><Label htmlFor={`box-h-${box.id}`} className="text-xs mb-5">Height</Label><Input type="number" step="0.1" min={MIN_BOX_SIZE_PERCENT.toString()} max="100" id={`box-h-${box.id}`} value={box.height.toFixed(1)} onChange={(e) => handleBoundaryBoxPropertyChange(box.id, 'height', e.target.value)} className="h-8 text-xs w-full bg-background" onClick={(e) => e.stopPropagation()} /></div>
                             </div>
                           </div>
                         ) : (
@@ -647,7 +689,7 @@ export default function ProductOptionsPage() {
                   <div className="space-y-3 p-3 border rounded-md bg-muted/20">
                     <h5 className="text-sm font-medium text-muted-foreground">Editing View: <span className="text-primary font-semibold">{currentActiveView.name}</span></h5>
                     <div>
-                      <Label htmlFor={`viewName-${currentActiveView.id}`} className="text-xs">View Name</Label>
+                      <Label htmlFor={`viewName-${currentActiveView.id}`} className="text-xs mb-5">View Name</Label>
                       <Input 
                         id={`viewName-${currentActiveView.id}`} 
                         value={currentActiveView.name} 
@@ -656,7 +698,7 @@ export default function ProductOptionsPage() {
                       />
                     </div>
                     <div>
-                      <Label htmlFor={`viewImageUrl-${currentActiveView.id}`} className="text-xs">Image URL</Label>
+                      <Label htmlFor={`viewImageUrl-${currentActiveView.id}`} className="text-xs mb-5">Image URL</Label>
                       <Input 
                         id={`viewImageUrl-${currentActiveView.id}`} 
                         value={currentActiveView.imageUrl} 
@@ -666,7 +708,7 @@ export default function ProductOptionsPage() {
                       />
                     </div>
                     <div>
-                      <Label htmlFor={`viewAiHint-${currentActiveView.id}`} className="text-xs">AI Hint (for image search)</Label>
+                      <Label htmlFor={`viewAiHint-${currentActiveView.id}`} className="text-xs mb-5">AI Hint (for image search)</Label>
                       <Input 
                         id={`viewAiHint-${currentActiveView.id}`} 
                         value={currentActiveView.aiHint || ''} 
@@ -691,48 +733,6 @@ export default function ProductOptionsPage() {
 
             </CardContent>
           </Card>
-        </div>
-
-        <div className="md:col-span-2 space-y-6">
-          <Card className="shadow-md">
-            <CardHeader><CardTitle className="font-headline text-lg">Base Product Information</CardTitle><CardDescription>From WooCommerce (Read-only).</CardDescription></CardHeader>
-            <CardContent className="space-y-4">
-              <div><Label htmlFor="productName">Product Name</Label><Input id="productName" value={productOptions.name} className="mt-1 bg-muted/50" readOnly /></div>
-              <div><Label htmlFor="productDescription">Description</Label><Textarea id="productDescription" value={productOptions.description} className="mt-1 bg-muted/50" rows={4} readOnly /></div>
-              <div className="grid grid-cols-2 gap-4">
-                <div><Label htmlFor="productPrice">Price ($)</Label><Input id="productPrice" type="number" value={productOptions.price} className="mt-1 bg-muted/50" readOnly /></div>
-                <div><Label htmlFor="productType">Type</Label><Input id="productType" value={productOptions.type.charAt(0).toUpperCase() + productOptions.type.slice(1)} className="mt-1 bg-muted/50" readOnly /></div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {productOptions.type === 'variable' && (
-            <Card className="shadow-md">
-              <CardHeader><div className="flex justify-between items-center"><div><CardTitle className="font-headline text-lg">Product Variations</CardTitle><CardDescription>{variations.length > 0 ? `Select variations for customization. (Total: ${variations.length})` : 'Variations from WooCommerce.'}</CardDescription></div></div></CardHeader>
-              <CardContent>
-                 {isLoadingVariations || (isRefreshing && isLoading) ? <div className="flex items-center justify-center py-6"><Loader2 className="h-6 w-6 animate-spin text-primary" /><p className="ml-2 text-muted-foreground">Loading variations...</p></div>
-                : variationsError ? <div className="text-center py-6"><AlertTriangle className="mx-auto h-10 w-10 text-destructive" /><p className="mt-3 text-destructive font-semibold">Error loading variations</p><p className="text-sm text-muted-foreground mt-1">{variationsError}</p></div>
-                : variations.length > 0 ? (<>
-                    <div className="mb-4 flex items-center space-x-2 p-2 border-b">
-                      <Checkbox id="selectAllVariations" checked={allVariationsSelected} onCheckedChange={(cs) => handleSelectAllVariations(cs === 'indeterminate' ? true : cs as boolean)} data-state={someVariationsSelected && !allVariationsSelected ? 'indeterminate' : (allVariationsSelected ? 'checked' : 'unchecked')} />
-                      <Label htmlFor="selectAllVariations" className="text-sm font-medium">{allVariationsSelected ? "Deselect All" : "Select All Variations"}</Label>
-                    </div>
-                    <div className="space-y-3 max-h-96 overflow-y-auto pr-2">
-                      {variations.map((variation) => (
-                        <div key={variation.id} className={cn("p-3 border rounded-md flex items-start gap-3 transition-colors", selectedVariationIdsForCstmzr.includes(variation.id.toString()) ? "bg-primary/10 border-primary" : "bg-muted/30 hover:bg-muted/50")}>
-                          <Checkbox id={`variation-${variation.id}`} checked={selectedVariationIdsForCstmzr.includes(variation.id.toString())} onCheckedChange={(c) => handleVariationSelectionChange(variation.id.toString(), c as boolean)} className="mt-1 flex-shrink-0" />
-                          <div className="relative h-16 w-16 rounded-md overflow-hidden border bg-card flex-shrink-0"><NextImage src={variation.image?.src || (productOptions.views[0]?.imageUrl) || 'https://placehold.co/100x100.png'} alt={variation.image?.alt || productOptions.name} fill className="object-contain" data-ai-hint={variation.image?.alt ? variation.image.alt.split(" ").slice(0,2).join(" ") : "variation image"}/></div>
-                          <div className="flex-grow"><p className="text-sm font-medium text-foreground">{variation.attributes.map(attr => `${attr.name}: ${attr.option}`).join(' / ')}</p><p className="text-xs text-muted-foreground">SKU: {variation.sku || 'N/A'}</p><p className="text-xs text-muted-foreground">Price: ${parseFloat(variation.price).toFixed(2)}</p></div>
-                          <Badge variant={variation.stock_status === 'instock' ? 'default' : (variation.stock_status === 'onbackorder' ? 'secondary' : 'destructive')} className={cn("self-start", variation.stock_status === 'instock' && 'bg-green-500/10 text-green-700 border-green-500/30', variation.stock_status === 'onbackorder' && 'bg-yellow-500/10 text-yellow-700 border-yellow-500/30', variation.stock_status === 'outofstock' && 'bg-red-500/10 text-red-700 border-red-500/30')}>{variation.stock_status === 'instock' ? 'In Stock' : variation.stock_status === 'onbackorder' ? 'On Backorder' : 'Out of Stock'}{variation.stock_quantity !== null && ` (${variation.stock_quantity})`}</Badge>
-                        </div>))}
-                    </div></>
-                ) : <div className="text-center py-6"><LayersIcon className="mx-auto h-10 w-10 text-muted-foreground" /><p className="mt-3 text-muted-foreground">No variations found for this product.</p></div>}
-              </CardContent>
-            </Card>
-          )}
-          {productOptions.type !== 'variable' && (
-            <Card className="shadow-md"><CardHeader><CardTitle className="font-headline text-lg">Product Variations</CardTitle></CardHeader><CardContent className="text-center py-8 text-muted-foreground"><Shirt className="mx-auto h-10 w-10 mb-2" />This is a simple product and does not have variations.</CardContent></Card>
-          )}
         </div>
       </div>
       <div className="mt-10 flex justify-end">
@@ -763,3 +763,4 @@ export default function ProductOptionsPage() {
     </div>
   );
 }
+
