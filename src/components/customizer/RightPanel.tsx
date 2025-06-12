@@ -2,7 +2,8 @@
 "use client";
 
 import AiAssistant from './AiAssistant';
-import GridControls from './GridControls'; // New import
+import GridControls from './GridControls'; 
+import HistoryControls from './HistoryControls'; // New import
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 
@@ -22,6 +23,13 @@ export default function RightPanel({ showGrid, toggleGrid }: RightPanelProps) {
           <AiAssistant />
         </div>
       </ScrollArea>
+      
+      <Separator />
+      <div className="p-4 border-t">
+        <h2 className="font-headline text-md font-semibold text-foreground mb-3">History</h2>
+        <HistoryControls />
+      </div>
+
       <Separator />
       <div className="p-4 border-t">
         <h2 className="font-headline text-md font-semibold text-foreground mb-3">Canvas Helpers</h2>
