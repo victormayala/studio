@@ -1,7 +1,7 @@
 
 'use client';
 import type { Dispatch, ReactNode, SetStateAction } from 'react';
-import { createContext, useContext, useState, useCallback, useEffect } from 'react';
+import { createContext, useContext, useState, useCallback, useEffect, useRef } from 'react';
 import { googleFonts } from '@/lib/google-fonts';
 
 // Represents a file uploaded by the user
@@ -143,6 +143,9 @@ interface UploadContextType {
   redo: () => void;
   canUndo: boolean;
   canRedo: boolean;
+
+  startInteractiveOperation: () => void;
+  endInteractiveOperation: () => void;
 }
 
 const UploadContext = createContext<UploadContextType | undefined>(undefined);
@@ -161,6 +164,8 @@ export function UploadProvider({ children }: { children: ReactNode }) {
   const [undoStack, setUndoStack] = useState<CanvasStateSnapshot[]>([]);
   const [redoStack, setRedoStack] = useState<CanvasStateSnapshot[]>([]);
 
+  const isInteractiveOperationInProgressRef = useRef(false);
+
   const createSnapshot = useCallback((): CanvasStateSnapshot => ({
     images: canvasImages,
     texts: canvasTexts,
@@ -176,8 +181,7 @@ export function UploadProvider({ children }: { children: ReactNode }) {
   }, []);
   
   useEffect(() => {
-    // Initialize with the first empty state
-    if (undoStack.length === 0) {
+    if (undoStack.length === 0 && !isInteractiveOperationInProgressRef.current) {
         pushToUndoStack({ images: [], texts: [], shapes: [], selectedCanvasImageId: null, selectedCanvasTextId: null, selectedCanvasShapeId: null });
     }
   }, [pushToUndoStack, undoStack.length]);
@@ -193,16 +197,16 @@ export function UploadProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const undo = useCallback(() => {
-    if (undoStack.length <= 1) return; // Keep the initial state
+    if (isInteractiveOperationInProgressRef.current || undoStack.length <= 1) return; 
     const currentState = createSnapshot();
     setRedoStack(prev => [currentState, ...prev]);
-    const prevState = undoStack[1]; // The very first item is the current "undone" state, the second is the one to restore
+    const prevState = undoStack[1]; 
     restoreState(prevState);
     setUndoStack(prev => prev.slice(1));
   }, [undoStack, createSnapshot, restoreState]);
 
   const redo = useCallback(() => {
-    if (redoStack.length === 0) return;
+    if (isInteractiveOperationInProgressRef.current || redoStack.length === 0) return;
     const currentState = createSnapshot();
     setUndoStack(prev => [currentState, ...prev]);
     const nextState = redoStack[0];
@@ -210,8 +214,20 @@ export function UploadProvider({ children }: { children: ReactNode }) {
     setRedoStack(prev => prev.slice(1));
   }, [redoStack, createSnapshot, restoreState]);
 
-  const canUndo = undoStack.length > 1;
-  const canRedo = redoStack.length > 0;
+  const canUndo = undoStack.length > 1 && !isInteractiveOperationInProgressRef.current;
+  const canRedo = redoStack.length > 0 && !isInteractiveOperationInProgressRef.current;
+
+  const startInteractiveOperation = useCallback(() => {
+    pushToUndoStack(createSnapshot());
+    isInteractiveOperationInProgressRef.current = true;
+  }, [pushToUndoStack, createSnapshot]);
+
+  const endInteractiveOperation = useCallback(() => {
+    isInteractiveOperationInProgressRef.current = false;
+    // The state *after* the interactive operation is now the current state.
+    // No need to push again here, as startInteractiveOperation saved the "before" state.
+  }, []);
+
 
   const addUploadedImage = useCallback(async (file: File) => {
     const reader = new FileReader();
@@ -246,7 +262,9 @@ export function UploadProvider({ children }: { children: ReactNode }) {
     const sourceImage = uploadedImages.find(img => img.id === sourceImageId);
     if (!sourceImage) return;
     
-    pushToUndoStack(createSnapshot());
+    if (!isInteractiveOperationInProgressRef.current) {
+      pushToUndoStack(createSnapshot());
+    }
     const currentMaxZIndex = getMaxZIndexForView(viewId);
     const newCanvasImage: CanvasImage = {
       id: crypto.randomUUID(), sourceImageId: sourceImage.id, viewId, name: sourceImage.name,
@@ -261,7 +279,9 @@ export function UploadProvider({ children }: { children: ReactNode }) {
   const addCanvasImageFromUrl = useCallback((name: string, dataUrl: string, type: string, viewId: string, sourceId?: string) => {
     if (!viewId) { console.error("addCanvasImageFromUrl: viewId is required"); return; }
 
-    pushToUndoStack(createSnapshot());
+    if (!isInteractiveOperationInProgressRef.current) {
+      pushToUndoStack(createSnapshot());
+    }
     const currentMaxZIndex = getMaxZIndexForView(viewId);
     const newCanvasImage: CanvasImage = {
       id: crypto.randomUUID(), sourceImageId: sourceId || `url-${crypto.randomUUID()}`, viewId,
@@ -275,14 +295,14 @@ export function UploadProvider({ children }: { children: ReactNode }) {
 
 
   const removeCanvasImage = useCallback((canvasImageId: string) => {
-    pushToUndoStack(createSnapshot());
+    if (!isInteractiveOperationInProgressRef.current) {
+      pushToUndoStack(createSnapshot());
+    }
     setCanvasImages(prev => prev.filter(img => img.id !== canvasImageId));
     if (selectedCanvasImageId === canvasImageId) setSelectedCanvasImageId(null);
   }, [selectedCanvasImageId, createSnapshot, pushToUndoStack]);
 
   const selectCanvasImage = useCallback((canvasImageId: string | null) => {
-    // Selection changes are not typically undoable by themselves, but can be part of a larger undo state
-    // If this needs to be undoable, a snapshot should be pushed here.
     setSelectedCanvasImageId(canvasImageId);
     if (canvasImageId !== null) {
       setSelectedCanvasTextId(null); setSelectedCanvasShapeId(null);
@@ -290,9 +310,9 @@ export function UploadProvider({ children }: { children: ReactNode }) {
   }, []); 
 
   const updateCanvasImage = useCallback((canvasImageId: string, updates: Partial<CanvasImage>) => {
-    // For frequent updates like dragging/resizing, snapshotting every time can be performance-intensive.
-    // Consider snapshotting on drag/resize end. For now, snapshotting on every update.
-    pushToUndoStack(createSnapshot());
+    if (!isInteractiveOperationInProgressRef.current) {
+      pushToUndoStack(createSnapshot());
+    }
     setCanvasImages(prev => prev.map(img => img.id === canvasImageId ? { ...img, ...updates } : img));
   }, [createSnapshot, pushToUndoStack]); 
 
@@ -300,7 +320,9 @@ export function UploadProvider({ children }: { children: ReactNode }) {
     const originalImage = canvasImages.find(img => img.id === canvasImageId);
     if (!originalImage) return;
 
-    pushToUndoStack(createSnapshot());
+    if (!isInteractiveOperationInProgressRef.current) {
+      pushToUndoStack(createSnapshot());
+    }
     const currentMaxZIndex = getMaxZIndexForView(originalImage.viewId);
     const newCanvasImage: CanvasImage = {
       ...originalImage, id: crypto.randomUUID(), x: originalImage.x + 2, y: originalImage.y + 2, 
@@ -312,7 +334,9 @@ export function UploadProvider({ children }: { children: ReactNode }) {
   }, [canvasImages, getMaxZIndexForView, createSnapshot, pushToUndoStack]);
 
   const toggleLockCanvasImage = useCallback((canvasImageId: string) => {
-    pushToUndoStack(createSnapshot());
+    if (!isInteractiveOperationInProgressRef.current) {
+      pushToUndoStack(createSnapshot());
+    }
     setCanvasImages(prevImages =>
       prevImages.map(img => {
         if (img.id === canvasImageId) {
@@ -329,7 +353,9 @@ export function UploadProvider({ children }: { children: ReactNode }) {
   const addCanvasText = useCallback((content: string, viewId: string, initialStyle?: Partial<CanvasText>) => {
     if (!viewId) { console.error("addCanvasText: viewId is required"); return; }
 
-    pushToUndoStack(createSnapshot());
+    if (!isInteractiveOperationInProgressRef.current) {
+      pushToUndoStack(createSnapshot());
+    }
     const currentMaxZIndex = getMaxZIndexForView(viewId);
     const defaultFont = googleFonts.find(f => f.name === 'Arial');
     const newText: CanvasText = {
@@ -352,7 +378,9 @@ export function UploadProvider({ children }: { children: ReactNode }) {
   }, [getMaxZIndexForView, createSnapshot, pushToUndoStack]);
 
   const removeCanvasText = useCallback((canvasTextId: string) => {
-    pushToUndoStack(createSnapshot());
+    if (!isInteractiveOperationInProgressRef.current) {
+      pushToUndoStack(createSnapshot());
+    }
     setCanvasTexts(prev => prev.filter(txt => txt.id !== canvasTextId));
     if (selectedCanvasTextId === canvasTextId) setSelectedCanvasTextId(null);
   }, [selectedCanvasTextId, createSnapshot, pushToUndoStack]);
@@ -365,7 +393,9 @@ export function UploadProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const updateCanvasText = useCallback((canvasTextId: string, updates: Partial<CanvasText>) => {
-    pushToUndoStack(createSnapshot());
+    if (!isInteractiveOperationInProgressRef.current) {
+      pushToUndoStack(createSnapshot());
+    }
     setCanvasTexts(prev => prev.map(txt => txt.id === canvasTextId ? { ...txt, ...updates } : txt));
   }, [createSnapshot, pushToUndoStack]);
 
@@ -373,7 +403,9 @@ export function UploadProvider({ children }: { children: ReactNode }) {
     const originalText = canvasTexts.find(txt => txt.id === canvasTextId);
     if (!originalText) return;
 
-    pushToUndoStack(createSnapshot());
+    if (!isInteractiveOperationInProgressRef.current) {
+      pushToUndoStack(createSnapshot());
+    }
     const currentMaxZIndex = getMaxZIndexForView(originalText.viewId);
     const newText: CanvasText = {
       ...originalText, id: crypto.randomUUID(), x: originalText.x + 2, y: originalText.y + 2,
@@ -385,7 +417,9 @@ export function UploadProvider({ children }: { children: ReactNode }) {
   }, [canvasTexts, getMaxZIndexForView, createSnapshot, pushToUndoStack]);
 
   const toggleLockCanvasText = useCallback((canvasTextId: string) => {
-    pushToUndoStack(createSnapshot());
+    if (!isInteractiveOperationInProgressRef.current) {
+      pushToUndoStack(createSnapshot());
+    }
     setCanvasTexts(prevTexts =>
       prevTexts.map(txt => {
         if (txt.id === canvasTextId) {
@@ -402,7 +436,9 @@ export function UploadProvider({ children }: { children: ReactNode }) {
   const addCanvasShape = useCallback((shapeType: ShapeType, viewId: string, initialProps?: Partial<CanvasShape>) => {
     if (!viewId) { console.error("addCanvasShape: viewId is required"); return; }
 
-    pushToUndoStack(createSnapshot());
+    if (!isInteractiveOperationInProgressRef.current) {
+      pushToUndoStack(createSnapshot());
+    }
     const currentMaxZIndex = getMaxZIndexForView(viewId);
     const defaultProps: CanvasShape = {
       id: crypto.randomUUID(), viewId, shapeType, x: 50, y: 50,
@@ -419,7 +455,9 @@ export function UploadProvider({ children }: { children: ReactNode }) {
   }, [getMaxZIndexForView, createSnapshot, pushToUndoStack]);
 
   const removeCanvasShape = useCallback((shapeId: string) => {
-    pushToUndoStack(createSnapshot());
+    if (!isInteractiveOperationInProgressRef.current) {
+      pushToUndoStack(createSnapshot());
+    }
     setCanvasShapes(prev => prev.filter(shp => shp.id !== shapeId));
     if (selectedCanvasShapeId === shapeId) setSelectedCanvasShapeId(null);
   }, [selectedCanvasShapeId, createSnapshot, pushToUndoStack]);
@@ -432,7 +470,9 @@ export function UploadProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const updateCanvasShape = useCallback((shapeId: string, updates: Partial<CanvasShape>) => {
-    pushToUndoStack(createSnapshot());
+    if (!isInteractiveOperationInProgressRef.current) {
+      pushToUndoStack(createSnapshot());
+    }
     setCanvasShapes(prev => prev.map(shp => shp.id === shapeId ? { ...shp, ...updates } : shp));
   }, [createSnapshot, pushToUndoStack]);
 
@@ -440,7 +480,9 @@ export function UploadProvider({ children }: { children: ReactNode }) {
     const originalShape = canvasShapes.find(shp => shp.id === shapeId);
     if (!originalShape) return;
 
-    pushToUndoStack(createSnapshot());
+    if (!isInteractiveOperationInProgressRef.current) {
+      pushToUndoStack(createSnapshot());
+    }
     const currentMaxZIndex = getMaxZIndexForView(originalShape.viewId);
     const newShape: CanvasShape = {
       ...originalShape, id: crypto.randomUUID(), x: originalShape.x + 2, y: originalShape.y + 2,
@@ -452,7 +494,9 @@ export function UploadProvider({ children }: { children: ReactNode }) {
   }, [canvasShapes, getMaxZIndexForView, createSnapshot, pushToUndoStack]);
 
   const toggleLockCanvasShape = useCallback((shapeId: string) => {
-    pushToUndoStack(createSnapshot());
+    if (!isInteractiveOperationInProgressRef.current) {
+      pushToUndoStack(createSnapshot());
+    }
     setCanvasShapes(prevShapes =>
       prevShapes.map(shp => {
         if (shp.id === shapeId) {
@@ -474,7 +518,10 @@ export function UploadProvider({ children }: { children: ReactNode }) {
 
     if (!sourceItem || sourceItem.isLocked) return;
     const currentViewId = sourceItem.viewId;
-    pushToUndoStack(createSnapshot());
+    
+    if (!isInteractiveOperationInProgressRef.current) {
+        pushToUndoStack(createSnapshot());
+    }
 
     let itemsInCurrentView: CanvasItem[] = [
       ...canvasImages.filter(img => img.viewId === currentViewId).map(img => ({ ...img, itemType: 'image' as const })),
@@ -485,12 +532,10 @@ export function UploadProvider({ children }: { children: ReactNode }) {
 
     const currentIndexInView = itemsInCurrentView.findIndex(item => item.id === itemId && item.itemType === itemType);
     if (currentIndexInView === -1) {
-      // If item not found, state might be stale or error occurred.
-      // To prevent issues, we can choose to revert the optimistic undo push, or log an error.
-      // For simplicity, we'll proceed, but this indicates a potential inconsistency.
       console.warn("reorderLayers: Item not found in current view for z-index operations.");
-      // To revert the optimistic undo:
-      // setUndoStack(prev => prev.slice(1)); // Remove the last pushed state
+      if (!isInteractiveOperationInProgressRef.current) {
+         setUndoStack(prev => prev.slice(1)); // Revert optimistic undo if something went wrong and it's not part of an interactive op
+      }
       return;
     }
 
@@ -500,15 +545,15 @@ export function UploadProvider({ children }: { children: ReactNode }) {
         for (let i = currentIndexInView + 1; i < itemsInCurrentView.length; i++) {
           if (!itemsInCurrentView[i].isLocked) { targetIndexInView = i; break; }
         }
-        if (targetIndexInView === -1) { setUndoStack(prev => prev.slice(1)); return; } // No unlocked item to swap with
-      } else { setUndoStack(prev => prev.slice(1)); return; } // Already at top
+        if (targetIndexInView === -1) { if (!isInteractiveOperationInProgressRef.current) setUndoStack(prev => prev.slice(1)); return; } 
+      } else { if (!isInteractiveOperationInProgressRef.current) setUndoStack(prev => prev.slice(1)); return; } 
     } else { // backward
       if (currentIndexInView > 0) {
         for (let i = currentIndexInView - 1; i >= 0; i--) {
           if (!itemsInCurrentView[i].isLocked) { targetIndexInView = i; break; }
         }
-        if (targetIndexInView === -1) { setUndoStack(prev => prev.slice(1)); return; } // No unlocked item to swap with
-      } else { setUndoStack(prev => prev.slice(1)); return; } // Already at bottom
+        if (targetIndexInView === -1) { if (!isInteractiveOperationInProgressRef.current) setUndoStack(prev => prev.slice(1)); return; } 
+      } else { if (!isInteractiveOperationInProgressRef.current) setUndoStack(prev => prev.slice(1)); return; } 
     }
     
     const tempZIndex = itemsInCurrentView[currentIndexInView].zIndex;
@@ -548,6 +593,7 @@ export function UploadProvider({ children }: { children: ReactNode }) {
         canvasShapes, addCanvasShape, removeCanvasShape, selectedCanvasShapeId, selectCanvasShape, updateCanvasShape,
         bringShapeLayerForward, sendShapeLayerBackward, duplicateCanvasShape, toggleLockCanvasShape,
         undo, redo, canUndo, canRedo,
+        startInteractiveOperation, endInteractiveOperation,
       }}
     >
       {children}
@@ -562,3 +608,4 @@ export function useUploads() {
   }
   return context;
 }
+

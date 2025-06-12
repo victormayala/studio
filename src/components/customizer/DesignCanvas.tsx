@@ -61,6 +61,7 @@ export default function DesignCanvas({
     canvasImages, selectCanvasImage, selectedCanvasImageId, updateCanvasImage, removeCanvasImage,
     canvasTexts, selectCanvasText, selectedCanvasTextId, updateCanvasText, removeCanvasText,
     canvasShapes, selectCanvasShape, selectedCanvasShapeId, updateCanvasShape, removeCanvasShape,
+    startInteractiveOperation, endInteractiveOperation, // Import new functions
   } = useUploads();
 
   const [activeDrag, setActiveDrag] = useState<{
@@ -91,7 +92,11 @@ export default function DesignCanvas({
         const firstBox = productDefinedBoundaryBoxes[0];
         const newX = firstBox.x + firstBox.width / 2;
         const newY = firstBox.y + firstBox.height / 2;
+        
+        startInteractiveOperation(); // Wrap this single update as an operation for consistency if needed, or decide if it's too minor
         updateFunc(item.id, { x: newX, y: newY });
+        endInteractiveOperation(); // Or simply call updateFunc if it's atomic enough not to warrant undo batching
+
         setLastAddedItemId(null); 
       }
     };
@@ -107,7 +112,7 @@ export default function DesignCanvas({
         if (newShape) checkAndMoveItem(newShape, updateCanvasShape);
     }
 
-  }, [canvasImages, canvasTexts, canvasShapes, productDefinedBoundaryBoxes, updateCanvasImage, updateCanvasText, updateCanvasShape, lastAddedItemId, activeViewId]);
+  }, [canvasImages, canvasTexts, canvasShapes, productDefinedBoundaryBoxes, updateCanvasImage, updateCanvasText, updateCanvasShape, lastAddedItemId, activeViewId, startInteractiveOperation, endInteractiveOperation]);
 
   useEffect(() => {
     if (canvasImages.length > 0) {
@@ -212,6 +217,8 @@ export default function DesignCanvas({
         itemInitialUnscaledWidth = shapeItem.width; 
         itemInitialUnscaledHeight = shapeItem.height;
     }
+
+    startInteractiveOperation(); // Call before setting activeDrag
 
     setActiveDrag({
       type, itemId: item.id, itemType,
@@ -348,7 +355,10 @@ export default function DesignCanvas({
     }
   }, [activeDrag, updateCanvasImage, canvasImages, updateCanvasText, canvasTexts, updateCanvasShape, canvasShapes, productDefinedBoundaryBoxes]);
 
-  const handleDragEnd = useCallback(() => setActiveDrag(null), []);
+  const handleDragEnd = useCallback(() => {
+    endInteractiveOperation(); // Call when drag ends
+    setActiveDrag(null);
+  }, [endInteractiveOperation]);
 
   useEffect(() => {
     if (activeDrag) {
