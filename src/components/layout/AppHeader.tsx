@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react'; // Added useEffect
 import Link from 'next/link';
 import { Button } from "@/components/ui/button";
 import { SidebarTrigger } from "@/components/ui/sidebar";
@@ -11,14 +11,25 @@ import { CodeXml, LayoutDashboard, Send, LogOut } from "lucide-react";
 import { useUploads } from '@/contexts/UploadContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
-import { usePathname } from 'next/navigation'; // Added import
+import { usePathname, useSearchParams } from 'next/navigation'; // Added useSearchParams
 
 export default function AppHeader() {
   const [isEmbedModalOpen, setIsEmbedModalOpen] = useState(false);
   const { canvasImages, canvasTexts, canvasShapes } = useUploads();
   const { signOut, isLoading: authIsLoading, user } = useAuth();
   const { toast } = useToast();
-  const pathname = usePathname(); // Get current path
+  const pathname = usePathname();
+  const searchParams = useSearchParams(); // For getting productId
+
+  const [currentProductId, setCurrentProductId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (pathname.startsWith('/customizer')) {
+      setCurrentProductId(searchParams.get('productId'));
+    } else {
+      setCurrentProductId(null);
+    }
+  }, [pathname, searchParams]);
 
   const showSidebarTrigger = pathname.startsWith('/customizer');
 
@@ -36,9 +47,15 @@ export default function AppHeader() {
       images: canvasImages,
       texts: canvasTexts,
       shapes: canvasShapes,
+      productId: currentProductId, // Include productId if available
     };
 
-    const targetOrigin = process.env.NODE_ENV === 'production' ? 'YOUR_WORDPRESS_SITE_ORIGIN' : '*';
+    // More robust targetOrigin handling
+    let targetOrigin = '*'; // Default to wildcard for local dev or if origin is unknown
+    // Example for a production environment (replace with your actual logic or env var)
+    if (process.env.NODE_ENV === 'production' && process.env.NEXT_PUBLIC_WORDPRESS_SITE_ORIGIN) {
+        targetOrigin = process.env.NEXT_PUBLIC_WORDPRESS_SITE_ORIGIN;
+    }
     
     if (window.parent !== window) {
       window.parent.postMessage({ cstmzrDesignData: designData }, targetOrigin);
@@ -50,7 +67,7 @@ export default function AppHeader() {
        toast({
         title: "Not in an iframe",
         description: "This action is intended to be used when the customizer is embedded.",
-        variant: "destructive"
+        variant: "info" // Changed to info as it's not strictly an error
       });
       console.warn("AppHeader: 'Apply Design' clicked, but not in an iframe. Data:", designData);
     }
@@ -79,7 +96,7 @@ export default function AppHeader() {
             onClick={handleApplyDesign} 
             variant="default"
             className="bg-primary text-primary-foreground hover:bg-primary/90"
-            disabled={!user}
+            disabled={!user && (canvasImages.length === 0 && canvasTexts.length === 0 && canvasShapes.length === 0)}
           >
             <Send className="mr-2 h-4 w-4" />
             Apply Design
@@ -113,7 +130,11 @@ export default function AppHeader() {
           </Button>
         )}
       </div>
-      {pathname.startsWith('/customizer') && <EmbedCodeModal isOpen={isEmbedModalOpen} onOpenChange={setIsEmbedModalOpen} />}
+      <EmbedCodeModal 
+        isOpen={isEmbedModalOpen} 
+        onOpenChange={setIsEmbedModalOpen}
+        productId={currentProductId} 
+      />
     </header>
   );
 }
