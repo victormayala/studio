@@ -11,7 +11,7 @@ export default function RightPanel() {
         <h2 className="font-headline text-lg font-semibold text-foreground">AI Design Assistant</h2>
       </div>
       <ScrollArea className="flex-grow">
-        <div className="p-4">
+        <div className="p-4 h-full flex flex-col"> {/* Added h-full and flex flex-col */}
           <AiAssistant />
         </div>
       </ScrollArea>

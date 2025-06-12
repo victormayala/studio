@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState } from 'react';
@@ -33,7 +34,7 @@ export default function AiAssistant() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 h-full flex flex-col flex-grow"> {/* Added h-full, flex, flex-col, flex-grow */}
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
           <Label htmlFor="designComposition" className="block text-sm font-medium text-foreground mb-1">
@@ -75,8 +76,15 @@ export default function AiAssistant() {
           </ul>
         </div>
       )}
-       {!isLoading && suggestions.length === 0 && !error && designComposition && (
-        <p className="text-sm text-muted-foreground text-center italic">No suggestions yet. Describe your design and click "Get Suggestions".</p>
+       {!isLoading && !error && designComposition && suggestions.length === 0 && (
+         <div className="flex-grow flex flex-col items-center justify-center"> {/* Added for centering placeholder text */}
+            <p className="text-sm text-muted-foreground text-center italic">No suggestions found for your description.</p>
+         </div>
+      )}
+      {!isLoading && !error && !designComposition && suggestions.length === 0 && (
+         <div className="flex-grow flex flex-col items-center justify-center"> {/* Added for centering placeholder text */}
+            <p className="text-sm text-muted-foreground text-center italic">Describe your design to get AI suggestions.</p>
+         </div>
       )}
     </div>
   );
