@@ -173,7 +173,7 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
           </Select>
         </div>
 
-        <div>
+        <div className="mb-5">
           <Label htmlFor="fontSizeSlider" className="text-xs mb-1 block">Size: {currentStyle.fontSize?.toFixed(0) || 24}px</Label>
           <Slider
             id="fontSizeSlider"
@@ -235,7 +235,7 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
       {/* Spacing Section */}
       <section className="space-y-4">
         <h3 className="text-sm font-medium text-muted-foreground flex items-center"><TextCursorInput className="mr-2 h-4 w-4 text-primary" />Spacing</h3>
-        <div>
+        <div className="mb-5">
           <Label htmlFor="lineHeightSlider" className="text-xs mb-1 block">Line Height: {(currentStyle.lineHeight || 1.2).toFixed(1)}</Label>
           <Slider
             id="lineHeightSlider"
@@ -247,7 +247,7 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
             onPointerUpCapture={endInteractiveOperation}
           />
         </div>
-        <div>
+        <div className="mb-5">
           <Label htmlFor="letterSpacingSlider" className="text-xs mb-1 block">Letter Spacing: {currentStyle.letterSpacing?.toFixed(1) || 0}px</Label>
           <Slider
             id="letterSpacingSlider"
@@ -356,7 +356,7 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
                     }}
                     maxLength={7}/>
               </div>
-              <div>
+              <div className="mb-5">
                 <Label htmlFor="outlineWidthSlider" className="text-xs mb-1 block">Width: {currentStyle.outlineWidth?.toFixed(1) || 0}px</Label>
                 <Slider 
                     id="outlineWidthSlider" 
@@ -421,7 +421,7 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
                     }}
                     maxLength={7}/>
               </div>
-              <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+              <div className="grid grid-cols-2 gap-x-4 gap-y-2 mb-5">
                 <div>
                     <Label htmlFor="shadowOffsetXSlider" className="text-xs mb-1 block">Offset X: {currentStyle.shadowOffsetX?.toFixed(0) || 0}px</Label>
                     <Slider 
@@ -447,7 +447,7 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
                     />
                 </div>
               </div>
-              <div>
+              <div className="mb-5">
                 <Label htmlFor="shadowBlurSlider" className="text-xs mb-1 block">Blur: {currentStyle.shadowBlur?.toFixed(0) || 0}px</Label>
                 <Slider 
                     id="shadowBlurSlider" 

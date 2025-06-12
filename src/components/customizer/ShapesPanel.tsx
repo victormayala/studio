@@ -88,7 +88,7 @@ export default function ShapesPanel({ activeViewId }: ShapesPanelProps) {
 
   const handleFillColorBlur = (e: React.FocusEvent<HTMLInputElement>) => {
     const finalColor = sanitizeHex(e.target.value);
-    setFillColorHex(finalColor); // Update local display immediately
+    setFillColorHex(finalColor); 
     if (selectedCanvasShapeId && selectedShape) {
       updateCanvasShape(selectedCanvasShapeId, { color: finalColor });
     }
@@ -96,14 +96,14 @@ export default function ShapesPanel({ activeViewId }: ShapesPanelProps) {
   
   const handleStrokeColorBlur = (e: React.FocusEvent<HTMLInputElement>) => {
     const finalColor = sanitizeHex(e.target.value);
-    setStrokeColorHex(finalColor); // Update local display immediately
+    setStrokeColorHex(finalColor); 
      if (selectedCanvasShapeId && selectedShape) {
       updateCanvasShape(selectedCanvasShapeId, { strokeColor: finalColor });
     }
   };
 
   const handleStrokeWidthChange = (value: number) => {
-    setCurrentStrokeWidth(value); // Visual update if needed locally
+    setCurrentStrokeWidth(value); 
     if (selectedCanvasShapeId && selectedShape) {
       updateCanvasShape(selectedCanvasShapeId, { strokeWidth: value });
     }
@@ -156,7 +156,7 @@ export default function ShapesPanel({ activeViewId }: ShapesPanelProps) {
                     onPointerDownCapture={startInteractiveOperation}
                     onPointerUpCapture={endInteractiveOperation}
                     onChange={(e) => {
-                        setFillColorHex(e.target.value); // Optimistic UI update for swatch
+                        setFillColorHex(e.target.value); 
                         if (selectedCanvasShapeId && selectedShape) {
                             updateCanvasShape(selectedCanvasShapeId, { color: e.target.value });
                         }
@@ -184,7 +184,7 @@ export default function ShapesPanel({ activeViewId }: ShapesPanelProps) {
                     onPointerDownCapture={startInteractiveOperation}
                     onPointerUpCapture={endInteractiveOperation}
                     onChange={(e) => {
-                        setStrokeColorHex(e.target.value); // Optimistic UI update
+                        setStrokeColorHex(e.target.value); 
                         if (selectedCanvasShapeId && selectedShape) {
                             updateCanvasShape(selectedCanvasShapeId, { strokeColor: e.target.value });
                         }
@@ -201,7 +201,7 @@ export default function ShapesPanel({ activeViewId }: ShapesPanelProps) {
                 </div>
               </div>
 
-              <div className="space-y-1.5">
+              <div className="space-y-1.5 mb-5">
                 <Label htmlFor="shapeStrokeWidthSlider" className="text-xs">
                   Outline Width: {currentStrokeWidth.toFixed(1)}px
                 </Label>
