@@ -5,7 +5,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import NextImage from 'next/image';
-import { Button } from '@/components/ui/button';
+import { Button, buttonVariants } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
@@ -124,10 +124,9 @@ export default function ProductOptionsPage() {
     setIsLoading(true); 
     setError(null);
     setVariationsError(null);
-    // Reset states that depend on product data to avoid showing stale info during refresh
     setVariations([]);
     setSelectedVariationIdsForCstmzr([]);
-    setActiveViewId(null); // Will be reset once new data is loaded
+    setActiveViewId(null); 
 
     let localOptions: LocalStorageOptions | null = null;
     const localStorageKey = `cstmzr_product_options_${user.id}_${productId}`;
@@ -139,7 +138,6 @@ export default function ProductOptionsPage() {
     } catch (e) {
       console.error("Error parsing local CSTMZR options from localStorage:", e);
       toast({ title: "Error Loading Local Settings", description: "Could not load saved CSTMZR settings. Using defaults.", variant: "destructive"});
-      // localOptions remains null, default view will be created
     }
 
     let wcProduct: WCCustomProduct | undefined;
@@ -162,7 +160,7 @@ export default function ProductOptionsPage() {
     
     if (fetchError || !wcProduct) {
       setError(fetchError || `Product with ID ${productId} not found or failed to load.`);
-      setProductOptions(null); // Ensure productOptions is null on error
+      setProductOptions(null); 
       setIsLoading(false);
       setIsRefreshing(false);
       toast({ title: "Error Fetching Product", description: fetchError || `Product ${productId} not found.`, variant: "destructive"});
@@ -195,7 +193,7 @@ export default function ProductOptionsPage() {
       views: viewsToSet,
       cstmzrSelectedVariationIds: localOptions?.cstmzrSelectedVariationIds || [], 
     });
-    setActiveViewId(viewsToSet[0]?.id || null); // This should always pick a valid ID now
+    setActiveViewId(viewsToSet[0]?.id || null); 
     setSelectedBoundaryBoxId(null); 
     setSelectedVariationIdsForCstmzr(localOptions?.cstmzrSelectedVariationIds || []); 
 
@@ -746,7 +744,7 @@ export default function ProductOptionsPage() {
             <AlertDialogCancel onClick={() => setViewIdToDelete(null)}>Cancel</AlertDialogCancel>
             <AlertDialogAction
               onClick={confirmDeleteView}
-              className={cn(Button({variant: "destructive"}))}
+              className={cn(buttonVariants({variant: "destructive"}))}
             >
               Delete View
             </AlertDialogAction>
