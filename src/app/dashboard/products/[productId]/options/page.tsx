@@ -20,6 +20,16 @@ import { useAuth } from '@/contexts/AuthContext';
 import { fetchWooCommerceProductById, fetchWooCommerceProductVariations } from '@/app/actions/woocommerceActions';
 import type { WCCustomProduct, WCVariation } from '@/types/woocommerce';
 import { Alert as ShadCnAlert, AlertDescription as ShadCnAlertDescription, AlertTitle as ShadCnAlertTitle } from "@/components/ui/alert";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface BoundaryBox {
   id: string;
@@ -91,6 +101,10 @@ export default function ProductOptionsPage() {
   const imageWrapperRef = useRef<HTMLDivElement>(null);
   const [activeDrag, setActiveDrag] = useState<ActiveDragState | null>(null);
 
+  const [isDeleteViewDialogOpen, setIsDeleteViewDialogOpen] = useState(false);
+  const [viewIdToDelete, setViewIdToDelete] = useState<string | null>(null);
+
+
   const stripHtml = (html: string): string => {
     if (typeof window === 'undefined') return html; 
     const tempDiv = document.createElement('div');
@@ -139,6 +153,7 @@ export default function ProductOptionsPage() {
       }
     } catch (storageError) {
       console.warn("Error accessing localStorage for WC credentials:", storageError);
+      toast({title: "Local Storage Access Error", description: "Could not access WooCommerce credentials. Using fallback if available.", variant: "info"})
     }
     
     ({ product: wcProduct, error: fetchError } = await fetchWooCommerceProductById(productId, userCredentials));
@@ -364,17 +379,26 @@ export default function ProductOptionsPage() {
     setSelectedBoundaryBoxId(null);
   };
 
-  const handleDeleteView = (viewIdToDelete: string) => {
+  const handleDeleteView = (viewId: string) => {
     if (!productOptions || productOptions.views.length <= 1) {
       toast({ title: "Cannot Delete", description: "At least one view must remain.", variant: "info" });
       return;
     }
+    setViewIdToDelete(viewId);
+    setIsDeleteViewDialogOpen(true);
+  };
+
+  const confirmDeleteView = () => {
+    if (!productOptions || !viewIdToDelete) return;
     const updatedViews = productOptions.views.filter(v => v.id !== viewIdToDelete);
     setProductOptions({ ...productOptions, views: updatedViews });
     if (activeViewId === viewIdToDelete) {
       setActiveViewId(updatedViews[0]?.id || null);
       setSelectedBoundaryBoxId(null);
     }
+    setIsDeleteViewDialogOpen(false);
+    setViewIdToDelete(null);
+    toast({title: "View Deleted", description: `The view has been removed.`});
   };
 
   const handleViewDetailChange = (viewId: string, field: keyof Pick<ProductView, 'name' | 'imageUrl' | 'aiHint'>, value: string) => {
@@ -518,7 +542,7 @@ export default function ProductOptionsPage() {
                   {currentActiveView?.imageUrl ? (
                     <NextImage src={currentActiveView.imageUrl} alt={currentActiveView.name} fill className="object-contain pointer-events-none" data-ai-hint={currentActiveView.aiHint || "product view"} priority />
                   ) : (
-                    <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none"><ImageIcon className="w-16 h-16 text-muted-foreground" /><p className="text-sm text-muted-foreground mt-2">No image for this view. Set URL above.</p></div>
+                    <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none"><ImageIcon className="w-16 h-16 text-muted-foreground" /><p className="text-sm text-muted-foreground mt-2">No image for this view. Set URL below.</p></div>
                   )}
                   {currentActiveView?.boundaryBoxes.map((box) => (
                     <div
@@ -705,7 +729,31 @@ export default function ProductOptionsPage() {
       <div className="mt-10 flex justify-end">
         <Button onClick={handleSaveChanges} size="lg" className="bg-primary text-primary-foreground hover:bg-primary/90">Save CSTMZR Options</Button>
       </div>
+
+      <AlertDialog open={isDeleteViewDialogOpen} onOpenChange={setIsDeleteViewDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure you want to delete this view?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete the view
+              and all its associated customization areas.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setViewIdToDelete(null)}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmDeleteView}
+              className={cn(Button({variant: "destructive"}))}
+            >
+              Delete View
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
     </div>
   );
 }
 
+
+    
