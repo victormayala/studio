@@ -8,16 +8,26 @@ interface FetchWooCommerceProductsResponse {
   error?: string;
 }
 
+interface FetchWooCommerceProductByIdResponse {
+  product?: WCCustomProduct;
+  error?: string;
+}
+
 interface WooCommerceCredentials {
   storeUrl: string;
   consumerKey: string;
   consumerSecret: string;
 }
 
-export async function fetchWooCommerceProducts(credentials?: WooCommerceCredentials): Promise<FetchWooCommerceProductsResponse> {
+function getApiCredentials(credentials?: WooCommerceCredentials) {
   const storeUrl = credentials?.storeUrl || process.env.WOOCOMMERCE_STORE_URL;
   const consumerKey = credentials?.consumerKey || process.env.WOOCOMMERCE_CONSUMER_KEY;
   const consumerSecret = credentials?.consumerSecret || process.env.WOOCOMMERCE_CONSUMER_SECRET;
+  return { storeUrl, consumerKey, consumerSecret, isUserProvided: !!credentials };
+}
+
+export async function fetchWooCommerceProducts(credentials?: WooCommerceCredentials): Promise<FetchWooCommerceProductsResponse> {
+  const { storeUrl, consumerKey, consumerSecret, isUserProvided } = getApiCredentials(credentials);
 
   if (!storeUrl || !consumerKey || !consumerSecret) {
     const missingFields = [];
@@ -25,7 +35,7 @@ export async function fetchWooCommerceProducts(credentials?: WooCommerceCredenti
     if (!consumerKey) missingFields.push('Consumer Key');
     if (!consumerSecret) missingFields.push('Consumer Secret');
     
-    const message = credentials 
+    const message = isUserProvided 
       ? `User-specific WooCommerce API credentials missing: ${missingFields.join(', ')}.`
       : `Global WooCommerce API credentials (WOOCOMMERCE_STORE_URL, WOOCOMMERCE_CONSUMER_KEY, WOOCOMMERCE_CONSUMER_SECRET) are not set in .env.`;
     
@@ -57,5 +67,53 @@ export async function fetchWooCommerceProducts(credentials?: WooCommerceCredenti
       return { error: `An unexpected error occurred: ${error.message}` };
     }
     return { error: 'An unexpected error occurred while fetching products.' };
+  }
+}
+
+export async function fetchWooCommerceProductById(productId: string, credentials?: WooCommerceCredentials): Promise<FetchWooCommerceProductByIdResponse> {
+  const { storeUrl, consumerKey, consumerSecret, isUserProvided } = getApiCredentials(credentials);
+  
+  if (!productId) {
+    return { error: 'Product ID is required.' };
+  }
+
+  if (!storeUrl || !consumerKey || !consumerSecret) {
+    const missingFields = [];
+    if (!storeUrl) missingFields.push('Store URL');
+    if (!consumerKey) missingFields.push('Consumer Key');
+    if (!consumerSecret) missingFields.push('Consumer Secret');
+    
+    const message = isUserProvided
+      ? `User-specific WooCommerce API credentials missing: ${missingFields.join(', ')}.`
+      : `Global WooCommerce API credentials (WOOCOMMERCE_STORE_URL, WOOCOMMERCE_CONSUMER_KEY, WOOCOMMERCE_CONSUMER_SECRET) are not set in .env.`;
+    
+    console.error(message);
+    return { error: `Server configuration error: ${message}` };
+  }
+
+  const apiUrl = `${storeUrl}/wp-json/wc/v3/products/${productId}`;
+
+  try {
+    const response = await fetch(apiUrl, {
+      headers: {
+        Authorization: `Basic ${Buffer.from(`${consumerKey}:${consumerSecret}`).toString('base64')}`,
+      },
+      cache: 'no-store', 
+    });
+
+    if (!response.ok) {
+      const errorBody = await response.text();
+      console.error(`WooCommerce API error for product ${productId}: ${response.status} ${response.statusText}`, errorBody);
+      return { error: `Failed to fetch product ${productId}. Status: ${response.status}. ${errorBody}` };
+    }
+
+    const product: WCCustomProduct = await response.json();
+    return { product };
+  } catch (error) {
+    console.error(`Error fetching WooCommerce product ${productId}:`, error);
+    if (error instanceof Error) {
+      return { error: `An unexpected error occurred: ${error.message}` };
+    }
+    return { error: `An unexpected error occurred while fetching product ${productId}.` };
   }
 }

@@ -12,43 +12,45 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-// import { Switch } from '@/components/ui/switch'; // Removed Switch import
-import { ArrowLeft, PlusCircle, Trash2, Image as ImageIcon, Maximize2 } from 'lucide-react'; // Removed Lock import
+import { ArrowLeft, PlusCircle, Trash2, Image as ImageIcon, Maximize2, Loader2, AlertTriangle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/contexts/AuthContext';
+import { fetchWooCommerceProductById } from '@/app/actions/woocommerceActions';
+import type { WCCustomProduct } from '@/types/woocommerce';
 
 interface BoundaryBox {
   id: string;
   name: string;
-  x: number; // percentage from left (top-left corner)
-  y: number; // percentage from top (top-left corner)
-  width: number; // percentage width
-  height: number; // percentage height
+  x: number; 
+  y: number; 
+  width: number;
+  height: number;
 }
 
-interface ProductDetails {
-  id: string;
-  name: string;
-  description: string;
-  price: number;
-  colors: string[];
-  sizes: string[];
-  imageUrl: string;
-  aiHint?: string;
+// Represents the combined data structure for the page
+interface ProductOptionsData {
+  id: string;         // WC Product ID
+  name: string;       // WC Product Name
+  description: string;// WC Product Description
+  price: number;      // WC Product Price (parsed)
+  imageUrl: string;   // WC Product Image URL
+  aiHint?: string;     // WC Product Image AI Hint
+
+  // CSTMZR-specific settings, to be saved in localStorage
+  cstmzrColors: string[];      // User-defined hex color options
+  cstmzrSizes: string[];       // User-defined size options
+  boundaryBoxes: BoundaryBox[];// User-defined customization areas
+}
+
+// Store only CSTMZR specific configurations in localStorage
+interface LocalStorageOptions {
+  cstmzrColors: string[];
+  cstmzrSizes: string[];
   boundaryBoxes: BoundaryBox[];
+  // We can add lastModifiedWC timestamp here to check if WC data changed
 }
 
-const mockProductDetails: ProductDetails = {
-  id: 'prod_1',
-  name: 'Classic T-Shirt',
-  description: 'A high-quality cotton t-shirt, perfect for customization.',
-  price: 19.99,
-  colors: ['#FFFFFF', '#000000', '#FF0000'],
-  sizes: ['S', 'M', 'L', 'XL'],
-  imageUrl: 'https://placehold.co/600x600.png',
-  aiHint: 't-shirt mockup',
-  boundaryBoxes: [],
-};
 
 interface ActiveDragState {
   type: 'move' | 'resize_br' | 'resize_bl' | 'resize_tr' | 'resize_tl';
@@ -69,8 +71,11 @@ export default function ProductOptionsPage() {
   const params = useParams();
   const productId = params.productId as string;
   const { toast } = useToast();
+  const { user } = useAuth();
 
-  const [product, setProduct] = useState<ProductDetails | null>(null);
+  const [productOptions, setProductOptions] = useState<ProductOptionsData | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   
   const [newColorHex, setNewColorHex] = useState<string>('#CCCCCC');
   const [newColorSwatch, setNewColorSwatch] = useState<string>('#CCCCCC');
@@ -81,20 +86,71 @@ export default function ProductOptionsPage() {
 
 
   useEffect(() => {
-    if (productId) {
-      // In a real app, you'd fetch this from a backend based on productId
-      const foundProduct = mockProductDetails.id === productId ? mockProductDetails : { 
-            ...mockProductDetails, 
-            id: productId, 
-            name: `Product ${productId}`, 
-            imageUrl: `https://placehold.co/600x600.png`,
-            aiHint: 'product image', 
-            boundaryBoxes: [], 
-          };
-      setProduct(foundProduct);
-      setSelectedBoundaryBoxId(null); // Reset selection when product changes
-    }
-  }, [productId]);
+    const loadProductData = async () => {
+      if (!productId || !user) {
+        setIsLoading(false);
+        if (!user) setError("User not authenticated. Please sign in.");
+        else setError("Product ID is missing.");
+        return;
+      }
+
+      setIsLoading(true);
+      setError(null);
+
+      const localStorageKey = `cstmzr_product_options_${user.id}_${productId}`;
+      let localOptions: LocalStorageOptions | null = null;
+      try {
+        const savedOptions = localStorage.getItem(localStorageKey);
+        if (savedOptions) {
+          localOptions = JSON.parse(savedOptions) as LocalStorageOptions;
+        }
+      } catch (e) {
+        console.error("Error parsing local options:", e);
+        toast({ title: "Error", description: "Could not load saved local settings.", variant: "destructive"});
+      }
+
+      // Fetch WooCommerce product details
+      let wcProduct: WCCustomProduct | undefined;
+      let fetchError: string | undefined;
+
+      const userStoreUrl = localStorage.getItem(`wc_store_url_${user.id}`);
+      const userConsumerKey = localStorage.getItem(`wc_consumer_key_${user.id}`);
+      const userConsumerSecret = localStorage.getItem(`wc_consumer_secret_${user.id}`);
+
+      if (userStoreUrl && userConsumerKey && userConsumerSecret) {
+        ({ product: wcProduct, error: fetchError } = await fetchWooCommerceProductById(productId, { storeUrl: userStoreUrl, consumerKey: userConsumerKey, consumerSecret: userConsumerSecret }));
+      } else {
+        ({ product: wcProduct, error: fetchError } = await fetchWooCommerceProductById(productId));
+      }
+
+      if (fetchError || !wcProduct) {
+        setError(fetchError || `Product with ID ${productId} not found or failed to load.`);
+        // If WC fetch fails but we have local data, we could potentially show that, or a fallback
+        // For now, just error out if WC product isn't found.
+        setIsLoading(false);
+        return;
+      }
+
+      const defaultImageUrl = 'https://placehold.co/600x600.png';
+      const defaultAiHint = 'product image';
+
+      setProductOptions({
+        id: wcProduct.id.toString(),
+        name: wcProduct.name || `Product ${productId}`,
+        description: wcProduct.description || wcProduct.short_description || 'No description available.',
+        price: parseFloat(wcProduct.price) || 0,
+        imageUrl: wcProduct.images && wcProduct.images.length > 0 ? wcProduct.images[0].src : defaultImageUrl,
+        aiHint: wcProduct.images && wcProduct.images.length > 0 && wcProduct.images[0].alt ? wcProduct.images[0].alt.split(" ").slice(0,2).join(" ") : defaultAiHint,
+        cstmzrColors: localOptions?.cstmzrColors || [],
+        cstmzrSizes: localOptions?.cstmzrSizes || [],
+        boundaryBoxes: localOptions?.boundaryBoxes || [],
+      });
+      setSelectedBoundaryBoxId(null);
+      setIsLoading(false);
+    };
+
+    loadProductData();
+  }, [productId, user, toast]);
 
   const getPointerCoords = (e: MouseEvent | TouchEvent | React.MouseEvent | React.TouchEvent) => {
     if ('touches' in e && e.touches.length > 0) {
@@ -111,7 +167,7 @@ export default function ProductOptionsPage() {
     e.preventDefault();
     e.stopPropagation();
 
-    const currentBox = product?.boundaryBoxes.find(b => b.id === boxId);
+    const currentBox = productOptions?.boundaryBoxes.find(b => b.id === boxId);
     if (!currentBox || !imageWrapperRef.current) return;
 
     setSelectedBoundaryBoxId(boxId);
@@ -131,10 +187,10 @@ export default function ProductOptionsPage() {
       containerHeightPx: containerRect.height,
     };
     setActiveDrag(dragState);
-  }, [product?.boundaryBoxes]); 
+  }, [productOptions?.boundaryBoxes]); 
 
   const handleDragging = useCallback((e: MouseEvent | TouchEvent) => {
-    if (!activeDrag || !product || !imageWrapperRef.current) return;
+    if (!activeDrag || !productOptions || !imageWrapperRef.current) return;
     e.preventDefault();
 
     const pointerCoords = getPointerCoords(e);
@@ -204,14 +260,14 @@ export default function ProductOptionsPage() {
         return; 
     }
 
-    setProduct(prev => prev ? {
+    setProductOptions(prev => prev ? {
       ...prev,
       boundaryBoxes: prev.boundaryBoxes.map(b => 
         b.id === activeDrag.boxId ? { ...b, x: newX, y: newY, width: newWidth, height: newHeight } : b
       )
     } : null);
 
-  }, [activeDrag, product]);
+  }, [activeDrag, productOptions]);
 
   const handleInteractionEnd = useCallback(() => {
     setActiveDrag(null);
@@ -238,108 +294,159 @@ export default function ProductOptionsPage() {
   }, [activeDrag, handleDragging, handleInteractionEnd]);
 
 
-  if (!product) {
+  if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-background">
-        <p>Loading product details...</p>
+        <Loader2 className="h-10 w-10 animate-spin text-primary" />
+        <p className="ml-3">Loading product details...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+     return (
+      <div className="flex flex-col items-center justify-center min-h-screen bg-background p-4">
+        <AlertTriangle className="h-12 w-12 text-destructive mb-4" />
+        <h2 className="text-xl font-semibold text-destructive mb-2">Error Loading Product</h2>
+        <p className="text-muted-foreground text-center mb-6">{error}</p>
+        <Button variant="outline" asChild>
+          <Link href="/dashboard">
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Back to Dashboard
+          </Link>
+        </Button>
+      </div>
+    );
+  }
+  
+  if (!productOptions) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen bg-background p-4">
+        <ImageIcon className="h-12 w-12 text-muted-foreground mb-4" />
+        <h2 className="text-xl font-semibold text-muted-foreground mb-2">Product Not Found</h2>
+        <p className="text-muted-foreground text-center mb-6">The requested product could not be loaded.</p>
+        <Button variant="outline" asChild>
+          <Link href="/dashboard">
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Back to Dashboard
+          </Link>
+        </Button>
       </div>
     );
   }
 
   const handleAddColor = () => {
-    if (!product) return;
-    // Basic hex validation (very simple)
+    if (!productOptions) return;
     if (!/^#[0-9A-F]{6}$/i.test(newColorHex)) {
         toast({ title: "Invalid Color", description: "Please enter a valid hex color (e.g., #RRGGBB).", variant: "destructive" });
         return;
     }
-    if (product.colors.includes(newColorHex)) {
+    if (productOptions.cstmzrColors.includes(newColorHex)) {
         toast({ title: "Duplicate Color", description: "This color already exists.", variant: "destructive" });
         return;
     }
-    const updatedProduct = { ...product, colors: [...product.colors, newColorHex] };
-    setProduct(updatedProduct);
+    setProductOptions({ ...productOptions, cstmzrColors: [...productOptions.cstmzrColors, newColorHex] });
     setNewColorHex('#CCCCCC'); 
     setNewColorSwatch('#CCCCCC');
   };
 
   const handleRemoveColor = (colorToRemove: string) => {
-    if (!product) return;
-    const updatedProduct = { ...product, colors: product.colors.filter(c => c !== colorToRemove) };
-    setProduct(updatedProduct);
+    if (!productOptions) return;
+    setProductOptions({ ...productOptions, cstmzrColors: productOptions.cstmzrColors.filter(c => c !== colorToRemove) });
   };
 
   const handleAddSize = () => {
-    if (!product || !newSize.trim()) {
+    if (!productOptions || !newSize.trim()) {
         if (!newSize.trim()) {
             toast({ title: "Invalid Size", description: "Size cannot be empty.", variant: "destructive" });
         }
         return;
     }
-    if (product.sizes.includes(newSize.trim())) {
+    if (productOptions.cstmzrSizes.includes(newSize.trim())) {
         toast({ title: "Duplicate Size", description: "This size already exists.", variant: "destructive" });
         return;
     }
-    const updatedProduct = { ...product, sizes: [...product.sizes, newSize.trim()] };
-    setProduct(updatedProduct);
+    setProductOptions({ ...productOptions, cstmzrSizes: [...productOptions.cstmzrSizes, newSize.trim()] });
     setNewSize('');
   };
 
   const handleRemoveSize = (sizeToRemove: string) => {
-     if (!product) return;
-    const updatedProduct = { ...product, sizes: product.sizes.filter(s => s !== sizeToRemove) };
-    setProduct(updatedProduct);
+     if (!productOptions) return;
+    setProductOptions({ ...productOptions, cstmzrSizes: productOptions.cstmzrSizes.filter(s => s !== sizeToRemove) });
   };
   
   const handleSaveChanges = () => {
-    if (!product) return;
-    console.log("Saving Product Options:", JSON.stringify(product, null, 2));
-    toast({
-      title: "Product Options Logged",
-      description: "Current product options have been logged to the console (simulating save).",
+    if (!productOptions || !user) {
+        toast({ title: "Error", description: "Product data or user session is missing.", variant: "destructive"});
+        return;
+    }
+    const localStorageKey = `cstmzr_product_options_${user.id}_${productOptions.id}`;
+    const dataToSave: LocalStorageOptions = {
+      cstmzrColors: productOptions.cstmzrColors,
+      cstmzrSizes: productOptions.cstmzrSizes,
+      boundaryBoxes: productOptions.boundaryBoxes,
+    };
+
+    try {
+      localStorage.setItem(localStorageKey, JSON.stringify(dataToSave));
+      toast({
+        title: "CSTMZR Options Saved",
+        description: "Custom colors, sizes, and boundary areas have been saved locally for this product.",
+      });
+    } catch (e) {
+      console.error("Error saving to localStorage:", e);
+      toast({ title: "Save Error", description: "Could not save CSTMZR options to local storage.", variant: "destructive"});
+    }
+    
+    // Log WC-related fields that are not being saved back to WC
+    console.log("Current WC Product Info (not saved back to WC):", {
+        id: productOptions.id,
+        name: productOptions.name,
+        description: productOptions.description,
+        price: productOptions.price,
     });
-    // In a real app, you would send `product` to your backend API here.
   };
 
   const handleAddBoundaryBox = () => {
-    if (!product || product.boundaryBoxes.length >= 3) {
-        if (product && product.boundaryBoxes.length >= 3) {
+    if (!productOptions || productOptions.boundaryBoxes.length >= 3) {
+        if (productOptions && productOptions.boundaryBoxes.length >= 3) {
              toast({ title: "Limit Reached", description: "Maximum of 3 customization areas allowed.", variant: "destructive" });
         }
         return;
     }
     const newBox: BoundaryBox = {
       id: crypto.randomUUID(),
-      name: `Area ${product.boundaryBoxes.length + 1}`,
-      x: 10 + product.boundaryBoxes.length * 5, 
-      y: 10 + product.boundaryBoxes.length * 5,
+      name: `Area ${productOptions.boundaryBoxes.length + 1}`,
+      x: 10 + productOptions.boundaryBoxes.length * 5, 
+      y: 10 + productOptions.boundaryBoxes.length * 5,
       width: 30,
       height: 20,
     };
-    const updatedProduct = { ...product, boundaryBoxes: [...product.boundaryBoxes, newBox] };
-    setProduct(updatedProduct);
+    setProductOptions({ ...productOptions, boundaryBoxes: [...productOptions.boundaryBoxes, newBox] });
     setSelectedBoundaryBoxId(newBox.id);
   };
 
   const handleRemoveBoundaryBox = (boxId: string) => {
-    setProduct(prev => prev ? { ...prev, boundaryBoxes: prev.boundaryBoxes.filter(b => b.id !== boxId) } : null);
+    setProductOptions(prev => prev ? { ...prev, boundaryBoxes: prev.boundaryBoxes.filter(b => b.id !== boxId) } : null);
     if (selectedBoundaryBoxId === boxId) {
       setSelectedBoundaryBoxId(null);
     }
   };
   
-  const handleProductDetailChange = (field: keyof ProductDetails, value: any) => {
-    if (product) {
-      setProduct({ ...product, [field]: value });
+  // Handler for WC Product Detail Changes (Name, Description, Price)
+  // These changes are only reflected in local state and logged, not saved back to WC.
+  const handleWCProductDetailChange = (field: 'name' | 'description' | 'price', value: string | number) => {
+    if (productOptions) {
+      setProductOptions({ ...productOptions, [field]: value });
     }
   };
 
   const handleBoundaryBoxNameChange = (boxId: string, newName: string) => {
-    if (!product) return;
-    const updatedBoxes = product.boundaryBoxes.map(box =>
+    if (!productOptions) return;
+    const updatedBoxes = productOptions.boundaryBoxes.map(box =>
       box.id === boxId ? { ...box, name: newName } : box
     );
-    setProduct({ ...product, boundaryBoxes: updatedBoxes });
+    setProductOptions({ ...productOptions, boundaryBoxes: updatedBoxes });
   };
 
   const handleBoundaryBoxPropertyChange = (
@@ -347,12 +454,12 @@ export default function ProductOptionsPage() {
     property: keyof Pick<BoundaryBox, 'x' | 'y' | 'width' | 'height'>,
     value: string
   ) => {
-    if (!product) return;
+    if (!productOptions) return;
 
-    setProduct(prevProduct => {
-      if (!prevProduct) return null;
+    setProductOptions(prevProductOptions => {
+      if (!prevProductOptions) return null;
 
-      const newBoxes = prevProduct.boundaryBoxes.map(box => {
+      const newBoxes = prevProductOptions.boundaryBoxes.map(box => {
         if (box.id === boxId) {
           let newBox = { ...box };
           const parsedValue = parseFloat(value);
@@ -364,7 +471,6 @@ export default function ProductOptionsPage() {
           else if (property === 'width') newBox.width = parsedValue;
           else if (property === 'height') newBox.height = parsedValue;
 
-          // Apply boundary constraints and min size collectively
           let tempX = newBox.x, tempY = newBox.y, tempW = newBox.width, tempH = newBox.height;
 
           tempW = Math.max(MIN_BOX_SIZE_PERCENT, tempW);
@@ -392,10 +498,9 @@ export default function ProductOptionsPage() {
         }
         return box;
       });
-      return { ...prevProduct, boundaryBoxes: newBoxes };
+      return { ...prevProductOptions, boundaryBoxes: newBoxes };
     });
   };
-
 
   return (
     <div className="container mx-auto p-4 md:p-6 lg:p-8 bg-background min-h-screen">
@@ -412,7 +517,7 @@ export default function ProductOptionsPage() {
         Product Options
       </h1>
       <p className="text-muted-foreground mb-8">
-        Editing options for: <span className="font-semibold text-foreground">{product.name}</span> (ID: {product.id})
+        Editing options for: <span className="font-semibold text-foreground">{productOptions.name}</span> (ID: {productOptions.id})
       </p>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
@@ -431,13 +536,13 @@ export default function ProductOptionsPage() {
                   }
                 }}
               >
-                {product.imageUrl ? (
+                {productOptions.imageUrl ? (
                   <NextImage
-                    src={product.imageUrl}
-                    alt={product.name}
+                    src={productOptions.imageUrl}
+                    alt={productOptions.name}
                     fill
                     className="object-contain pointer-events-none" 
-                    data-ai-hint={product.aiHint || "product image"}
+                    data-ai-hint={productOptions.aiHint || "product image"}
                     priority
                   />
                 ) : (
@@ -447,7 +552,7 @@ export default function ProductOptionsPage() {
                   </div>
                 )}
 
-                {product.boundaryBoxes.map((box) => (
+                {productOptions.boundaryBoxes.map((box) => (
                   <div
                     key={box.id}
                     className={cn(
@@ -469,7 +574,6 @@ export default function ProductOptionsPage() {
                   >
                     {selectedBoundaryBoxId === box.id && (
                       <>
-                        {/* Top-Left Resize Handle */}
                         <div
                           className="absolute -top-1.5 -left-1.5 w-4 h-4 bg-primary rounded-full border-2 border-background shadow-md cursor-nwse-resize hover:opacity-80 active:opacity-100"
                           title="Resize Area (Top-Left)"
@@ -478,7 +582,6 @@ export default function ProductOptionsPage() {
                         >
                           <Maximize2 className="w-2.5 h-2.5 text-primary-foreground absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
                         </div>
-                        {/* Top-Right Resize Handle */}
                         <div
                           className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-primary rounded-full border-2 border-background shadow-md cursor-nesw-resize hover:opacity-80 active:opacity-100"
                           title="Resize Area (Top-Right)"
@@ -487,7 +590,6 @@ export default function ProductOptionsPage() {
                         >
                           <Maximize2 className="w-2.5 h-2.5 text-primary-foreground absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
                         </div>
-                        {/* Bottom-Left Resize Handle */}
                         <div
                           className="absolute -bottom-1.5 -left-1.5 w-4 h-4 bg-primary rounded-full border-2 border-background shadow-md cursor-nesw-resize hover:opacity-80 active:opacity-100"
                           title="Resize Area (Bottom-Left)"
@@ -496,7 +598,6 @@ export default function ProductOptionsPage() {
                         >
                           <Maximize2 className="w-2.5 h-2.5 text-primary-foreground absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
                         </div>
-                        {/* Bottom-Right Resize Handle */}
                         <div
                           className="absolute -bottom-1.5 -right-1.5 w-4 h-4 bg-primary rounded-full border-2 border-background shadow-md cursor-nwse-resize hover:opacity-80 active:opacity-100"
                           title="Resize Area (Bottom-Right)"
@@ -527,9 +628,9 @@ export default function ProductOptionsPage() {
               </div>
             </CardHeader>
             <CardContent>
-              {product.boundaryBoxes.length > 0 && (
+              {productOptions.boundaryBoxes.length > 0 && (
                 <div className="space-y-3 mb-4">
-                  {product.boundaryBoxes.map((box) => (
+                  {productOptions.boundaryBoxes.map((box) => (
                     <div 
                       key={box.id} 
                       className={cn(
@@ -588,7 +689,7 @@ export default function ProductOptionsPage() {
                   ))}
                 </div>
               )}
-              {product.boundaryBoxes.length < 3 ? (
+              {productOptions.boundaryBoxes.length < 3 ? (
                 <Button onClick={handleAddBoundaryBox} variant="outline" className="w-full hover:bg-accent hover:text-accent-foreground">
                   <PlusCircle className="mr-2 h-4 w-4" />
                   Add Customization Area
@@ -605,26 +706,29 @@ export default function ProductOptionsPage() {
         <div className="md:col-span-2 space-y-6">
           <Card className="shadow-md">
             <CardHeader>
-              <CardTitle className="font-headline text-lg">Basic Information</CardTitle>
+              <CardTitle className="font-headline text-lg">Base Product Information</CardTitle>
+              <CardDescription>Displayed from your WooCommerce store. (Read-only here)</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
                 <Label htmlFor="productName">Product Name</Label>
                 <Input 
                     id="productName" 
-                    value={product.name} 
-                    onChange={(e) => handleProductDetailChange('name', e.target.value)}
-                    className="mt-1" 
+                    value={productOptions.name} 
+                    onChange={(e) => handleWCProductDetailChange('name', e.target.value)}
+                    className="mt-1 bg-muted/50" 
+                    readOnly // Or disabled, as changes are not saved to WC
                 />
               </div>
               <div>
                 <Label htmlFor="productDescription">Product Description</Label>
                 <Textarea 
                     id="productDescription" 
-                    value={product.description} 
-                    onChange={(e) => handleProductDetailChange('description', e.target.value)}
-                    className="mt-1" 
+                    value={productOptions.description} 
+                    onChange={(e) => handleWCProductDetailChange('description', e.target.value)}
+                    className="mt-1 bg-muted/50" 
                     rows={4} 
+                    readOnly
                 />
               </div>
               <div>
@@ -632,10 +736,11 @@ export default function ProductOptionsPage() {
                 <Input 
                     id="productPrice" 
                     type="number" 
-                    value={product.price} 
-                    onChange={(e) => handleProductDetailChange('price', parseFloat(e.target.value) || 0)}
-                    className="mt-1" 
+                    value={productOptions.price} 
+                    onChange={(e) => handleWCProductDetailChange('price', parseFloat(e.target.value) || 0)}
+                    className="mt-1 bg-muted/50" 
                     step="0.01" 
+                    readOnly
                 />
               </div>
             </CardContent>
@@ -643,15 +748,15 @@ export default function ProductOptionsPage() {
 
           <Card className="shadow-md">
             <CardHeader>
-              <CardTitle className="font-headline text-lg">Product Colors</CardTitle>
-              <CardDescription>Manage available color options.</CardDescription>
+              <CardTitle className="font-headline text-lg">CSTMZR Color Options</CardTitle>
+              <CardDescription>Manage available custom color options for the customizer.</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-2 mb-4">
-                <Label>Current Colors:</Label>
-                {product.colors.length > 0 ? (
+                <Label>Current Custom Colors:</Label>
+                {productOptions.cstmzrColors.length > 0 ? (
                   <div className="flex flex-wrap gap-2">
-                    {product.colors.map((color, index) => (
+                    {productOptions.cstmzrColors.map((color, index) => (
                       <Badge key={index} variant="secondary" className="relative group pr-7">
                         <span className="inline-block w-3 h-3 rounded-full mr-1.5 border" style={{ backgroundColor: color }}></span>
                         {color.toUpperCase()}
@@ -666,12 +771,12 @@ export default function ProductOptionsPage() {
                     ))}
                   </div>
                 ) : (
-                  <p className="text-sm text-muted-foreground">No colors added yet.</p>
+                  <p className="text-sm text-muted-foreground">No custom colors added yet.</p>
                 )}
               </div>
               <Separator className="my-4" />
               <div className="space-y-3">
-                <Label htmlFor="newColorHex">Add New Color</Label>
+                <Label htmlFor="newColorHex">Add New Custom Color</Label>
                 <div className="flex items-center gap-2">
                   <Input
                     type="color"
@@ -700,15 +805,15 @@ export default function ProductOptionsPage() {
 
           <Card className="shadow-md">
             <CardHeader>
-              <CardTitle className="font-headline text-lg">Product Sizes</CardTitle>
-              <CardDescription>Manage available size options.</CardDescription>
+              <CardTitle className="font-headline text-lg">CSTMZR Size Options</CardTitle>
+              <CardDescription>Manage available custom size options for the customizer.</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-2 mb-4">
-                <Label>Current Sizes:</Label>
-                {product.sizes.length > 0 ? (
+                <Label>Current Custom Sizes:</Label>
+                {productOptions.cstmzrSizes.length > 0 ? (
                   <div className="flex flex-wrap gap-2">
-                    {product.sizes.map((size, index) => (
+                    {productOptions.cstmzrSizes.map((size, index) => (
                        <Badge key={index} variant="secondary" className="relative group pr-7">
                         {size}
                          <button 
@@ -722,12 +827,12 @@ export default function ProductOptionsPage() {
                     ))}
                   </div>
                 ) : (
-                  <p className="text-sm text-muted-foreground">No sizes added yet.</p>
+                  <p className="text-sm text-muted-foreground">No custom sizes added yet.</p>
                 )}
               </div>
               <Separator className="my-4" />
               <div className="space-y-3">
-                <Label htmlFor="newSize">Add New Size</Label>
+                <Label htmlFor="newSize">Add New Custom Size</Label>
                 <div className="flex items-center gap-2">
                   <Input
                     id="newSize"
@@ -749,9 +854,10 @@ export default function ProductOptionsPage() {
 
       <div className="mt-10 flex justify-end">
         <Button onClick={handleSaveChanges} size="lg" className="bg-primary text-primary-foreground hover:bg-primary/90">
-          Save Product Options
+          Save CSTMZR Options
         </Button>
       </div>
     </div>
   );
 }
+
