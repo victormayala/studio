@@ -548,7 +548,7 @@ export default function ProductOptionsPage() {
                   {currentActiveView && currentActiveView.boundaryBoxes && currentActiveView.boundaryBoxes.map((box) => (
                     <div
                       key={box.id}
-                      className={cn("absolute transition-colors duration-100 ease-in-out group/box", selectedBoundaryBoxId === box.id ? 'border-primary ring-2 ring-primary ring-offset-1 bg-primary/10' : 'border-dashed border-muted-foreground/30 hover:border-primary/70 hover:bg-primary/5', activeDrag?.boxId === box.id && activeDrag.type === 'move' ? 'cursor-grabbing' : 'cursor-grab')}
+                      className={cn("absolute transition-colors duration-100 ease-in-out group/box", selectedBoundaryBoxId === box.id ? 'border-primary ring-2 ring-primary ring-offset-1 bg-primary/10' : 'border-dashed border-muted-foreground/80 hover:border-primary/70 hover:bg-primary/5', activeDrag?.boxId === box.id && activeDrag.type === 'move' ? 'cursor-grabbing' : 'cursor-grab')}
                       style={{ left: `${box.x}%`, top: `${box.y}%`, width: `${box.width}%`, height: `${box.height}%`, zIndex: selectedBoundaryBoxId === box.id ? 10 : 1 }}
                       onMouseDown={(e) => handleInteractionStart(e, box.id, 'move')}
                       onTouchStart={(e) => handleInteractionStart(e, box.id, 'move')}
