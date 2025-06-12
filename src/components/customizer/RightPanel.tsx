@@ -7,7 +7,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 
 export default function RightPanel() {
   return (
-    <Card className="w-72 md:w-80 lg:w-96 h-full flex-shrink-0 shadow-sm border-l flex flex-col"> {/* Removed rounded-lg, added border-l, changed shadow */}
+    <Card className="w-72 md:w-80 lg:w-96 h-full flex-shrink-0 shadow-sm border-l flex flex-col">
       <CardHeader className="border-b">
         <CardTitle className="font-headline text-lg text-foreground">AI Design Assistant</CardTitle>
       </CardHeader>
@@ -20,3 +20,4 @@ export default function RightPanel() {
   );
 }
 
+    

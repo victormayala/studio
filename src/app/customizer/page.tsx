@@ -88,7 +88,7 @@ function CustomizerLayoutAndLogic() {
   const productId = searchParams.get('productId');
   const { user, isLoading: authLoading } = useAuth();
   const { toast } = useToast();
-  const { canvasImages, canvasTexts, canvasShapes } = useUploads(); // This will now work
+  const { canvasImages, canvasTexts, canvasShapes } = useUploads(); 
 
   const [productDetails, setProductDetails] = useState<ProductForCustomizer | null>(null);
   const [activeViewId, setActiveViewId] = useState<string | null>(null);
@@ -256,12 +256,12 @@ function CustomizerLayoutAndLogic() {
       window.parent.postMessage({ cstmzrDesignData: designData }, targetOrigin);
       toast({
         title: "Design Sent!",
-        description: "Your design details have been sent. Proceeding to cart...",
+        description: "Your design details have been sent to the store.",
       });
     } else {
        toast({
-        title: "Add to Cart Clicked",
-        description: "This action is intended to send data to an embedded store. (Not in iframe).",
+        title: "Add to Cart Clicked (Standalone)",
+        description: "This action would normally send data to an embedded store. Design data logged to console.",
         variant: "info"
       });
       console.log("Add to Cart - Design Data:", designData);
@@ -390,3 +390,5 @@ export default function CustomizerPage() {
     </UploadProvider>
   );
 }
+
+    
