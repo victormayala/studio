@@ -38,7 +38,7 @@ interface DesignCanvasProps {
   productImageAiHint?: string;
   productDefinedBoundaryBoxes?: BoundaryBox[];
   activeViewId: string | null;
-  showGrid: boolean; // New prop
+  showGrid: boolean;
 }
 
 export default function DesignCanvas({ 
@@ -47,7 +47,7 @@ export default function DesignCanvas({
   productImageAiHint,
   productDefinedBoundaryBoxes = [],
   activeViewId,
-  showGrid // Destructure new prop
+  showGrid
 }: DesignCanvasProps) {
 
   const productToDisplay = {
@@ -372,7 +372,6 @@ export default function DesignCanvas({
     else if (itemType === 'shape') removeCanvasShape(itemId);
   };
 
-  // Filter items based on activeViewId
   const visibleImages = canvasImages.filter(img => img.viewId === activeViewId);
   const visibleTexts = canvasTexts.filter(txt => txt.viewId === activeViewId);
   const visibleShapes = canvasShapes.filter(shp => shp.viewId === activeViewId);
@@ -410,13 +409,13 @@ export default function DesignCanvas({
                 width: `${productDefinedBoundaryBoxes[0].width}%`,
                 height: `${productDefinedBoundaryBoxes[0].height}%`,
                 pointerEvents: 'none',
-                zIndex: 0,
+                zIndex: 0, 
                 overflow: 'hidden',
                 backgroundImage: `
-                  repeating-linear-gradient(to right, hsla(var(--border) / 0.2) 0, hsla(var(--border) / 0.2) 1px, transparent 1px, transparent 10%),
-                  repeating-linear-gradient(to bottom, hsla(var(--border) / 0.2) 0, hsla(var(--border) / 0.2) 1px, transparent 1px, transparent 10%)
+                  repeating-linear-gradient(to right, hsla(var(--border) / 0.2) 0, hsla(var(--border) / 0.2) 1px, transparent 1px, transparent 100%),
+                  repeating-linear-gradient(to bottom, hsla(var(--border) / 0.2) 0, hsla(var(--border) / 0.2) 1px, transparent 1px, transparent 100%)
                 `,
-                backgroundSize: '100% 100%',
+                backgroundSize: '10% 10%', // 10 lines in each direction
               }}
               className="grid-overlay"
             />
@@ -429,7 +428,7 @@ export default function DesignCanvas({
               style={{
                 left: `${box.x}%`, top: `${box.y}%`,
                 width: `${box.width}%`, height: `${box.height}%`,
-                zIndex: 1, // Ensure boundary box outline is above the grid but below items
+                zIndex: 1, 
               }}
               title={box.name}
             >
@@ -489,3 +488,4 @@ export default function DesignCanvas({
   );
 }
 
+    
