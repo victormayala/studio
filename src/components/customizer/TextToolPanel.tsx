@@ -15,12 +15,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from '@/components/ui/accordion';
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import { Bold, Italic, Underline, CaseUpper, CaseLower, Type, Palette, Blend, PenLine, Pilcrow, TextCursorInput, Pipette, Settings2 } from 'lucide-react';
 import { useUploads, type CanvasText } from '@/contexts/UploadContext';
@@ -312,173 +306,169 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
       <Separator />
 
       {/* Effects Section */}
-      <section className="space-y-1">
+      <section className="space-y-4">
         <h3 className="text-sm font-medium text-muted-foreground flex items-center mb-2"><Settings2 className="mr-2 h-4 w-4 text-primary" />Effects</h3>
-        <Accordion type="multiple" className="w-full -mx-1">
-          <AccordionItem value="text-outline" className="border-b-0">
-            <AccordionTrigger className="py-2 px-1 text-xs hover:no-underline font-normal">
-              <div className="flex items-center w-full">
-                <PenLine className="mr-2 h-3 w-3" />
-                Text Outline
-                <Switch
-                    id="outlineEnabledSwitch"
-                    className="ml-auto scale-[0.7] origin-right" 
-                    checked={currentStyle.outlineEnabled || false}
-                    onCheckedChange={(checked) => handleStyleChange('outlineEnabled', checked)}
-                    onClick={(e) => e.stopPropagation()} 
+        
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <Label htmlFor="outlineEnabledSwitch" className="text-xs flex items-center">
+              <PenLine className="mr-2 h-3 w-3" /> Text Outline
+            </Label>
+            <Switch
+                id="outlineEnabledSwitch"
+                className="scale-[0.8] origin-right" 
+                checked={currentStyle.outlineEnabled || false}
+                onCheckedChange={(checked) => handleStyleChange('outlineEnabled', checked)}
+            />
+          </div>
+          {currentStyle.outlineEnabled && (
+            <div className="space-y-3 pl-5 border-l-2 border-muted ml-1.5">
+              <div className="flex items-center space-x-2">
+                <Label htmlFor="outlineColorSwatch" className="text-xs shrink-0">Color</Label>
+                <Input 
+                    type="color" 
+                    id="outlineColorSwatch" 
+                    className="h-8 w-10 p-0.5 border-none rounded" 
+                    value={localOutlineColorHex} 
+                    onPointerDownCapture={startInteractiveOperation}
+                    onPointerUpCapture={endInteractiveOperation}
+                    onChange={(e) => {
+                        setLocalOutlineColorHex(e.target.value);
+                        if (selectedCanvasTextId && selectedText) {
+                            updateCanvasText(selectedCanvasTextId, { outlineColor: e.target.value });
+                        } else {
+                            setCurrentStyle(prev => ({ ...prev, outlineColor: e.target.value }));
+                        }
+                    }}/>
+                <Input 
+                    id="outlineColorHex" 
+                    className="h-8 text-xs flex-grow max-w-[100px]" 
+                    value={localOutlineColorHex} 
+                    onChange={(e) => setLocalOutlineColorHex(e.target.value)}
+                    onBlur={(e) => {
+                        const finalColor = sanitizeHex(e.target.value);
+                        setLocalOutlineColorHex(finalColor);
+                        if (selectedCanvasTextId && selectedText) {
+                            updateCanvasText(selectedCanvasTextId, { outlineColor: finalColor });
+                        } else {
+                             setCurrentStyle(prev => ({ ...prev, outlineColor: finalColor }));
+                        }
+                    }}
+                    maxLength={7}/>
+              </div>
+              <div>
+                <Label htmlFor="outlineWidthSlider" className="text-xs mb-1 block">Width: {currentStyle.outlineWidth?.toFixed(1) || 0}px</Label>
+                <Slider 
+                    id="outlineWidthSlider" 
+                    min={0} max={10} step={0.5} 
+                    defaultValue={[1]} 
+                    value={[currentStyle.outlineWidth || 0]} 
+                    onValueChange={([value]) => handleStyleChange('outlineWidth', value)}
+                    onPointerDownCapture={startInteractiveOperation}
+                    onPointerUpCapture={endInteractiveOperation}
                 />
               </div>
-            </AccordionTrigger>
-            <AccordionContent className="space-y-3 pt-2 pb-1 pl-3 pr-1">
-              {currentStyle.outlineEnabled && (
-                <>
-                  <div className="flex items-center space-x-2">
-                    <Label htmlFor="outlineColorSwatch" className="text-xs shrink-0">Color</Label>
-                    <Input 
-                        type="color" 
-                        id="outlineColorSwatch" 
-                        className="h-8 w-10 p-0.5 border-none rounded" 
-                        value={localOutlineColorHex} 
-                        onPointerDownCapture={startInteractiveOperation}
-                        onPointerUpCapture={endInteractiveOperation}
-                        onChange={(e) => {
-                            setLocalOutlineColorHex(e.target.value);
-                            if (selectedCanvasTextId && selectedText) {
-                                updateCanvasText(selectedCanvasTextId, { outlineColor: e.target.value });
-                            } else {
-                                setCurrentStyle(prev => ({ ...prev, outlineColor: e.target.value }));
-                            }
-                        }}/>
-                    <Input 
-                        id="outlineColorHex" 
-                        className="h-8 text-xs flex-grow max-w-[100px]" 
-                        value={localOutlineColorHex} 
-                        onChange={(e) => setLocalOutlineColorHex(e.target.value)}
-                        onBlur={(e) => {
-                            const finalColor = sanitizeHex(e.target.value);
-                            setLocalOutlineColorHex(finalColor);
-                            if (selectedCanvasTextId && selectedText) {
-                                updateCanvasText(selectedCanvasTextId, { outlineColor: finalColor });
-                            } else {
-                                 setCurrentStyle(prev => ({ ...prev, outlineColor: finalColor }));
-                            }
-                        }}
-                        maxLength={7}/>
-                  </div>
-                  <div>
-                    <Label htmlFor="outlineWidthSlider" className="text-xs mb-1 block">Width: {currentStyle.outlineWidth?.toFixed(1) || 0}px</Label>
-                    <Slider 
-                        id="outlineWidthSlider" 
-                        min={0} max={10} step={0.5} 
-                        defaultValue={[1]} 
-                        value={[currentStyle.outlineWidth || 0]} 
-                        onValueChange={([value]) => handleStyleChange('outlineWidth', value)}
-                        onPointerDownCapture={startInteractiveOperation}
-                        onPointerUpCapture={endInteractiveOperation}
-                    />
-                  </div>
-                </>
-              )}
-            </AccordionContent>
-          </AccordionItem>
+            </div>
+          )}
+        </div>
         
-          <AccordionItem value="text-shadow" className="border-b-0">
-            <AccordionTrigger className="py-2 px-1 text-xs hover:no-underline font-normal">
-                <div className="flex items-center w-full">
-                    <Blend className="mr-2 h-3 w-3" />
-                    Text Shadow
-                    <Switch
-                        id="shadowEnabledSwitch"
-                        className="ml-auto scale-[0.7] origin-right"
-                        checked={currentStyle.shadowEnabled || false}
-                        onCheckedChange={(checked) => handleStyleChange('shadowEnabled', checked)}
-                        onClick={(e) => e.stopPropagation()}
+        <Separator className="my-3" />
+
+        <div className="space-y-3">
+            <div className="flex items-center justify-between">
+                <Label htmlFor="shadowEnabledSwitch" className="text-xs flex items-center">
+                     <Blend className="mr-2 h-3 w-3" /> Text Shadow
+                </Label>
+                <Switch
+                    id="shadowEnabledSwitch"
+                    className="scale-[0.8] origin-right"
+                    checked={currentStyle.shadowEnabled || false}
+                    onCheckedChange={(checked) => handleStyleChange('shadowEnabled', checked)}
+                />
+            </div>
+            {currentStyle.shadowEnabled && (
+            <div className="space-y-3 pl-5 border-l-2 border-muted ml-1.5">
+              <div className="flex items-center space-x-2">
+                <Label htmlFor="shadowColorSwatch" className="text-xs shrink-0">Color</Label>
+                <Input 
+                    type="color" 
+                    id="shadowColorSwatch" 
+                    className="h-8 w-10 p-0.5 border-none rounded" 
+                    value={localShadowColorHex} 
+                    onPointerDownCapture={startInteractiveOperation}
+                    onPointerUpCapture={endInteractiveOperation}
+                    onChange={(e) => {
+                        setLocalShadowColorHex(e.target.value);
+                        if (selectedCanvasTextId && selectedText) {
+                            updateCanvasText(selectedCanvasTextId, { shadowColor: e.target.value });
+                        } else {
+                             setCurrentStyle(prev => ({ ...prev, shadowColor: e.target.value }));
+                        }
+                    }}/>
+                <Input 
+                    id="shadowColorHex" 
+                    className="h-8 text-xs flex-grow max-w-[100px]" 
+                    value={localShadowColorHex} 
+                    onChange={(e) => setLocalShadowColorHex(e.target.value)}
+                    onBlur={(e) => {
+                        const finalColor = sanitizeHex(e.target.value);
+                        setLocalShadowColorHex(finalColor);
+                        if (selectedCanvasTextId && selectedText) {
+                            updateCanvasText(selectedCanvasTextId, { shadowColor: finalColor });
+                        } else {
+                             setCurrentStyle(prev => ({ ...prev, shadowColor: finalColor }));
+                        }
+                    }}
+                    maxLength={7}/>
+              </div>
+              <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+                <div>
+                    <Label htmlFor="shadowOffsetXSlider" className="text-xs mb-1 block">Offset X: {currentStyle.shadowOffsetX?.toFixed(0) || 0}px</Label>
+                    <Slider 
+                        id="shadowOffsetXSlider" 
+                        min={-20} max={20} step={1} 
+                        defaultValue={[0]} 
+                        value={[currentStyle.shadowOffsetX || 0]} 
+                        onValueChange={([value]) => handleStyleChange('shadowOffsetX', value)}
+                        onPointerDownCapture={startInteractiveOperation}
+                        onPointerUpCapture={endInteractiveOperation}
                     />
                 </div>
-            </AccordionTrigger>
-            <AccordionContent className="space-y-3 pt-2 pb-1 pl-3 pr-1">
-              {currentStyle.shadowEnabled && (
-                <>
-                  <div className="flex items-center space-x-2">
-                    <Label htmlFor="shadowColorSwatch" className="text-xs shrink-0">Color</Label>
-                    <Input 
-                        type="color" 
-                        id="shadowColorSwatch" 
-                        className="h-8 w-10 p-0.5 border-none rounded" 
-                        value={localShadowColorHex} 
-                        onPointerDownCapture={startInteractiveOperation}
-                        onPointerUpCapture={endInteractiveOperation}
-                        onChange={(e) => {
-                            setLocalShadowColorHex(e.target.value);
-                            if (selectedCanvasTextId && selectedText) {
-                                updateCanvasText(selectedCanvasTextId, { shadowColor: e.target.value });
-                            } else {
-                                 setCurrentStyle(prev => ({ ...prev, shadowColor: e.target.value }));
-                            }
-                        }}/>
-                    <Input 
-                        id="shadowColorHex" 
-                        className="h-8 text-xs flex-grow max-w-[100px]" 
-                        value={localShadowColorHex} 
-                        onChange={(e) => setLocalShadowColorHex(e.target.value)}
-                        onBlur={(e) => {
-                            const finalColor = sanitizeHex(e.target.value);
-                            setLocalShadowColorHex(finalColor);
-                            if (selectedCanvasTextId && selectedText) {
-                                updateCanvasText(selectedCanvasTextId, { shadowColor: finalColor });
-                            } else {
-                                 setCurrentStyle(prev => ({ ...prev, shadowColor: finalColor }));
-                            }
-                        }}
-                        maxLength={7}/>
-                  </div>
-                  <div className="grid grid-cols-2 gap-x-4 gap-y-2">
-                    <div>
-                        <Label htmlFor="shadowOffsetXSlider" className="text-xs mb-1 block">Offset X: {currentStyle.shadowOffsetX?.toFixed(0) || 0}px</Label>
-                        <Slider 
-                            id="shadowOffsetXSlider" 
-                            min={-20} max={20} step={1} 
-                            defaultValue={[0]} 
-                            value={[currentStyle.shadowOffsetX || 0]} 
-                            onValueChange={([value]) => handleStyleChange('shadowOffsetX', value)}
-                            onPointerDownCapture={startInteractiveOperation}
-                            onPointerUpCapture={endInteractiveOperation}
-                        />
-                    </div>
-                    <div>
-                        <Label htmlFor="shadowOffsetYSlider" className="text-xs mb-1 block">Offset Y: {currentStyle.shadowOffsetY?.toFixed(0) || 0}px</Label>
-                        <Slider 
-                            id="shadowOffsetYSlider" 
-                            min={-20} max={20} step={1} 
-                            defaultValue={[0]} 
-                            value={[currentStyle.shadowOffsetY || 0]} 
-                            onValueChange={([value]) => handleStyleChange('shadowOffsetY', value)}
-                            onPointerDownCapture={startInteractiveOperation}
-                            onPointerUpCapture={endInteractiveOperation}
-                        />
-                    </div>
-                  </div>
-                  <div>
-                    <Label htmlFor="shadowBlurSlider" className="text-xs mb-1 block">Blur: {currentStyle.shadowBlur?.toFixed(0) || 0}px</Label>
+                <div>
+                    <Label htmlFor="shadowOffsetYSlider" className="text-xs mb-1 block">Offset Y: {currentStyle.shadowOffsetY?.toFixed(0) || 0}px</Label>
                     <Slider 
-                        id="shadowBlurSlider" 
-                        min={0} max={30} step={1} 
+                        id="shadowOffsetYSlider" 
+                        min={-20} max={20} step={1} 
                         defaultValue={[0]} 
-                        value={[currentStyle.shadowBlur || 0]} 
-                        onValueChange={([value]) => handleStyleChange('shadowBlur', value)}
+                        value={[currentStyle.shadowOffsetY || 0]} 
+                        onValueChange={([value]) => handleStyleChange('shadowOffsetY', value)}
                         onPointerDownCapture={startInteractiveOperation}
                         onPointerUpCapture={endInteractiveOperation}
                     />
-                  </div>
-                </>
-              )}
-            </AccordionContent>
-          </AccordionItem>
-        </Accordion>
+                </div>
+              </div>
+              <div>
+                <Label htmlFor="shadowBlurSlider" className="text-xs mb-1 block">Blur: {currentStyle.shadowBlur?.toFixed(0) || 0}px</Label>
+                <Slider 
+                    id="shadowBlurSlider" 
+                    min={0} max={30} step={1} 
+                    defaultValue={[0]} 
+                    value={[currentStyle.shadowBlur || 0]} 
+                    onValueChange={([value]) => handleStyleChange('shadowBlur', value)}
+                    onPointerDownCapture={startInteractiveOperation}
+                    onPointerUpCapture={endInteractiveOperation}
+                />
+              </div>
+            </div>
+          )}
+        </div>
 
-        <div className="flex items-center space-x-2 pt-3 px-1">
+        <Separator className="my-3" />
+
+        <div className="flex items-center space-x-2 pt-1">
           <Switch
             id="archTextSwitch"
+            className="scale-[0.8] origin-left"
             checked={currentStyle.isArchText || false}
             onCheckedChange={(checked) => handleStyleChange('isArchText', checked)}
           />
@@ -508,7 +498,7 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
             <Type className="mr-2 h-4 w-4" />
             Add Text to Canvas
           </Button>
-          <div className="flex-grow mt-2"> {/* Changed from flex-1 to flex-grow */}
+          <div className="flex-grow mt-2"> 
             {renderControls()}
           </div>
         </>
