@@ -139,7 +139,6 @@ export default function ProductOptionsPage() {
       }
     } catch (storageError) {
       console.warn("Error accessing localStorage for WC credentials:", storageError);
-      // toast({ title: "Local Storage Error", description: "Could not access WooCommerce credentials.", variant: "destructive" });
     }
     
     ({ product: wcProduct, error: fetchError } = await fetchWooCommerceProductById(productId, userCredentials));
@@ -507,71 +506,10 @@ export default function ProductOptionsPage() {
               <CardDescription>Manage views and define customization areas for each.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-              {/* View Management Section */}
-              <div>
-                <h4 className="text-base font-semibold text-foreground mb-3">View Management</h4>
-                {productOptions.views.length < MAX_PRODUCT_VIEWS && (
-                  <Button onClick={handleAddNewView} variant="outline" className="w-full mb-4 hover:bg-accent hover:text-accent-foreground">
-                    <PlusCircle className="mr-2 h-4 w-4" /> Add New View
-                  </Button>
-                )}
-                {productOptions.views.length >= MAX_PRODUCT_VIEWS && (
-                    <p className="text-xs text-muted-foreground mb-4 text-center">Maximum {MAX_PRODUCT_VIEWS} views reached.</p>
-                )}
-
-                {currentActiveView && (
-                  <div className="space-y-3 p-3 border rounded-md bg-muted/20">
-                    <h5 className="text-sm font-medium text-muted-foreground">Editing View: <span className="text-primary font-semibold">{currentActiveView.name}</span></h5>
-                    <div>
-                      <Label htmlFor={`viewName-${currentActiveView.id}`} className="text-xs">View Name</Label>
-                      <Input 
-                        id={`viewName-${currentActiveView.id}`} 
-                        value={currentActiveView.name} 
-                        onChange={(e) => handleViewDetailChange(currentActiveView.id, 'name', e.target.value)} 
-                        className="mt-1 h-8 bg-background"
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor={`viewImageUrl-${currentActiveView.id}`} className="text-xs">Image URL</Label>
-                      <Input 
-                        id={`viewImageUrl-${currentActiveView.id}`} 
-                        value={currentActiveView.imageUrl} 
-                        onChange={(e) => handleViewDetailChange(currentActiveView.id, 'imageUrl', e.target.value)} 
-                        placeholder="https://placehold.co/600x600.png"
-                        className="mt-1 h-8 bg-background"
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor={`viewAiHint-${currentActiveView.id}`} className="text-xs">AI Hint (for image search)</Label>
-                      <Input 
-                        id={`viewAiHint-${currentActiveView.id}`} 
-                        value={currentActiveView.aiHint || ''} 
-                        onChange={(e) => handleViewDetailChange(currentActiveView.id, 'aiHint', e.target.value)} 
-                        placeholder="e.g., t-shirt back"
-                        className="mt-1 h-8 bg-background"
-                      />
-                    </div>
-                    {productOptions.views.length > 1 && (
-                      <Button 
-                        variant="destructive" 
-                        onClick={() => handleDeleteView(currentActiveView.id)} 
-                        size="sm"
-                        className="w-full mt-2"
-                      >
-                        <Trash2 className="mr-2 h-4 w-4" /> Delete This View
-                      </Button>
-                    )}
-                  </div>
-                )}
-              </div>
-
-              <Separator />
-
-              {/* Image Display & View Selection Section */}
+              {/* Image Display & View Selection Buttons Section */}
               <div>
                  <h4 className="text-base font-semibold text-foreground mb-1">Image for: <span className="text-primary">{currentActiveView?.name || "N/A"}</span></h4>
-                 <p className="text-xs text-muted-foreground mb-3">Click & drag areas. Use handles to resize. Select a view below to change image.</p
-                 >
+                 <p className="text-xs text-muted-foreground mb-3">Click & drag areas. Use handles to resize. Select a view below to change image.</p>
                 <div 
                   ref={imageWrapperRef} 
                   className="relative w-full aspect-square border rounded-md overflow-hidden group bg-muted/20 select-none mb-4"
@@ -657,6 +595,67 @@ export default function ProductOptionsPage() {
                  )}
                 {!currentActiveView && <p className="text-sm text-muted-foreground text-center py-2">Select or add a product view to manage its areas.</p>}
               </div>
+
+              <Separator />
+
+              {/* View Management Section */}
+              <div>
+                <h4 className="text-base font-semibold text-foreground mb-3">View Management</h4>
+                {productOptions.views.length < MAX_PRODUCT_VIEWS && (
+                  <Button onClick={handleAddNewView} variant="outline" className="w-full mb-4 hover:bg-accent hover:text-accent-foreground">
+                    <PlusCircle className="mr-2 h-4 w-4" /> Add New View
+                  </Button>
+                )}
+                {productOptions.views.length >= MAX_PRODUCT_VIEWS && (
+                    <p className="text-xs text-muted-foreground mb-4 text-center">Maximum {MAX_PRODUCT_VIEWS} views reached.</p>
+                )}
+
+                {currentActiveView && (
+                  <div className="space-y-3 p-3 border rounded-md bg-muted/20">
+                    <h5 className="text-sm font-medium text-muted-foreground">Editing View: <span className="text-primary font-semibold">{currentActiveView.name}</span></h5>
+                    <div>
+                      <Label htmlFor={`viewName-${currentActiveView.id}`} className="text-xs">View Name</Label>
+                      <Input 
+                        id={`viewName-${currentActiveView.id}`} 
+                        value={currentActiveView.name} 
+                        onChange={(e) => handleViewDetailChange(currentActiveView.id, 'name', e.target.value)} 
+                        className="mt-1 h-8 bg-background"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor={`viewImageUrl-${currentActiveView.id}`} className="text-xs">Image URL</Label>
+                      <Input 
+                        id={`viewImageUrl-${currentActiveView.id}`} 
+                        value={currentActiveView.imageUrl} 
+                        onChange={(e) => handleViewDetailChange(currentActiveView.id, 'imageUrl', e.target.value)} 
+                        placeholder="https://placehold.co/600x600.png"
+                        className="mt-1 h-8 bg-background"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor={`viewAiHint-${currentActiveView.id}`} className="text-xs">AI Hint (for image search)</Label>
+                      <Input 
+                        id={`viewAiHint-${currentActiveView.id}`} 
+                        value={currentActiveView.aiHint || ''} 
+                        onChange={(e) => handleViewDetailChange(currentActiveView.id, 'aiHint', e.target.value)} 
+                        placeholder="e.g., t-shirt back"
+                        className="mt-1 h-8 bg-background"
+                      />
+                    </div>
+                    {productOptions.views.length > 1 && (
+                      <Button 
+                        variant="destructive" 
+                        onClick={() => handleDeleteView(currentActiveView.id)} 
+                        size="sm"
+                        className="w-full mt-2"
+                      >
+                        <Trash2 className="mr-2 h-4 w-4" /> Delete This View
+                      </Button>
+                    )}
+                  </div>
+                )}
+              </div>
+
             </CardContent>
           </Card>
         </div>
