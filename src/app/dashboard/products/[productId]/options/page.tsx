@@ -124,9 +124,10 @@ export default function ProductOptionsPage() {
     setIsLoading(true); 
     setError(null);
     setVariationsError(null);
+    // Reset states that depend on product data to avoid showing stale info during refresh
     setVariations([]);
     setSelectedVariationIdsForCstmzr([]);
-    setActiveViewId(null);
+    setActiveViewId(null); // Will be reset once new data is loaded
 
     let localOptions: LocalStorageOptions | null = null;
     const localStorageKey = `cstmzr_product_options_${user.id}_${productId}`;
@@ -138,6 +139,7 @@ export default function ProductOptionsPage() {
     } catch (e) {
       console.error("Error parsing local CSTMZR options from localStorage:", e);
       toast({ title: "Error Loading Local Settings", description: "Could not load saved CSTMZR settings. Using defaults.", variant: "destructive"});
+      // localOptions remains null, default view will be created
     }
 
     let wcProduct: WCCustomProduct | undefined;
@@ -160,6 +162,7 @@ export default function ProductOptionsPage() {
     
     if (fetchError || !wcProduct) {
       setError(fetchError || `Product with ID ${productId} not found or failed to load.`);
+      setProductOptions(null); // Ensure productOptions is null on error
       setIsLoading(false);
       setIsRefreshing(false);
       toast({ title: "Error Fetching Product", description: fetchError || `Product ${productId} not found.`, variant: "destructive"});
@@ -192,7 +195,7 @@ export default function ProductOptionsPage() {
       views: viewsToSet,
       cstmzrSelectedVariationIds: localOptions?.cstmzrSelectedVariationIds || [], 
     });
-    setActiveViewId(viewsToSet[0]?.id || null);
+    setActiveViewId(viewsToSet[0]?.id || null); // This should always pick a valid ID now
     setSelectedBoundaryBoxId(null); 
     setSelectedVariationIdsForCstmzr(localOptions?.cstmzrSelectedVariationIds || []); 
 
@@ -524,10 +527,10 @@ export default function ProductOptionsPage() {
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
         <div className="md:col-span-1 space-y-6">
-          <Card className="shadow-md">
+           <Card className="shadow-md">
             <CardHeader>
               <CardTitle className="font-headline text-lg">Product View & Customization Setup</CardTitle>
-              <CardDescription>Manage views and define customization areas for each.</CardDescription>
+              <CardDescription>Manage views, their images, and define customization areas for each.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
               {/* Image Display & View Selection Buttons Section */}
@@ -540,11 +543,11 @@ export default function ProductOptionsPage() {
                   onMouseDown={(e) => { if (e.target === imageWrapperRef.current) setSelectedBoundaryBoxId(null); }}
                 >
                   {currentActiveView?.imageUrl ? (
-                    <NextImage src={currentActiveView.imageUrl} alt={currentActiveView.name} fill className="object-contain pointer-events-none" data-ai-hint={currentActiveView.aiHint || "product view"} priority />
+                    <NextImage src={currentActiveView.imageUrl} alt={currentActiveView.name || 'Product View'} fill className="object-contain pointer-events-none" data-ai-hint={currentActiveView.aiHint || "product view"} priority />
                   ) : (
                     <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none"><ImageIcon className="w-16 h-16 text-muted-foreground" /><p className="text-sm text-muted-foreground mt-2">No image for this view. Set URL below.</p></div>
                   )}
-                  {currentActiveView?.boundaryBoxes.map((box) => (
+                  {currentActiveView && currentActiveView.boundaryBoxes && currentActiveView.boundaryBoxes.map((box) => (
                     <div
                       key={box.id}
                       className={cn("absolute transition-colors duration-100 ease-in-out group/box", selectedBoundaryBoxId === box.id ? 'border-primary ring-2 ring-primary ring-offset-1 bg-primary/10' : 'border-dashed border-muted-foreground/50 hover:border-primary/70 hover:bg-primary/5', activeDrag?.boxId === box.id && activeDrag.type === 'move' ? 'cursor-grabbing' : 'cursor-grab')}
