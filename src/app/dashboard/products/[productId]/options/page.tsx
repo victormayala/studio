@@ -12,12 +12,15 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { ArrowLeft, PlusCircle, Trash2, Image as ImageIcon, Maximize2, Loader2, AlertTriangle, LayersIcon, Shirt, RefreshCcw } from 'lucide-react';
+import { ArrowLeft, PlusCircle, Trash2, Image as ImageIcon, Maximize2, Loader2, AlertTriangle, LayersIcon, Shirt, RefreshCcw, CheckSquare, Square as SquareIcon } from 'lucide-react';
+import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { fetchWooCommerceProductById, fetchWooCommerceProductVariations } from '@/app/actions/woocommerceActions';
 import type { WCCustomProduct, WCVariation } from '@/types/woocommerce';
+import { Alert as ShadCnAlert, AlertDescription as ShadCnAlertDescription, AlertTitle as ShadCnAlertTitle } from "@/components/ui/alert";
+
 
 interface BoundaryBox {
   id: string;
@@ -28,27 +31,26 @@ interface BoundaryBox {
   height: number;
 }
 
-// Represents the combined data structure for the page
 interface ProductOptionsData {
-  id: string;         // WC Product ID
-  name: string;       // WC Product Name
-  description: string;// WC Product Description (plain text)
-  price: number;      // WC Product Price (parsed)
-  type: 'simple' | 'variable' | 'grouped' | 'external'; // Added product type
-  imageUrl: string;   // WC Product Image URL
-  aiHint?: string;     // WC Product Image AI Hint
+  id: string;         
+  name: string;       
+  description: string;
+  price: number;      
+  type: 'simple' | 'variable' | 'grouped' | 'external'; 
+  imageUrl: string;   
+  aiHint?: string;     
 
-  // CSTMZR-specific settings, to be saved in localStorage
-  cstmzrColors: string[];      // User-defined hex color options
-  cstmzrSizes: string[];       // User-defined size options
-  boundaryBoxes: BoundaryBox[];// User-defined customization areas
+  cstmzrColors: string[];      
+  cstmzrSizes: string[];       
+  boundaryBoxes: BoundaryBox[];
+  cstmzrSelectedVariationIds: string[]; // New: Store selected variation IDs
 }
 
-// Store only CSTMZR specific configurations in localStorage
 interface LocalStorageOptions {
   cstmzrColors: string[];
   cstmzrSizes: string[];
   boundaryBoxes: BoundaryBox[];
+  cstmzrSelectedVariationIds: string[]; // New
 }
 
 
@@ -82,6 +84,8 @@ export default function ProductOptionsPage() {
   const [isLoadingVariations, setIsLoadingVariations] = useState(false);
   const [variationsError, setVariationsError] = useState<string | null>(null);
 
+  const [selectedVariationIdsForCstmzr, setSelectedVariationIdsForCstmzr] = useState<string[]>([]);
+
   const [newColorHex, setNewColorHex] = useState<string>('#CCCCCC');
   const [newColorSwatch, setNewColorSwatch] = useState<string>('#CCCCCC');
   const [newSize, setNewSize] = useState<string>('');
@@ -105,10 +109,11 @@ export default function ProductOptionsPage() {
       return;
     }
 
-    setIsLoading(true); // Overall loading for initial or full refresh
+    setIsLoading(true); 
     setError(null);
     setVariationsError(null);
     setVariations([]);
+    setSelectedVariationIdsForCstmzr([]); // Reset on fresh load
 
     let localOptions: LocalStorageOptions | null = null;
     const localStorageKey = `cstmzr_product_options_${user.id}_${productId}`;
@@ -119,7 +124,7 @@ export default function ProductOptionsPage() {
       }
     } catch (e) {
       console.error("Error parsing local CSTMZR options from localStorage:", e);
-      toast({ title: "Error Loading Local Settings", description: "Could not load saved CSTMZR settings. Using defaults.", variant: "warning"});
+      toast({ title: "Error Loading Local Settings", description: "Could not load saved CSTMZR settings. Using defaults.", variant: "destructive"});
     }
 
     let wcProduct: WCCustomProduct | undefined;
@@ -169,8 +174,10 @@ export default function ProductOptionsPage() {
       cstmzrColors: localOptions?.cstmzrColors || [],
       cstmzrSizes: localOptions?.cstmzrSizes || [],
       boundaryBoxes: localOptions?.boundaryBoxes || [],
+      cstmzrSelectedVariationIds: localOptions?.cstmzrSelectedVariationIds || [], // Load selected IDs
     });
-    setSelectedBoundaryBoxId(null); // Reset selection on data load/refresh
+    setSelectedBoundaryBoxId(null); 
+    setSelectedVariationIdsForCstmzr(localOptions?.cstmzrSelectedVariationIds || []); // Also set the state for selected variation IDs
 
     if (wcProduct.type === 'variable') {
       setIsLoadingVariations(true);
@@ -188,14 +195,14 @@ export default function ProductOptionsPage() {
     setIsRefreshing(false);
     if (isRefreshing) toast({ title: "Product Data Refreshed", description: "Base product details updated from store."});
 
-  }, [productId, user, toast, isRefreshing]); // Added isRefreshing to dependency list
+  }, [productId, user, toast, isRefreshing]); 
 
   useEffect(() => {
     fetchAndSetProductData();
-  }, [fetchAndSetProductData]); // useEffect now only depends on the memoized fetchAndSetProductData
+  }, [fetchAndSetProductData]); 
 
   const handleRefreshData = () => {
-    setIsRefreshing(true); // Set refreshing true before calling
+    setIsRefreshing(true); 
     fetchAndSetProductData();
   };
 
@@ -342,7 +349,7 @@ export default function ProductOptionsPage() {
   }, [activeDrag, handleDragging, handleInteractionEnd]);
 
 
-  if (isLoading && !isRefreshing) { // Show main loader only on initial load
+  if (isLoading && !isRefreshing) { 
     return (
       <div className="flex items-center justify-center min-h-screen bg-background">
         <Loader2 className="h-10 w-10 animate-spin text-primary" />
@@ -351,7 +358,7 @@ export default function ProductOptionsPage() {
     );
   }
 
-  if (error && !productOptions) { // Show critical error if productOptions is null
+  if (error && !productOptions) { 
      return (
       <div className="flex flex-col items-center justify-center min-h-screen bg-background p-4">
         <AlertTriangle className="h-12 w-12 text-destructive mb-4" />
@@ -367,7 +374,7 @@ export default function ProductOptionsPage() {
     );
   }
   
-  if (!productOptions) { // Fallback if still no productOptions but not in error or loading state
+  if (!productOptions) { 
     return (
       <div className="flex flex-col items-center justify-center min-h-screen bg-background p-4">
         <ImageIcon className="h-12 w-12 text-muted-foreground mb-4" />
@@ -433,13 +440,14 @@ export default function ProductOptionsPage() {
       cstmzrColors: productOptions.cstmzrColors,
       cstmzrSizes: productOptions.cstmzrSizes,
       boundaryBoxes: productOptions.boundaryBoxes,
+      cstmzrSelectedVariationIds: selectedVariationIdsForCstmzr, // Save selected variation IDs
     };
 
     try {
       localStorage.setItem(localStorageKey, JSON.stringify(dataToSave));
       toast({
         title: "CSTMZR Options Saved",
-        description: "Custom colors, sizes, and boundary areas have been saved locally for this product.",
+        description: "Custom colors, sizes, areas, and variation selections have been saved locally.",
       });
     } catch (e) {
       console.error("Error saving to localStorage:", e);
@@ -540,6 +548,28 @@ export default function ProductOptionsPage() {
     });
   };
 
+  const handleSelectAllVariations = (checked: boolean) => {
+    if (checked) {
+      setSelectedVariationIdsForCstmzr(variations.map(v => v.id.toString()));
+    } else {
+      setSelectedVariationIdsForCstmzr([]);
+    }
+  };
+
+  const handleVariationSelectionChange = (variationId: string, checked: boolean) => {
+    setSelectedVariationIdsForCstmzr(prevSelectedIds => {
+      if (checked) {
+        return [...prevSelectedIds, variationId];
+      } else {
+        return prevSelectedIds.filter(id => id !== variationId);
+      }
+    });
+  };
+
+  const allVariationsSelected = variations.length > 0 && selectedVariationIdsForCstmzr.length === variations.length;
+  const someVariationsSelected = selectedVariationIdsForCstmzr.length > 0 && selectedVariationIdsForCstmzr.length < variations.length;
+
+
   return (
     <div className="container mx-auto p-4 md:p-6 lg:p-8 bg-background min-h-screen">
       <div className="mb-6 flex justify-between items-center">
@@ -561,18 +591,16 @@ export default function ProductOptionsPage() {
       <p className="text-muted-foreground mb-8">
         Editing options for: <span className="font-semibold text-foreground">{productOptions.name}</span> (ID: {productOptions.id})
       </p>
-      {/* Display non-critical errors (e.g., variation fetch error) if productOptions is available */}
        {error && productOptions && (
-        <Alert variant="destructive" className="mb-6">
+        <ShadCnAlert variant="destructive" className="mb-6">
           <AlertTriangle className="h-4 w-4" />
-          <AlertTitle>Product Data Error</AlertTitle>
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
+          <ShadCnAlertTitle>Product Data Error</ShadCnAlertTitle>
+          <ShadCnAlertDescription>{error}</ShadCnAlertDescription>
+        </ShadCnAlert>
       )}
 
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-        {/* Left Column: Image & Boundary Boxes */}
         <div className="md:col-span-1 space-y-6">
            <Card className="shadow-md">
             <CardHeader>
@@ -755,7 +783,6 @@ export default function ProductOptionsPage() {
           </Card>
         </div>
 
-        {/* Right Column: Product Info, Variations, Colors, Sizes */}
         <div className="md:col-span-2 space-y-6">
           <Card className="shadow-md">
             <CardHeader>
@@ -810,15 +837,20 @@ export default function ProductOptionsPage() {
             </CardContent>
           </Card>
 
-          {/* Product Variations Card */}
           {productOptions.type === 'variable' && (
             <Card className="shadow-md">
               <CardHeader>
-                <CardTitle className="font-headline text-lg">Product Variations</CardTitle>
-                <CardDescription>Available variations from your WooCommerce store.</CardDescription>
+                <div className="flex justify-between items-center">
+                  <div>
+                    <CardTitle className="font-headline text-lg">Product Variations</CardTitle>
+                    <CardDescription>
+                      {variations.length > 0 ? `Select variations for customization. (Total: ${variations.length})` : 'Available variations from your WooCommerce store.'}
+                    </CardDescription>
+                  </div>
+                </div>
               </CardHeader>
               <CardContent>
-                {isLoadingVariations || (isRefreshing && isLoading) ? (
+                 {isLoadingVariations || (isRefreshing && isLoading) ? (
                   <div className="flex items-center justify-center py-6">
                     <Loader2 className="h-6 w-6 animate-spin text-primary" />
                     <p className="ml-2 text-muted-foreground">Loading variations...</p>
@@ -830,10 +862,33 @@ export default function ProductOptionsPage() {
                     <p className="text-sm text-muted-foreground mt-1">{variationsError}</p>
                   </div>
                 ) : variations.length > 0 ? (
-                  <div className="space-y-3 max-h-96 overflow-y-auto pr-2">
-                    {variations.map((variation) => (
-                      <div key={variation.id} className="p-3 border rounded-md bg-muted/30">
-                        <div className="flex items-start gap-3">
+                  <>
+                    <div className="mb-4 flex items-center space-x-2 p-2 border-b">
+                      <Checkbox
+                        id="selectAllVariations"
+                        checked={allVariationsSelected}
+                        indeterminate={someVariationsSelected}
+                        onCheckedChange={(checked) => handleSelectAllVariations(checked as boolean)}
+                      />
+                      <Label htmlFor="selectAllVariations" className="text-sm font-medium">
+                        {allVariationsSelected ? "Deselect All" : "Select All Variations for Customizer"}
+                      </Label>
+                    </div>
+                    <div className="space-y-3 max-h-96 overflow-y-auto pr-2">
+                      {variations.map((variation) => (
+                        <div 
+                          key={variation.id} 
+                          className={cn(
+                            "p-3 border rounded-md flex items-start gap-3 transition-colors",
+                            selectedVariationIdsForCstmzr.includes(variation.id.toString()) ? "bg-primary/10 border-primary" : "bg-muted/30 hover:bg-muted/50"
+                          )}
+                        >
+                          <Checkbox
+                            id={`variation-${variation.id}`}
+                            checked={selectedVariationIdsForCstmzr.includes(variation.id.toString())}
+                            onCheckedChange={(checked) => handleVariationSelectionChange(variation.id.toString(), checked as boolean)}
+                            className="mt-1 flex-shrink-0"
+                          />
                           <div className="relative h-16 w-16 rounded-md overflow-hidden border bg-card flex-shrink-0">
                             <NextImage 
                               src={variation.image?.src || productOptions.imageUrl || 'https://placehold.co/100x100.png'} 
@@ -857,6 +912,7 @@ export default function ProductOptionsPage() {
                           <Badge 
                             variant={variation.stock_status === 'instock' ? 'default' : (variation.stock_status === 'onbackorder' ? 'secondary' : 'destructive')}
                             className={cn(
+                              "self-start",
                               variation.stock_status === 'instock' && 'bg-green-500/10 text-green-700 border-green-500/30',
                               variation.stock_status === 'onbackorder' && 'bg-yellow-500/10 text-yellow-700 border-yellow-500/30',
                               variation.stock_status === 'outofstock' && 'bg-red-500/10 text-red-700 border-red-500/30'
@@ -866,9 +922,9 @@ export default function ProductOptionsPage() {
                             {variation.stock_quantity !== null && ` (${variation.stock_quantity})`}
                           </Badge>
                         </div>
-                      </div>
-                    ))}
-                  </div>
+                      ))}
+                    </div>
+                  </>
                 ) : (
                   <div className="text-center py-6">
                     <LayersIcon className="mx-auto h-10 w-10 text-muted-foreground" />
