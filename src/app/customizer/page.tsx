@@ -5,7 +5,7 @@ import { useSearchParams } from 'next/navigation';
 import AppHeader from '@/components/layout/AppHeader';
 import DesignCanvas from '@/components/customizer/DesignCanvas';
 import RightPanel from '@/components/customizer/RightPanel';
-import { UploadProvider } from "@/contexts/UploadContext";
+import { UploadProvider, useUploads } from "@/contexts/UploadContext"; // Import useUploads here
 import { useEffect, useState, useCallback } from 'react';
 import { fetchWooCommerceProductById } from '@/app/actions/woocommerceActions';
 import { useAuth } from '@/contexts/AuthContext';
@@ -18,7 +18,6 @@ import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import CustomizerIconNav, { type CustomizerTool } from '@/components/customizer/CustomizerIconNav';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { useUploads } from '@/contexts/UploadContext'; // Added for Add to Cart functionality
 
 // Panel Content Components
 import UploadArea from '@/components/customizer/UploadArea';
@@ -83,13 +82,13 @@ const toolItems: CustomizerTool[] = [
   { id: "premium-designs", label: "Premium Designs", icon: GemIcon },
 ];
 
-
-export default function CustomizerPage() {
+// Inner component that uses the context
+function CustomizerLayoutAndLogic() {
   const searchParams = useSearchParams();
   const productId = searchParams.get('productId');
   const { user, isLoading: authLoading } = useAuth();
   const { toast } = useToast();
-  const { canvasImages, canvasTexts, canvasShapes } = useUploads();
+  const { canvasImages, canvasTexts, canvasShapes } = useUploads(); // This will now work
 
   const [productDetails, setProductDetails] = useState<ProductForCustomizer | null>(null);
   const [activeViewId, setActiveViewId] = useState<string | null>(null);
@@ -190,7 +189,7 @@ export default function CustomizerPage() {
   };
 
   const renderActiveToolPanelContent = () => {
-     if (!activeViewId && (activeTool !== "layers")) { // Layers panel can show without an active view (global layers for all views could be a concept)
+     if (!activeViewId && (activeTool !== "layers")) {
        return (
          <div className="p-6 text-center text-muted-foreground h-full flex flex-col items-center justify-center flex-1">
            <SettingsIcon className="w-12 h-12 mb-4 text-muted-foreground/50" />
@@ -234,22 +233,18 @@ export default function CustomizerPage() {
         description: "Sign in to save your design and add to cart.",
         variant: "info",
       });
-      // Optionally redirect to sign-in or show sign-in modal
       return;
     }
-
 
     const currentProductIdFromParams = searchParams.get('productId'); 
 
     const designData = {
-      images: canvasImages.filter(item => item.viewId === activeViewId), // Send only items for current view for now, or all if needed
+      images: canvasImages.filter(item => item.viewId === activeViewId), 
       texts: canvasTexts.filter(item => item.viewId === activeViewId),
       shapes: canvasShapes.filter(item => item.viewId === activeViewId),
       productId: currentProductIdFromParams, 
       userId: user?.id, 
-      activeViewId: activeViewId, // Include active view context
-      // Potentially include all views' data if WordPress needs it:
-      // allViewsData: { images: canvasImages, texts: canvasTexts, shapes: canvasShapes }
+      activeViewId: activeViewId, 
     };
 
     let targetOrigin = '*'; 
@@ -263,8 +258,6 @@ export default function CustomizerPage() {
         title: "Design Sent!",
         description: "Your design details have been sent. Proceeding to cart...",
       });
-      // Here, you might also trigger navigation or further actions on the parent page
-      // For example, window.parent.postMessage({ cstmzrAction: 'addToCart', product: productDetails, design: designData }, targetOrigin);
     } else {
        toast({
         title: "Add to Cart Clicked",
@@ -308,7 +301,6 @@ export default function CustomizerPage() {
   }
 
   return (
-    <UploadProvider>
       <div className="flex flex-col min-h-svh w-full bg-muted/20">
         <AppHeader />
         <div className="flex flex-1 overflow-hidden">
@@ -381,13 +373,20 @@ export default function CustomizerPage() {
           <RightPanel /> 
         </div>
         <footer className="h-20 border-t bg-card shadow-md p-4 flex items-center justify-between flex-shrink-0">
-            <div className="text-lg font-semibold text-foreground">Total: $0.00</div> {/* Placeholder */}
+            <div className="text-lg font-semibold text-foreground">Total: $0.00</div>
             <Button size="lg" className="bg-primary text-primary-foreground hover:bg-primary/90" onClick={handleAddToCart}>
               <ShoppingCart className="mr-2 h-5 w-5" /> Add to Cart
             </Button>
         </footer>
       </div>
-    </UploadProvider>
   );
 }
 
+// Main page component that provides the context
+export default function CustomizerPage() {
+  return (
+    <UploadProvider>
+      <CustomizerLayoutAndLogic />
+    </UploadProvider>
+  );
+}
