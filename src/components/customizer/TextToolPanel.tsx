@@ -160,7 +160,7 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
           <AccordionTrigger className="font-medium text-sm py-3 px-1">
             <Pilcrow className="mr-2 h-4 w-4" /> Font Settings
           </AccordionTrigger>
-          <AccordionContent className="space-y-6 pt-3 pb-1 px-1">
+          <AccordionContent className="space-y-8 pt-3 pb-1 px-1">
             <div>
               <Label htmlFor="fontFamilySelect" className="text-xs mb-1 block">Font Family</Label>
               <Select
@@ -281,12 +281,16 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
                 type="color"
                 id="textColorSwatch"
                 className="h-8 w-10 p-0.5 border-none rounded" 
-                value={currentStyle.color || '#333333'}
+                value={localTextColorHex}
                 onPointerDownCapture={startInteractiveOperation}
                 onPointerUpCapture={endInteractiveOperation}
                 onChange={(e) => {
-                    handleStyleChange('color', e.target.value);
-                    setLocalTextColorHex(e.target.value);
+                    setLocalTextColorHex(e.target.value); // Keep local hex updated
+                    if (selectedCanvasTextId && selectedText) { // Only update context if item selected
+                         updateCanvasText(selectedCanvasTextId, { color: e.target.value });
+                    } else { // Update currentStyle for new items
+                        setCurrentStyle(prev => ({ ...prev, color: e.target.value }));
+                    }
                 }}
               />
               <Input
@@ -294,7 +298,15 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
                 className="h-8 text-xs flex-grow max-w-[100px]" 
                 value={localTextColorHex}
                 onChange={(e) => setLocalTextColorHex(e.target.value)}
-                onBlur={(e) => handleStyleChange('color', sanitizeHex(e.target.value))}
+                onBlur={(e) => {
+                    const finalColor = sanitizeHex(e.target.value);
+                    setLocalTextColorHex(finalColor);
+                    if (selectedCanvasTextId && selectedText) {
+                        updateCanvasText(selectedCanvasTextId, { color: finalColor });
+                    } else {
+                        setCurrentStyle(prev => ({ ...prev, color: finalColor }));
+                    }
+                }}
                 maxLength={7}
               />
             </div>
@@ -323,19 +335,31 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
                             type="color" 
                             id="outlineColorSwatch" 
                             className="h-8 w-10 p-0.5 border-none rounded" 
-                            value={currentStyle.outlineColor || '#000000'} 
+                            value={localOutlineColorHex} 
                             onPointerDownCapture={startInteractiveOperation}
                             onPointerUpCapture={endInteractiveOperation}
                             onChange={(e) => {
-                                handleStyleChange('outlineColor', e.target.value);
                                 setLocalOutlineColorHex(e.target.value);
+                                if (selectedCanvasTextId && selectedText) {
+                                    updateCanvasText(selectedCanvasTextId, { outlineColor: e.target.value });
+                                } else {
+                                    setCurrentStyle(prev => ({ ...prev, outlineColor: e.target.value }));
+                                }
                             }}/>
                         <Input 
                             id="outlineColorHex" 
                             className="h-8 text-xs flex-grow max-w-[100px]" 
                             value={localOutlineColorHex} 
                             onChange={(e) => setLocalOutlineColorHex(e.target.value)}
-                            onBlur={(e) => handleStyleChange('outlineColor', sanitizeHex(e.target.value))}
+                            onBlur={(e) => {
+                                const finalColor = sanitizeHex(e.target.value);
+                                setLocalOutlineColorHex(finalColor);
+                                if (selectedCanvasTextId && selectedText) {
+                                    updateCanvasText(selectedCanvasTextId, { outlineColor: finalColor });
+                                } else {
+                                     setCurrentStyle(prev => ({ ...prev, outlineColor: finalColor }));
+                                }
+                            }}
                             maxLength={7}/>
                       </div>
                       <div>
@@ -380,19 +404,31 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
                             type="color" 
                             id="shadowColorSwatch" 
                             className="h-8 w-10 p-0.5 border-none rounded" 
-                            value={currentStyle.shadowColor || '#000000'} 
+                            value={localShadowColorHex} 
                             onPointerDownCapture={startInteractiveOperation}
                             onPointerUpCapture={endInteractiveOperation}
                             onChange={(e) => {
-                                handleStyleChange('shadowColor', e.target.value);
                                 setLocalShadowColorHex(e.target.value);
+                                if (selectedCanvasTextId && selectedText) {
+                                    updateCanvasText(selectedCanvasTextId, { shadowColor: e.target.value });
+                                } else {
+                                     setCurrentStyle(prev => ({ ...prev, shadowColor: e.target.value }));
+                                }
                             }}/>
                         <Input 
                             id="shadowColorHex" 
                             className="h-8 text-xs flex-grow max-w-[100px]" 
                             value={localShadowColorHex} 
                             onChange={(e) => setLocalShadowColorHex(e.target.value)}
-                            onBlur={(e) => handleStyleChange('shadowColor', sanitizeHex(e.target.value))}
+                            onBlur={(e) => {
+                                const finalColor = sanitizeHex(e.target.value);
+                                setLocalShadowColorHex(finalColor);
+                                if (selectedCanvasTextId && selectedText) {
+                                    updateCanvasText(selectedCanvasTextId, { shadowColor: finalColor });
+                                } else {
+                                     setCurrentStyle(prev => ({ ...prev, shadowColor: finalColor }));
+                                }
+                            }}
                             maxLength={7}/>
                       </div>
                       <div className="grid grid-cols-2 gap-3">
