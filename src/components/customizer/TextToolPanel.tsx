@@ -22,10 +22,11 @@ import {
   AccordionTrigger,
 } from '@/components/ui/accordion';
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
-import { Bold, Italic, Underline, CaseUpper, CaseLower, Type, Palette, Blend, PenLine, Pilcrow } from 'lucide-react';
+import { Bold, Italic, Underline, CaseUpper, CaseLower, Type, Palette, Blend, PenLine, Pilcrow, TextCursorInput, Pipette, Settings2 } from 'lucide-react';
 import { useUploads, type CanvasText } from '@/contexts/UploadContext';
 import { googleFonts } from '@/lib/google-fonts';
 import { useToast } from '@/hooks/use-toast';
+import { Separator } from '@/components/ui/separator';
 
 const sanitizeHex = (hex: string): string => {
   let sanitized = hex.replace(/[^0-9a-fA-F]/g, '');
@@ -154,329 +155,336 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
   };
 
   const renderControls = () => (
-    <div className="space-y-4 py-2">
-      <Accordion type="multiple" defaultValue={['font-settings', 'color-settings']} className="w-full">
-        <AccordionItem value="font-settings">
-          <AccordionTrigger className="font-medium text-sm py-3 px-1">
-            <Pilcrow className="mr-2 h-4 w-4" /> Font Settings
-          </AccordionTrigger>
-          <AccordionContent className="space-y-8 pt-3 pb-1 px-1">
-            <div>
-              <Label htmlFor="fontFamilySelect" className="text-xs mb-1 block">Font Family</Label>
-              <Select
-                value={currentStyle.fontFamily || 'Arial, sans-serif'}
-                onValueChange={(value) => handleStyleChange('fontFamily', value)}
-              >
-                <SelectTrigger id="fontFamilySelect">
-                  <SelectValue placeholder="Select font" />
-                </SelectTrigger>
-                <SelectContent>
-                  {googleFonts.map((font) => (
-                    <SelectItem key={font.name} value={font.family} style={{ fontFamily: font.family }}>
-                      {font.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+    <div className="space-y-6 py-2">
+      
+      {/* Font Basics Section */}
+      <section className="space-y-4">
+        <h3 className="text-sm font-medium text-muted-foreground flex items-center"><Pilcrow className="mr-2 h-4 w-4 text-primary" />Font</h3>
+        <div>
+          <Label htmlFor="fontFamilySelect" className="text-xs mb-1 block">Font Family</Label>
+          <Select
+            value={currentStyle.fontFamily || 'Arial, sans-serif'}
+            onValueChange={(value) => handleStyleChange('fontFamily', value)}
+          >
+            <SelectTrigger id="fontFamilySelect" className="h-9">
+              <SelectValue placeholder="Select font" />
+            </SelectTrigger>
+            <SelectContent>
+              {googleFonts.map((font) => (
+                <SelectItem key={font.name} value={font.family} style={{ fontFamily: font.family }}>
+                  {font.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
 
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <Label htmlFor="textTransform" className="text-xs mb-1 block">Case</Label>
-                <Select
-                  value={currentStyle.textTransform || 'none'}
-                  onValueChange={(value: 'none' | 'uppercase' | 'lowercase') => handleStyleChange('textTransform', value)}
-                >
-                  <SelectTrigger id="textTransform" className="h-9"><SelectValue/></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">Normal</SelectItem>
-                    <SelectItem value="uppercase"><CaseUpper className="inline h-4 w-4 mr-1"/>Uppercase</SelectItem>
-                    <SelectItem value="lowercase"><CaseLower className="inline h-4 w-4 mr-1"/>Lowercase</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                 <Label className="text-xs mb-1 block">Style</Label>
-                 <ToggleGroup 
-                    type="multiple" 
-                    variant="outline" 
-                    className="w-full grid grid-cols-3 gap-px" 
-                    value={
-                        [
-                         currentStyle.fontWeight === 'bold' ? 'bold' : undefined,
-                         currentStyle.fontStyle === 'italic' ? 'italic' : undefined,
-                         currentStyle.textDecoration === 'underline' ? 'underline' : undefined,
-                        ].filter(Boolean) as string[]
-                    }
-                    onValueChange={(styles) => {
-                        handleBulkStyleChange({
-                            fontWeight: styles.includes('bold') ? 'bold' : 'normal',
-                            fontStyle: styles.includes('italic') ? 'italic' : 'normal',
-                            textDecoration: styles.includes('underline') ? 'underline' : 'none',
-                        });
-                    }}
-                 >
-                    <ToggleGroupItem value="bold" aria-label="Toggle bold" className="h-9 w-full px-1 rounded-l-md rounded-r-none border-r-0"><Bold size={18}/></ToggleGroupItem>
-                    <ToggleGroupItem value="italic" aria-label="Toggle italic" className="h-9 w-full px-1 rounded-none border-r-0"><Italic size={18} /></ToggleGroupItem>
-                    <ToggleGroupItem value="underline" aria-label="Toggle underline" className="h-9 w-full px-1 rounded-r-md rounded-l-none"><Underline size={18}/></ToggleGroupItem>
-                </ToggleGroup>
-              </div>
-            </div>
-            
-            <div>
-              <Label htmlFor="fontSizeSlider" className="text-xs mb-1 block">Size: {currentStyle.fontSize?.toFixed(0) || 24}px</Label>
-              <Slider
-                id="fontSizeSlider"
-                min={8} max={128} step={1}
-                defaultValue={[24]}
-                value={[currentStyle.fontSize || 24]}
-                onValueChange={([value]) => handleStyleChange('fontSize', value)}
-                onPointerDownCapture={startInteractiveOperation}
-                onPointerUpCapture={endInteractiveOperation}
-              />
-            </div>
-            <div>
-              <Label htmlFor="lineHeightSlider" className="text-xs mb-1 block">Line Height: {(currentStyle.lineHeight || 1.2).toFixed(1)}</Label>
-              <Slider
-                id="lineHeightSlider"
-                min={0.5} max={3} step={0.1}
-                defaultValue={[1.2]}
-                value={[currentStyle.lineHeight || 1.2]}
-                onValueChange={([value]) => handleStyleChange('lineHeight', value)}
-                onPointerDownCapture={startInteractiveOperation}
-                onPointerUpCapture={endInteractiveOperation}
-              />
-            </div>
-            <div>
-              <Label htmlFor="letterSpacingSlider" className="text-xs mb-1 block">Letter Spacing: {currentStyle.letterSpacing?.toFixed(1) || 0}px</Label>
-              <Slider
-                id="letterSpacingSlider"
-                min={-5} max={20} step={0.5}
-                defaultValue={[0]}
-                value={[currentStyle.letterSpacing || 0]}
-                onValueChange={([value]) => handleStyleChange('letterSpacing', value)}
-                onPointerDownCapture={startInteractiveOperation}
-                onPointerUpCapture={endInteractiveOperation}
-              />
-            </div>
-            <div className="flex items-center space-x-2 pt-1">
-              <Switch
-                id="archTextSwitch"
-                checked={currentStyle.isArchText || false}
-                onCheckedChange={(checked) => handleStyleChange('isArchText', checked)}
-              />
-              <Label htmlFor="archTextSwitch" className="text-xs">Arch Text <span className="text-muted-foreground/80 text-[10px]">(Visual Only)</span></Label>
-            </div>
-          </AccordionContent>
-        </AccordionItem>
-
-        <AccordionItem value="color-settings">
-          <AccordionTrigger className="font-medium text-sm py-3 px-1">
-            <Palette className="mr-2 h-4 w-4" /> Color Settings
-          </AccordionTrigger>
-          <AccordionContent className="space-y-4 pt-3 pb-1 px-1">
-            <div className="flex items-center space-x-2">
-              <Label htmlFor="textColorSwatch" className="text-xs shrink-0">Text</Label>
-              <Input
-                type="color"
-                id="textColorSwatch"
-                className="h-8 w-10 p-0.5 border-none rounded" 
-                value={localTextColorHex}
-                onPointerDownCapture={startInteractiveOperation}
-                onPointerUpCapture={endInteractiveOperation}
-                onChange={(e) => {
-                    setLocalTextColorHex(e.target.value); // Keep local hex updated
-                    if (selectedCanvasTextId && selectedText) { // Only update context if item selected
-                         updateCanvasText(selectedCanvasTextId, { color: e.target.value });
-                    } else { // Update currentStyle for new items
-                        setCurrentStyle(prev => ({ ...prev, color: e.target.value }));
-                    }
+        <div>
+          <Label htmlFor="fontSizeSlider" className="text-xs mb-1 block">Size: {currentStyle.fontSize?.toFixed(0) || 24}px</Label>
+          <Slider
+            id="fontSizeSlider"
+            min={8} max={128} step={1}
+            defaultValue={[24]}
+            value={[currentStyle.fontSize || 24]}
+            onValueChange={([value]) => handleStyleChange('fontSize', value)}
+            onPointerDownCapture={startInteractiveOperation}
+            onPointerUpCapture={endInteractiveOperation}
+          />
+        </div>
+        
+        <div className="grid grid-cols-2 gap-x-4 gap-y-3">
+          <div>
+             <Label className="text-xs mb-1 block">Style</Label>
+             <ToggleGroup 
+                type="multiple" 
+                variant="outline" 
+                className="w-full grid grid-cols-3 gap-px" 
+                value={
+                    [
+                     currentStyle.fontWeight === 'bold' ? 'bold' : undefined,
+                     currentStyle.fontStyle === 'italic' ? 'italic' : undefined,
+                     currentStyle.textDecoration === 'underline' ? 'underline' : undefined,
+                    ].filter(Boolean) as string[]
+                }
+                onValueChange={(styles) => {
+                    handleBulkStyleChange({
+                        fontWeight: styles.includes('bold') ? 'bold' : 'normal',
+                        fontStyle: styles.includes('italic') ? 'italic' : 'normal',
+                        textDecoration: styles.includes('underline') ? 'underline' : 'none',
+                    });
                 }}
-              />
-              <Input
-                id="textColorHex"
-                className="h-8 text-xs flex-grow max-w-[100px]" 
-                value={localTextColorHex}
-                onChange={(e) => setLocalTextColorHex(e.target.value)}
-                onBlur={(e) => {
-                    const finalColor = sanitizeHex(e.target.value);
-                    setLocalTextColorHex(finalColor);
-                    if (selectedCanvasTextId && selectedText) {
-                        updateCanvasText(selectedCanvasTextId, { color: finalColor });
-                    } else {
-                        setCurrentStyle(prev => ({ ...prev, color: finalColor }));
-                    }
-                }}
-                maxLength={7}
-              />
-            </div>
+             >
+                <ToggleGroupItem value="bold" aria-label="Toggle bold" className="h-9 w-full px-1 rounded-l-md rounded-r-none border-r-0"><Bold size={18}/></ToggleGroupItem>
+                <ToggleGroupItem value="italic" aria-label="Toggle italic" className="h-9 w-full px-1 rounded-none border-r-0"><Italic size={18} /></ToggleGroupItem>
+                <ToggleGroupItem value="underline" aria-label="Toggle underline" className="h-9 w-full px-1 rounded-r-md rounded-l-none"><Underline size={18}/></ToggleGroupItem>
+            </ToggleGroup>
+          </div>
+          <div>
+            <Label htmlFor="textTransform" className="text-xs mb-1 block">Case</Label>
+            <Select
+              value={currentStyle.textTransform || 'none'}
+              onValueChange={(value: 'none' | 'uppercase' | 'lowercase') => handleStyleChange('textTransform', value)}
+            >
+              <SelectTrigger id="textTransform" className="h-9"><SelectValue/></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">Normal</SelectItem>
+                <SelectItem value="uppercase"><CaseUpper className="inline h-4 w-4 mr-1"/>Uppercase</SelectItem>
+                <SelectItem value="lowercase"><CaseLower className="inline h-4 w-4 mr-1"/>Lowercase</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+      </section>
 
-            <Accordion type="single" collapsible className="w-full text-xs border-t pt-2 mt-3">
-              <AccordionItem value="text-outline" className="border-b-0">
-                <AccordionTrigger className="py-2 text-xs hover:no-underline font-normal">
-                  <div className="flex items-center w-full">
-                    <PenLine className="mr-2 h-3 w-3" />
-                    Text Outline
-                    <Switch
-                        id="outlineEnabledSwitch"
-                        className="ml-auto scale-[0.7] origin-right" 
-                        checked={currentStyle.outlineEnabled || false}
-                        onCheckedChange={(checked) => handleStyleChange('outlineEnabled', checked)}
-                        onClick={(e) => e.stopPropagation()} 
+      <Separator />
+
+      {/* Spacing Section */}
+      <section className="space-y-4">
+        <h3 className="text-sm font-medium text-muted-foreground flex items-center"><TextCursorInput className="mr-2 h-4 w-4 text-primary" />Spacing</h3>
+        <div>
+          <Label htmlFor="lineHeightSlider" className="text-xs mb-1 block">Line Height: {(currentStyle.lineHeight || 1.2).toFixed(1)}</Label>
+          <Slider
+            id="lineHeightSlider"
+            min={0.5} max={3} step={0.1}
+            defaultValue={[1.2]}
+            value={[currentStyle.lineHeight || 1.2]}
+            onValueChange={([value]) => handleStyleChange('lineHeight', value)}
+            onPointerDownCapture={startInteractiveOperation}
+            onPointerUpCapture={endInteractiveOperation}
+          />
+        </div>
+        <div>
+          <Label htmlFor="letterSpacingSlider" className="text-xs mb-1 block">Letter Spacing: {currentStyle.letterSpacing?.toFixed(1) || 0}px</Label>
+          <Slider
+            id="letterSpacingSlider"
+            min={-5} max={20} step={0.5}
+            defaultValue={[0]}
+            value={[currentStyle.letterSpacing || 0]}
+            onValueChange={([value]) => handleStyleChange('letterSpacing', value)}
+            onPointerDownCapture={startInteractiveOperation}
+            onPointerUpCapture={endInteractiveOperation}
+          />
+        </div>
+      </section>
+      
+      <Separator />
+
+      {/* Color Section */}
+      <section className="space-y-4">
+        <h3 className="text-sm font-medium text-muted-foreground flex items-center"><Pipette className="mr-2 h-4 w-4 text-primary" />Color</h3>
+        <div className="flex items-center space-x-2">
+          <Label htmlFor="textColorSwatch" className="text-xs shrink-0">Fill Color</Label>
+          <Input
+            type="color"
+            id="textColorSwatch"
+            className="h-8 w-10 p-0.5 border-none rounded" 
+            value={localTextColorHex}
+            onPointerDownCapture={startInteractiveOperation}
+            onPointerUpCapture={endInteractiveOperation}
+            onChange={(e) => {
+                setLocalTextColorHex(e.target.value); 
+                if (selectedCanvasTextId && selectedText) { 
+                     updateCanvasText(selectedCanvasTextId, { color: e.target.value });
+                } else { 
+                    setCurrentStyle(prev => ({ ...prev, color: e.target.value }));
+                }
+            }}
+          />
+          <Input
+            id="textColorHex"
+            className="h-8 text-xs flex-grow max-w-[100px]" 
+            value={localTextColorHex}
+            onChange={(e) => setLocalTextColorHex(e.target.value)}
+            onBlur={(e) => {
+                const finalColor = sanitizeHex(e.target.value);
+                setLocalTextColorHex(finalColor);
+                if (selectedCanvasTextId && selectedText) {
+                    updateCanvasText(selectedCanvasTextId, { color: finalColor });
+                } else {
+                    setCurrentStyle(prev => ({ ...prev, color: finalColor }));
+                }
+            }}
+            maxLength={7}
+          />
+        </div>
+      </section>
+
+      <Separator />
+
+      {/* Effects Section */}
+      <section className="space-y-1">
+        <h3 className="text-sm font-medium text-muted-foreground flex items-center mb-2"><Settings2 className="mr-2 h-4 w-4 text-primary" />Effects</h3>
+        <Accordion type="multiple" className="w-full -mx-1">
+          <AccordionItem value="text-outline" className="border-b-0">
+            <AccordionTrigger className="py-2 px-1 text-xs hover:no-underline font-normal">
+              <div className="flex items-center w-full">
+                <PenLine className="mr-2 h-3 w-3" />
+                Text Outline
+                <Switch
+                    id="outlineEnabledSwitch"
+                    className="ml-auto scale-[0.7] origin-right" 
+                    checked={currentStyle.outlineEnabled || false}
+                    onCheckedChange={(checked) => handleStyleChange('outlineEnabled', checked)}
+                    onClick={(e) => e.stopPropagation()} 
+                />
+              </div>
+            </AccordionTrigger>
+            <AccordionContent className="space-y-3 pt-2 pb-1 pl-3 pr-1">
+              {currentStyle.outlineEnabled && (
+                <>
+                  <div className="flex items-center space-x-2">
+                    <Label htmlFor="outlineColorSwatch" className="text-xs shrink-0">Color</Label>
+                    <Input 
+                        type="color" 
+                        id="outlineColorSwatch" 
+                        className="h-8 w-10 p-0.5 border-none rounded" 
+                        value={localOutlineColorHex} 
+                        onPointerDownCapture={startInteractiveOperation}
+                        onPointerUpCapture={endInteractiveOperation}
+                        onChange={(e) => {
+                            setLocalOutlineColorHex(e.target.value);
+                            if (selectedCanvasTextId && selectedText) {
+                                updateCanvasText(selectedCanvasTextId, { outlineColor: e.target.value });
+                            } else {
+                                setCurrentStyle(prev => ({ ...prev, outlineColor: e.target.value }));
+                            }
+                        }}/>
+                    <Input 
+                        id="outlineColorHex" 
+                        className="h-8 text-xs flex-grow max-w-[100px]" 
+                        value={localOutlineColorHex} 
+                        onChange={(e) => setLocalOutlineColorHex(e.target.value)}
+                        onBlur={(e) => {
+                            const finalColor = sanitizeHex(e.target.value);
+                            setLocalOutlineColorHex(finalColor);
+                            if (selectedCanvasTextId && selectedText) {
+                                updateCanvasText(selectedCanvasTextId, { outlineColor: finalColor });
+                            } else {
+                                 setCurrentStyle(prev => ({ ...prev, outlineColor: finalColor }));
+                            }
+                        }}
+                        maxLength={7}/>
+                  </div>
+                  <div>
+                    <Label htmlFor="outlineWidthSlider" className="text-xs mb-1 block">Width: {currentStyle.outlineWidth?.toFixed(1) || 0}px</Label>
+                    <Slider 
+                        id="outlineWidthSlider" 
+                        min={0} max={10} step={0.5} 
+                        defaultValue={[1]} 
+                        value={[currentStyle.outlineWidth || 0]} 
+                        onValueChange={([value]) => handleStyleChange('outlineWidth', value)}
+                        onPointerDownCapture={startInteractiveOperation}
+                        onPointerUpCapture={endInteractiveOperation}
                     />
                   </div>
-                </AccordionTrigger>
-                <AccordionContent className="space-y-3 pt-2 pb-1 pl-1">
-                  {currentStyle.outlineEnabled && (
-                    <>
-                      <div className="flex items-center space-x-2">
-                        <Label htmlFor="outlineColorSwatch" className="text-xs shrink-0">Color</Label>
-                        <Input 
-                            type="color" 
-                            id="outlineColorSwatch" 
-                            className="h-8 w-10 p-0.5 border-none rounded" 
-                            value={localOutlineColorHex} 
-                            onPointerDownCapture={startInteractiveOperation}
-                            onPointerUpCapture={endInteractiveOperation}
-                            onChange={(e) => {
-                                setLocalOutlineColorHex(e.target.value);
-                                if (selectedCanvasTextId && selectedText) {
-                                    updateCanvasText(selectedCanvasTextId, { outlineColor: e.target.value });
-                                } else {
-                                    setCurrentStyle(prev => ({ ...prev, outlineColor: e.target.value }));
-                                }
-                            }}/>
-                        <Input 
-                            id="outlineColorHex" 
-                            className="h-8 text-xs flex-grow max-w-[100px]" 
-                            value={localOutlineColorHex} 
-                            onChange={(e) => setLocalOutlineColorHex(e.target.value)}
-                            onBlur={(e) => {
-                                const finalColor = sanitizeHex(e.target.value);
-                                setLocalOutlineColorHex(finalColor);
-                                if (selectedCanvasTextId && selectedText) {
-                                    updateCanvasText(selectedCanvasTextId, { outlineColor: finalColor });
-                                } else {
-                                     setCurrentStyle(prev => ({ ...prev, outlineColor: finalColor }));
-                                }
-                            }}
-                            maxLength={7}/>
-                      </div>
-                      <div>
-                        <Label htmlFor="outlineWidthSlider" className="text-xs mb-1 block">Width: {currentStyle.outlineWidth?.toFixed(1) || 0}px</Label>
+                </>
+              )}
+            </AccordionContent>
+          </AccordionItem>
+        
+          <AccordionItem value="text-shadow" className="border-b-0">
+            <AccordionTrigger className="py-2 px-1 text-xs hover:no-underline font-normal">
+                <div className="flex items-center w-full">
+                    <Blend className="mr-2 h-3 w-3" />
+                    Text Shadow
+                    <Switch
+                        id="shadowEnabledSwitch"
+                        className="ml-auto scale-[0.7] origin-right"
+                        checked={currentStyle.shadowEnabled || false}
+                        onCheckedChange={(checked) => handleStyleChange('shadowEnabled', checked)}
+                        onClick={(e) => e.stopPropagation()}
+                    />
+                </div>
+            </AccordionTrigger>
+            <AccordionContent className="space-y-3 pt-2 pb-1 pl-3 pr-1">
+              {currentStyle.shadowEnabled && (
+                <>
+                  <div className="flex items-center space-x-2">
+                    <Label htmlFor="shadowColorSwatch" className="text-xs shrink-0">Color</Label>
+                    <Input 
+                        type="color" 
+                        id="shadowColorSwatch" 
+                        className="h-8 w-10 p-0.5 border-none rounded" 
+                        value={localShadowColorHex} 
+                        onPointerDownCapture={startInteractiveOperation}
+                        onPointerUpCapture={endInteractiveOperation}
+                        onChange={(e) => {
+                            setLocalShadowColorHex(e.target.value);
+                            if (selectedCanvasTextId && selectedText) {
+                                updateCanvasText(selectedCanvasTextId, { shadowColor: e.target.value });
+                            } else {
+                                 setCurrentStyle(prev => ({ ...prev, shadowColor: e.target.value }));
+                            }
+                        }}/>
+                    <Input 
+                        id="shadowColorHex" 
+                        className="h-8 text-xs flex-grow max-w-[100px]" 
+                        value={localShadowColorHex} 
+                        onChange={(e) => setLocalShadowColorHex(e.target.value)}
+                        onBlur={(e) => {
+                            const finalColor = sanitizeHex(e.target.value);
+                            setLocalShadowColorHex(finalColor);
+                            if (selectedCanvasTextId && selectedText) {
+                                updateCanvasText(selectedCanvasTextId, { shadowColor: finalColor });
+                            } else {
+                                 setCurrentStyle(prev => ({ ...prev, shadowColor: finalColor }));
+                            }
+                        }}
+                        maxLength={7}/>
+                  </div>
+                  <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+                    <div>
+                        <Label htmlFor="shadowOffsetXSlider" className="text-xs mb-1 block">Offset X: {currentStyle.shadowOffsetX?.toFixed(0) || 0}px</Label>
                         <Slider 
-                            id="outlineWidthSlider" 
-                            min={0} max={10} step={0.5} 
-                            defaultValue={[1]} 
-                            value={[currentStyle.outlineWidth || 0]} 
-                            onValueChange={([value]) => handleStyleChange('outlineWidth', value)}
+                            id="shadowOffsetXSlider" 
+                            min={-20} max={20} step={1} 
+                            defaultValue={[0]} 
+                            value={[currentStyle.shadowOffsetX || 0]} 
+                            onValueChange={([value]) => handleStyleChange('shadowOffsetX', value)}
                             onPointerDownCapture={startInteractiveOperation}
                             onPointerUpCapture={endInteractiveOperation}
-                        />
-                      </div>
-                    </>
-                  )}
-                </AccordionContent>
-              </AccordionItem>
-            </Accordion>
-
-             <Accordion type="single" collapsible className="w-full text-xs border-t pt-2 mt-2">
-              <AccordionItem value="text-shadow" className="border-b-0">
-                <AccordionTrigger className="py-2 text-xs hover:no-underline font-normal">
-                    <div className="flex items-center w-full">
-                        <Blend className="mr-2 h-3 w-3" />
-                        Text Shadow
-                        <Switch
-                            id="shadowEnabledSwitch"
-                            className="ml-auto scale-[0.7] origin-right"
-                            checked={currentStyle.shadowEnabled || false}
-                            onCheckedChange={(checked) => handleStyleChange('shadowEnabled', checked)}
-                            onClick={(e) => e.stopPropagation()}
                         />
                     </div>
-                </AccordionTrigger>
-                <AccordionContent className="space-y-3 pt-2 pb-1 pl-1">
-                  {currentStyle.shadowEnabled && (
-                    <>
-                      <div className="flex items-center space-x-2">
-                        <Label htmlFor="shadowColorSwatch" className="text-xs shrink-0">Color</Label>
-                        <Input 
-                            type="color" 
-                            id="shadowColorSwatch" 
-                            className="h-8 w-10 p-0.5 border-none rounded" 
-                            value={localShadowColorHex} 
-                            onPointerDownCapture={startInteractiveOperation}
-                            onPointerUpCapture={endInteractiveOperation}
-                            onChange={(e) => {
-                                setLocalShadowColorHex(e.target.value);
-                                if (selectedCanvasTextId && selectedText) {
-                                    updateCanvasText(selectedCanvasTextId, { shadowColor: e.target.value });
-                                } else {
-                                     setCurrentStyle(prev => ({ ...prev, shadowColor: e.target.value }));
-                                }
-                            }}/>
-                        <Input 
-                            id="shadowColorHex" 
-                            className="h-8 text-xs flex-grow max-w-[100px]" 
-                            value={localShadowColorHex} 
-                            onChange={(e) => setLocalShadowColorHex(e.target.value)}
-                            onBlur={(e) => {
-                                const finalColor = sanitizeHex(e.target.value);
-                                setLocalShadowColorHex(finalColor);
-                                if (selectedCanvasTextId && selectedText) {
-                                    updateCanvasText(selectedCanvasTextId, { shadowColor: finalColor });
-                                } else {
-                                     setCurrentStyle(prev => ({ ...prev, shadowColor: finalColor }));
-                                }
-                            }}
-                            maxLength={7}/>
-                      </div>
-                      <div className="grid grid-cols-2 gap-3">
-                        <div>
-                            <Label htmlFor="shadowOffsetXSlider" className="text-xs mb-1 block">Offset X: {currentStyle.shadowOffsetX?.toFixed(0) || 0}px</Label>
-                            <Slider 
-                                id="shadowOffsetXSlider" 
-                                min={-20} max={20} step={1} 
-                                defaultValue={[0]} 
-                                value={[currentStyle.shadowOffsetX || 0]} 
-                                onValueChange={([value]) => handleStyleChange('shadowOffsetX', value)}
-                                onPointerDownCapture={startInteractiveOperation}
-                                onPointerUpCapture={endInteractiveOperation}
-                            />
-                        </div>
-                        <div>
-                            <Label htmlFor="shadowOffsetYSlider" className="text-xs mb-1 block">Offset Y: {currentStyle.shadowOffsetY?.toFixed(0) || 0}px</Label>
-                            <Slider 
-                                id="shadowOffsetYSlider" 
-                                min={-20} max={20} step={1} 
-                                defaultValue={[0]} 
-                                value={[currentStyle.shadowOffsetY || 0]} 
-                                onValueChange={([value]) => handleStyleChange('shadowOffsetY', value)}
-                                onPointerDownCapture={startInteractiveOperation}
-                                onPointerUpCapture={endInteractiveOperation}
-                            />
-                        </div>
-                      </div>
-                      <div>
-                        <Label htmlFor="shadowBlurSlider" className="text-xs mb-1 block">Blur: {currentStyle.shadowBlur?.toFixed(0) || 0}px</Label>
+                    <div>
+                        <Label htmlFor="shadowOffsetYSlider" className="text-xs mb-1 block">Offset Y: {currentStyle.shadowOffsetY?.toFixed(0) || 0}px</Label>
                         <Slider 
-                            id="shadowBlurSlider" 
-                            min={0} max={30} step={1} 
+                            id="shadowOffsetYSlider" 
+                            min={-20} max={20} step={1} 
                             defaultValue={[0]} 
-                            value={[currentStyle.shadowBlur || 0]} 
-                            onValueChange={([value]) => handleStyleChange('shadowBlur', value)}
+                            value={[currentStyle.shadowOffsetY || 0]} 
+                            onValueChange={([value]) => handleStyleChange('shadowOffsetY', value)}
                             onPointerDownCapture={startInteractiveOperation}
                             onPointerUpCapture={endInteractiveOperation}
                         />
-                      </div>
-                    </>
-                  )}
-                </AccordionContent>
-              </AccordionItem>
-            </Accordion>
-          </AccordionContent>
-        </AccordionItem>
-      </Accordion>
+                    </div>
+                  </div>
+                  <div>
+                    <Label htmlFor="shadowBlurSlider" className="text-xs mb-1 block">Blur: {currentStyle.shadowBlur?.toFixed(0) || 0}px</Label>
+                    <Slider 
+                        id="shadowBlurSlider" 
+                        min={0} max={30} step={1} 
+                        defaultValue={[0]} 
+                        value={[currentStyle.shadowBlur || 0]} 
+                        onValueChange={([value]) => handleStyleChange('shadowBlur', value)}
+                        onPointerDownCapture={startInteractiveOperation}
+                        onPointerUpCapture={endInteractiveOperation}
+                    />
+                  </div>
+                </>
+              )}
+            </AccordionContent>
+          </AccordionItem>
+        </Accordion>
+
+        <div className="flex items-center space-x-2 pt-3 px-1">
+          <Switch
+            id="archTextSwitch"
+            checked={currentStyle.isArchText || false}
+            onCheckedChange={(checked) => handleStyleChange('isArchText', checked)}
+          />
+          <Label htmlFor="archTextSwitch" className="text-xs">Arch Text <span className="text-muted-foreground/80 text-[10px]">(Visual Only)</span></Label>
+        </div>
+      </section>
     </div>
   );
 
@@ -500,7 +508,7 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
             <Type className="mr-2 h-4 w-4" />
             Add Text to Canvas
           </Button>
-          <div className="flex-grow mt-2">
+          <div className="flex-grow mt-2"> {/* Changed from flex-1 to flex-grow */}
             {renderControls()}
           </div>
         </>
@@ -514,4 +522,3 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
     </div>
   );
 }
-
