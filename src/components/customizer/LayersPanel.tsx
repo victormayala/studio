@@ -59,9 +59,9 @@ export default function LayersPanel({ activeViewId }: LayersPanelProps) {
 
 
   return (
-    // Removed outer padding, should be handled by the parent ScrollArea's content container
+    
     <div className="h-full flex flex-col"> 
-      <ScrollArea className="flex-grow border-none rounded-none bg-transparent"> {/* Adjusted ScrollArea to fit new layout */}
+      <ScrollArea className="flex-grow border-none rounded-none bg-transparent"> 
         <div className="p-2 space-y-1">
           {combinedItems.map((item, index) => {
             const isSelected = 
@@ -133,7 +133,7 @@ export default function LayersPanel({ activeViewId }: LayersPanelProps) {
                   item.isLocked
                     ? "opacity-70 cursor-not-allowed"
                     : "cursor-pointer hover:bg-accent/10",
-                  isSelected && "ring-2 ring-primary"
+                  isSelected && "ring-2 ring-secondary"
                 )}
                 title={title}
               >
@@ -163,7 +163,7 @@ export default function LayersPanel({ activeViewId }: LayersPanelProps) {
                     <Trash2 className="h-4 w-4" />
                   </Button>
                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={handleToggleLock} title={item.isLocked ? `Unlock ${item.itemType}` : `Lock ${item.itemType}`} >
-                    {item.isLocked ? <Lock className="h-4 w-4 text-primary" /> : <Unlock className="h-4 w-4" />}
+                    {item.isLocked ? <Lock className="h-4 w-4 text-secondary" /> : <Unlock className="h-4 w-4" />}
                   </Button>
                   <Button variant="ghost" size="icon" className="h-7 w-7" onClick={handleBringForward} disabled={isTopmostInView || item.isLocked} title="Bring Forward" >
                     <ArrowUp className="h-4 w-4" />

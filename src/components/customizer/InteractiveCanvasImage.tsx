@@ -21,7 +21,7 @@ interface InteractiveCanvasImageProps {
   onRemoveHandleClick: (e: ReactMouseEvent<HTMLDivElement> | ReactTouchEvent<HTMLDivElement>, imageId: string) => void;
 }
 
-export function InteractiveCanvasImage({ // Changed to a regular export, removed React.memo
+export function InteractiveCanvasImage({ 
   image,
   isSelected,
   isBeingDragged,
@@ -54,8 +54,8 @@ export function InteractiveCanvasImage({ // Changed to a regular export, removed
       id={`canvas-image-${image.id}`}
       className={`absolute group
                   ${image.isLocked ? 'cursor-not-allowed' : 'cursor-grab'}
-                  ${isSelected && !image.isLocked ? 'ring-2 ring-primary ring-offset-2 ring-offset-background' : ''}
-                  ${!image.isLocked ? 'hover:ring-1 hover:ring-primary/50' : ''}
+                  ${isSelected && !image.isLocked ? 'ring-2 ring-secondary ring-offset-2 ring-offset-background' : ''}
+                  ${!image.isLocked ? 'hover:ring-1 hover:ring-secondary/50' : ''}
                   `}
       style={style}
       onClick={(e) => {
@@ -89,7 +89,7 @@ export function InteractiveCanvasImage({ // Changed to a regular export, removed
       />
       {showHandles && (
         <>
-          {/* Remove Button */}
+          
           <div
             className="absolute -top-3 -right-3 bg-destructive text-destructive-foreground rounded-full p-1 cursor-pointer hover:bg-destructive/80 transition-colors flex items-center justify-center"
             style={{ width: HANDLE_SIZE, height: HANDLE_SIZE, zIndex: dynamicZIndex + 1 }} 
@@ -101,9 +101,9 @@ export function InteractiveCanvasImage({ // Changed to a regular export, removed
             <Trash2 size={HANDLE_SIZE * 0.6} />
           </div>
 
-          {/* Rotate Handle (Top-Center) */}
+          
           <div
-            className="absolute -top-3 left-1/2 -translate-x-1/2 bg-primary text-primary-foreground rounded-full p-1 cursor-[grab] active:cursor-[grabbing] flex items-center justify-center"
+            className="absolute -top-3 left-1/2 -translate-x-1/2 bg-secondary text-secondary-foreground rounded-full p-1 cursor-[grab] active:cursor-[grabbing] flex items-center justify-center"
             style={{ width: HANDLE_SIZE, height: HANDLE_SIZE, zIndex: dynamicZIndex + 1 }}
             onMouseDown={(e) => onRotateHandleMouseDown(e, image)}
             onTouchStart={(e) => onRotateHandleMouseDown(e, image)}
@@ -112,9 +112,9 @@ export function InteractiveCanvasImage({ // Changed to a regular export, removed
             <RefreshCwIcon size={HANDLE_SIZE * 0.6} />
           </div>
 
-          {/* Resize Handle (Bottom-Right) */}
+          
           <div
-            className="absolute -bottom-3 -right-3 bg-primary text-primary-foreground rounded-full p-1 cursor-nwse-resize flex items-center justify-center"
+            className="absolute -bottom-3 -right-3 bg-secondary text-secondary-foreground rounded-full p-1 cursor-nwse-resize flex items-center justify-center"
             style={{ width: HANDLE_SIZE, height: HANDLE_SIZE, zIndex: dynamicZIndex + 1 }}
             onMouseDown={(e) => onResizeHandleMouseDown(e, image)}
             onTouchStart={(e) => onResizeHandleMouseDown(e, image)}
@@ -127,5 +127,3 @@ export function InteractiveCanvasImage({ // Changed to a regular export, removed
     </div>
   );
 }
-
-    

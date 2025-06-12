@@ -6,12 +6,12 @@ import { Trash2, RefreshCwIcon, MoveIcon, LockKeyholeIcon, UnlockKeyholeIcon } f
 import type { MouseEvent as ReactMouseEvent, TouchEvent as ReactTouchEvent } from 'react';
 import React from 'react';
 
-const HANDLE_SIZE = 24; // Consistent with other interactive items
+const HANDLE_SIZE = 24; 
 
 interface InteractiveCanvasShapeProps {
   shape: CanvasShape;
   isSelected: boolean;
-  isBeingDragged: boolean; // If the main body is being dragged
+  isBeingDragged: boolean; 
   onShapeSelect: (shapeId: string) => void;
   onShapeSelectAndDragStart: (e: ReactMouseEvent<SVGElement> | ReactTouchEvent<SVGElement>, shape: CanvasShape) => void;
   onRotateHandleMouseDown: (e: ReactMouseEvent<HTMLDivElement> | ReactTouchEvent<HTMLDivElement>, shape: CanvasShape) => void;
@@ -48,7 +48,7 @@ export function InteractiveCanvasShape({
   const svgStyle: React.CSSProperties = {
     width: '100%',
     height: '100%',
-    overflow: 'visible', // Important for stroke not to be clipped
+    overflow: 'visible', 
   };
 
   const renderShape = () => {
@@ -63,9 +63,9 @@ export function InteractiveCanvasShape({
         return <rect x="0" y="0" width="100%" height="100%" {...commonProps} />;
       case 'circle':
         return <circle cx="50%" cy="50%" r="50%" {...commonProps} />;
-      // Add other shapes here
+      
       default:
-        return <rect x="0" y="0" width="100%" height="100%" fill="grey" />; // Fallback
+        return <rect x="0" y="0" width="100%" height="100%" fill="grey" />; 
     }
   };
 
@@ -73,15 +73,15 @@ export function InteractiveCanvasShape({
     <div
       id={`canvas-shape-${shape.id}`}
       className={`absolute group
-                  ${isSelected && !shape.isLocked ? 'ring-2 ring-primary ring-offset-2 ring-offset-background' : ''}
-                  ${!shape.isLocked ? 'hover:ring-1 hover:ring-primary/50' : ''}
+                  ${isSelected && !shape.isLocked ? 'ring-2 ring-secondary ring-offset-2 ring-offset-background' : ''}
+                  ${!shape.isLocked ? 'hover:ring-1 hover:ring-secondary/50' : ''}
                   `}
       style={wrapperStyle}
-      // onClick and onMouseDown/onTouchStart are on the SVG element itself to ensure interaction with the shape
+      
     >
       <svg
-        viewBox={`0 0 ${shape.width} ${shape.height}`} // Use base width/height for viewBox
-        preserveAspectRatio="none" // Allows non-uniform scaling if width/height differ
+        viewBox={`0 0 ${shape.width} ${shape.height}`} 
+        preserveAspectRatio="none" 
         style={svgStyle}
         onClick={(e) => {
           e.stopPropagation();
@@ -110,7 +110,7 @@ export function InteractiveCanvasShape({
 
       {showHandles && (
         <>
-          {/* Remove Button */}
+          
           <div
             className="absolute -top-3 -right-3 bg-destructive text-destructive-foreground rounded-full p-1 cursor-pointer hover:bg-destructive/80 transition-colors flex items-center justify-center"
             style={{ width: HANDLE_SIZE, height: HANDLE_SIZE, zIndex: dynamicZIndex + 1 }} 
@@ -122,9 +122,9 @@ export function InteractiveCanvasShape({
             <Trash2 size={HANDLE_SIZE * 0.6} />
           </div>
 
-          {/* Rotate Handle (Top-Center) */}
+          
           <div
-            className="absolute -top-3 left-1/2 -translate-x-1/2 bg-primary text-primary-foreground rounded-full p-1 cursor-[grab] active:cursor-[grabbing] flex items-center justify-center"
+            className="absolute -top-3 left-1/2 -translate-x-1/2 bg-secondary text-secondary-foreground rounded-full p-1 cursor-[grab] active:cursor-[grabbing] flex items-center justify-center"
             style={{ width: HANDLE_SIZE, height: HANDLE_SIZE, zIndex: dynamicZIndex + 1 }}
             onMouseDown={(e) => onRotateHandleMouseDown(e, shape)}
             onTouchStart={(e) => onRotateHandleMouseDown(e, shape)}
@@ -133,9 +133,9 @@ export function InteractiveCanvasShape({
             <RefreshCwIcon size={HANDLE_SIZE * 0.6} />
           </div>
 
-          {/* Resize Handle (Bottom-Right) */}
+          
           <div
-            className="absolute -bottom-3 -right-3 bg-primary text-primary-foreground rounded-full p-1 cursor-nwse-resize flex items-center justify-center"
+            className="absolute -bottom-3 -right-3 bg-secondary text-secondary-foreground rounded-full p-1 cursor-nwse-resize flex items-center justify-center"
             style={{ width: HANDLE_SIZE, height: HANDLE_SIZE, zIndex: dynamicZIndex + 1 }}
             onMouseDown={(e) => onResizeHandleMouseDown(e, shape)}
             onTouchStart={(e) => onResizeHandleMouseDown(e, shape)}
