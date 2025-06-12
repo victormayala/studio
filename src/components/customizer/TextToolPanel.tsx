@@ -25,10 +25,8 @@ import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import { Bold, Italic, Underline, CaseUpper, CaseLower, Type, Palette, Blend, PenLine, Pilcrow } from 'lucide-react';
 import { useUploads, type CanvasText } from '@/contexts/UploadContext';
 import { googleFonts } from '@/lib/google-fonts';
-// ScrollArea is removed as parent handles scrolling
 import { useToast } from '@/hooks/use-toast';
 
-// Helper to validate and sanitize hex color
 const sanitizeHex = (hex: string): string => {
   let sanitized = hex.replace(/[^0-9a-fA-F]/g, '');
   if (sanitized.startsWith('#')) {
@@ -53,19 +51,17 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
     selectedCanvasTextId, 
     canvasTexts, 
     updateCanvasText,
-    startInteractiveOperation, // Import for sliders
-    endInteractiveOperation    // Import for sliders
+    startInteractiveOperation,
+    endInteractiveOperation
   } = useUploads();
   const { toast } = useToast();
   const [textValue, setTextValue] = useState('');
 
   const selectedText = canvasTexts.find(t => t.id === selectedCanvasTextId && t.viewId === activeViewId);
 
-  // Local state for hex inputs to update onBlur
   const [localTextColorHex, setLocalTextColorHex] = useState(selectedText?.color || '#333333');
   const [localOutlineColorHex, setLocalOutlineColorHex] = useState(selectedText?.outlineColor || '#000000');
   const [localShadowColorHex, setLocalShadowColorHex] = useState(selectedText?.shadowColor || '#000000');
-
 
   const [currentStyle, setCurrentStyle] = useState<Partial<CanvasText>>({});
 
@@ -286,6 +282,8 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
                 id="textColorSwatch"
                 className="h-8 w-10 p-0.5 border-none rounded" 
                 value={currentStyle.color || '#333333'}
+                onPointerDownCapture={startInteractiveOperation}
+                onPointerUpCapture={endInteractiveOperation}
                 onChange={(e) => {
                     handleStyleChange('color', e.target.value);
                     setLocalTextColorHex(e.target.value);
@@ -326,6 +324,8 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
                             id="outlineColorSwatch" 
                             className="h-8 w-10 p-0.5 border-none rounded" 
                             value={currentStyle.outlineColor || '#000000'} 
+                            onPointerDownCapture={startInteractiveOperation}
+                            onPointerUpCapture={endInteractiveOperation}
                             onChange={(e) => {
                                 handleStyleChange('outlineColor', e.target.value);
                                 setLocalOutlineColorHex(e.target.value);
@@ -381,6 +381,8 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
                             id="shadowColorSwatch" 
                             className="h-8 w-10 p-0.5 border-none rounded" 
                             value={currentStyle.shadowColor || '#000000'} 
+                            onPointerDownCapture={startInteractiveOperation}
+                            onPointerUpCapture={endInteractiveOperation}
                             onChange={(e) => {
                                 handleStyleChange('shadowColor', e.target.value);
                                 setLocalShadowColorHex(e.target.value);
@@ -476,6 +478,3 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
     </div>
   );
 }
-
-
-    

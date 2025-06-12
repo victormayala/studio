@@ -5,7 +5,6 @@ import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { useUploads, type ShapeType, type CanvasShape } from '@/contexts/UploadContext';
 import { Square, Circle, Shapes as ShapesIconLucide, Palette, PenLine } from 'lucide-react';
-// ScrollArea is removed as parent handles scrolling
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Slider } from '@/components/ui/slider';
@@ -48,24 +47,21 @@ export default function ShapesPanel({ activeViewId }: ShapesPanelProps) {
     selectedCanvasShapeId, 
     canvasShapes, 
     updateCanvasShape,
-    startInteractiveOperation, // Import for sliders
-    endInteractiveOperation    // Import for sliders
+    startInteractiveOperation,
+    endInteractiveOperation
   } = useUploads();
   const { toast } = useToast();
   const selectedShape = canvasShapes.find(s => s.id === selectedCanvasShapeId && s.viewId === activeViewId);
 
   const [fillColorHex, setFillColorHex] = useState(selectedShape?.color || '#468189');
   const [strokeColorHex, setStrokeColorHex] = useState(selectedShape?.strokeColor || '#000000');
+  const [currentStrokeWidth, setCurrentStrokeWidth] = useState(selectedShape?.strokeWidth ?? 0);
 
   useEffect(() => {
     if (selectedShape) {
       setFillColorHex(selectedShape.color);
       setStrokeColorHex(selectedShape.strokeColor);
-    } else {
-      // Reset to defaults or keep current if user is setting up for new shape
-      // For now, let's keep the last used values if no shape is selected
-      // setFillColorHex('#468189');
-      // setStrokeColorHex('#000000');
+      setCurrentStrokeWidth(selectedShape.strokeWidth);
     }
   }, [selectedShape]);
 
@@ -77,54 +73,41 @@ export default function ShapesPanel({ activeViewId }: ShapesPanelProps) {
     addCanvasShape(shapeType, activeViewId, {
       color: fillColorHex, 
       strokeColor: strokeColorHex,
-      strokeWidth: currentStrokeWidth, // Use state for new shapes
+      strokeWidth: currentStrokeWidth,
     });
   };
   
-  // State for properties to be applied to new shapes, or to edit selected ones
-  const [currentStrokeWidth, setCurrentStrokeWidth] = useState(selectedShape?.strokeWidth ?? 0);
-
-  useEffect(() => {
-      if (selectedShape) {
-          setCurrentStrokeWidth(selectedShape.strokeWidth);
-      } else {
-         // If no shape is selected, keep the currentStrokeWidth for new shapes
-         // Or reset: setCurrentStrokeWidth(0); 
-      }
-  }, [selectedShape]);
-
-
   const handleStyleChange = <K extends keyof CanvasShape>(property: K, value: CanvasShape[K]) => {
     if (selectedCanvasShapeId && selectedShape) { 
       updateCanvasShape(selectedCanvasShapeId, { [property]: value });
     }
-    // Update local preview/default states if needed, e.g., for strokeWidth:
     if (property === 'strokeWidth') setCurrentStrokeWidth(value as number);
+    if (property === 'color') setFillColorHex(value as string);
+    if (property === 'strokeColor') setStrokeColorHex(value as string);
   };
 
-  const handleFillColorChange = (value: string) => {
-    const sanitized = sanitizeHex(value);
-    setFillColorHex(sanitized); 
+  const handleFillColorBlur = (e: React.FocusEvent<HTMLInputElement>) => {
+    const finalColor = sanitizeHex(e.target.value);
+    setFillColorHex(finalColor); // Update local display immediately
     if (selectedCanvasShapeId && selectedShape) {
-      handleStyleChange('color', sanitized);
+      updateCanvasShape(selectedCanvasShapeId, { color: finalColor });
     }
   };
   
-  const handleStrokeColorChange = (value: string) => {
-    const sanitized = sanitizeHex(value);
-    setStrokeColorHex(sanitized); 
+  const handleStrokeColorBlur = (e: React.FocusEvent<HTMLInputElement>) => {
+    const finalColor = sanitizeHex(e.target.value);
+    setStrokeColorHex(finalColor); // Update local display immediately
      if (selectedCanvasShapeId && selectedShape) {
-      handleStyleChange('strokeColor', sanitized);
+      updateCanvasShape(selectedCanvasShapeId, { strokeColor: finalColor });
     }
   };
 
   const handleStrokeWidthChange = (value: number) => {
-    setCurrentStrokeWidth(value);
+    setCurrentStrokeWidth(value); // Visual update if needed locally
     if (selectedCanvasShapeId && selectedShape) {
-      handleStyleChange('strokeWidth', value);
+      updateCanvasShape(selectedCanvasShapeId, { strokeWidth: value });
     }
   };
-
 
   return (
     <div className="space-y-4 h-full flex flex-col"> 
@@ -170,14 +153,21 @@ export default function ShapesPanel({ activeViewId }: ShapesPanelProps) {
                     id="shapeFillColorSwatch"
                     className="h-8 w-10 p-0.5 border-none rounded"
                     value={fillColorHex} 
-                    onChange={(e) => handleFillColorChange(e.target.value)}
+                    onPointerDownCapture={startInteractiveOperation}
+                    onPointerUpCapture={endInteractiveOperation}
+                    onChange={(e) => {
+                        setFillColorHex(e.target.value); // Optimistic UI update for swatch
+                        if (selectedCanvasShapeId && selectedShape) {
+                            updateCanvasShape(selectedCanvasShapeId, { color: e.target.value });
+                        }
+                    }}
                   />
                   <Input
                     id="shapeFillColorHex"
                     className="h-8 text-xs flex-grow max-w-[100px]"
                     value={fillColorHex} 
-                    onChange={(e) => setFillColorHex(e.target.value)} // Update local state for typing
-                    onBlur={(e) => handleFillColorChange(e.target.value)} // Commit on blur
+                    onChange={(e) => setFillColorHex(e.target.value)}
+                    onBlur={handleFillColorBlur}
                     maxLength={7}
                   />
                 </div>
@@ -191,14 +181,21 @@ export default function ShapesPanel({ activeViewId }: ShapesPanelProps) {
                     id="shapeStrokeColorSwatch"
                     className="h-8 w-10 p-0.5 border-none rounded"
                     value={strokeColorHex} 
-                    onChange={(e) => handleStrokeColorChange(e.target.value)}
+                    onPointerDownCapture={startInteractiveOperation}
+                    onPointerUpCapture={endInteractiveOperation}
+                    onChange={(e) => {
+                        setStrokeColorHex(e.target.value); // Optimistic UI update
+                        if (selectedCanvasShapeId && selectedShape) {
+                            updateCanvasShape(selectedCanvasShapeId, { strokeColor: e.target.value });
+                        }
+                    }}
                   />
                   <Input
                     id="shapeStrokeColorHex"
                     className="h-8 text-xs flex-grow max-w-[100px]"
                     value={strokeColorHex} 
-                    onChange={(e) => setStrokeColorHex(e.target.value)} // Update local state
-                    onBlur={(e) => handleStrokeColorChange(e.target.value)} // Commit on blur
+                    onChange={(e) => setStrokeColorHex(e.target.value)}
+                    onBlur={handleStrokeColorBlur}
                     maxLength={7}
                   />
                 </div>
@@ -233,5 +230,3 @@ export default function ShapesPanel({ activeViewId }: ShapesPanelProps) {
     </div>
   );
 }
-
-    
