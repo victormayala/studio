@@ -144,7 +144,8 @@ export async function fetchWooCommerceProductVariations(productId: string, crede
     return { error: `Server configuration error: ${message}` };
   }
 
-  const apiUrl = `${storeUrl}/wp-json/wc/v3/products/${productId}/variations`;
+  // Add per_page=100 to fetch up to 100 variations
+  const apiUrl = `${storeUrl}/wp-json/wc/v3/products/${productId}/variations?per_page=100`;
 
   try {
     const response = await fetch(apiUrl, {
@@ -170,3 +171,4 @@ export async function fetchWooCommerceProductVariations(productId: string, crede
     return { error: `An unexpected error occurred while fetching variations for product ${productId}.` };
   }
 }
+
