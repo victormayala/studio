@@ -28,9 +28,9 @@ const defaultProductBase = {
 };
 
 const BASE_IMAGE_DIMENSION = 200;
-const BASE_TEXT_DIMENSION_APPROX_WIDTH = 100; // Approx width for unscaled text 
-const BASE_TEXT_DIMENSION_APPROX_HEIGHT = 50; // Approx height for unscaled text
-const BASE_SHAPE_DIMENSION = 100; // Base for shapes, actual depends on shape.width/height
+const BASE_TEXT_DIMENSION_APPROX_WIDTH = 100; 
+const BASE_TEXT_DIMENSION_APPROX_HEIGHT = 50; 
+const BASE_SHAPE_DIMENSION = 100; 
 
 interface DesignCanvasProps {
   productImageUrl?: string;
@@ -43,7 +43,7 @@ export default function DesignCanvas({
   productImageUrl,
   productImageAlt,
   productImageAiHint,
-  productDefinedBoundaryBoxes = [] // Default to empty array
+  productDefinedBoundaryBoxes = [] 
 }: DesignCanvasProps) {
 
   const productToDisplay = {
@@ -69,30 +69,26 @@ export default function DesignCanvas({
     initialScale?: number;
     initialX?: number;
     initialY?: number;
-    itemCenterX?: number; // Center of item in pixels relative to canvasRef's top-left
+    itemCenterX?: number; 
     itemCenterY?: number;
-    itemInitialWidth?: number; // Unscaled base width in pixels
-    itemInitialHeight?: number; // Unscaled base height in pixels
+    itemInitialWidth?: number; 
+    itemInitialHeight?: number; 
   } | null>(null);
 
-  const canvasRef = useRef<HTMLDivElement>(null); // This will now refer to the product image container
+  const canvasRef = useRef<HTMLDivElement>(null); 
   const [lastAddedItemId, setLastAddedItemId] = useState<string | null>(null);
 
 
-  // Effect to snap newly added items to the first boundary box
   useEffect(() => {
-    if (!canvasRef.current || productDefinedBoundaryBoxes.length === 0) return;
+    if (!canvasRef.current || !productDefinedBoundaryBoxes || productDefinedBoundaryBoxes.length === 0) return;
 
     const checkAndMoveItem = (item: CanvasImage | CanvasText | CanvasShape, updateFunc: (id: string, updates: Partial<any>) => void) => {
-      // Check if item is new (e.g. at default 50,50 and not yet explicitly moved by this effect)
-      // and a boundary box exists.
-      // A more robust check might involve a flag on the item or comparing its ID to a 'lastProcessedNewItemId'
       if (item.x === 50 && item.y === 50 && item.id === lastAddedItemId) {
         const firstBox = productDefinedBoundaryBoxes[0];
         const newX = firstBox.x + firstBox.width / 2;
         const newY = firstBox.y + firstBox.height / 2;
         updateFunc(item.id, { x: newX, y: newY });
-        setLastAddedItemId(null); // Reset after moving
+        setLastAddedItemId(null); 
       }
     };
     
@@ -109,7 +105,6 @@ export default function DesignCanvas({
 
   }, [canvasImages, canvasTexts, canvasShapes, productDefinedBoundaryBoxes, updateCanvasImage, updateCanvasText, updateCanvasShape, lastAddedItemId]);
 
-  // Capture the ID of the most recently added item to trigger the snap effect
   useEffect(() => {
     if (canvasImages.length > 0) {
         const latestImage = canvasImages[canvasImages.length -1];
@@ -139,7 +134,6 @@ export default function DesignCanvas({
 
   const handleCanvasClick = (e: ReactMouseEvent<HTMLDivElement>) => {
     const target = e.target as HTMLElement;
-    // If click is on canvasRef (image container) or the outer product-image-container, deselect.
     if (target === canvasRef.current || target.classList.contains('product-image-outer-container')) {
         selectCanvasImage(null);
         selectCanvasText(null);
@@ -177,8 +171,8 @@ export default function DesignCanvas({
     item: CanvasImage | CanvasText | CanvasShape,
     itemType: 'image' | 'text' | 'shape'
   ) => {
-    if (item.isLocked && type !== 'move') return; // Allow selecting locked items to unlock
-    if (item.isLocked && type === 'move') return; // Prevent moving locked items
+    if (item.isLocked && type !== 'move') return; 
+    if (item.isLocked && type === 'move') return; 
 
     e.preventDefault();
     e.stopPropagation();
@@ -191,7 +185,6 @@ export default function DesignCanvas({
     const canvasRect = canvasRef.current.getBoundingClientRect();
     const coords = getMouseOrTouchCoords(e);
 
-    // Calculate item's center in pixels relative to canvasRef's top-left
     const itemCenterXInCanvasPx = item.x/100 * canvasRect.width;
     const itemCenterYInCanvasPx = item.y/100 * canvasRect.height;
     
@@ -204,8 +197,8 @@ export default function DesignCanvas({
     } else if (itemType === 'text') {
         const textEl = document.getElementById(`canvas-text-${item.id}`);
         if (textEl) {
-            itemInitialUnscaledWidth = textEl.offsetWidth / item.scale; // Get unscaled width
-            itemInitialUnscaledHeight = textEl.offsetHeight / item.scale; // Get unscaled height
+            itemInitialUnscaledWidth = textEl.offsetWidth / item.scale; 
+            itemInitialUnscaledHeight = textEl.offsetHeight / item.scale; 
         } else {
             itemInitialUnscaledWidth = BASE_TEXT_DIMENSION_APPROX_WIDTH;
             itemInitialUnscaledHeight = BASE_TEXT_DIMENSION_APPROX_HEIGHT;
@@ -263,7 +256,37 @@ export default function DesignCanvas({
       if (initialDistFromCenter === 0) return;
       const scaleRatio = distFromCenter / initialDistFromCenter;
       let newScale = initialScale * scaleRatio;
-      newScale = Math.max(0.1, Math.min(newScale, itemType === 'text' ? 20 : 10)); // Text can scale larger
+      newScale = Math.max(0.1, Math.min(newScale, itemType === 'text' ? 20 : 10)); 
+      
+      if (productDefinedBoundaryBoxes && productDefinedBoundaryBoxes.length > 0 && itemInitialWidth > 0 && itemInitialHeight > 0) {
+        const targetBox = productDefinedBoundaryBoxes[0]; 
+
+        const itemCurrentXPercent = activeItemData?.x || initialX;
+        const itemCurrentYPercent = activeItemData?.y || initialY;
+
+        const distToBoxLeftEdge = itemCurrentXPercent - targetBox.x;
+        const distToBoxRightEdge = (targetBox.x + targetBox.width) - itemCurrentXPercent;
+        const distToBoxTopEdge = itemCurrentYPercent - targetBox.y;
+        const distToBoxBottomEdge = (targetBox.y + targetBox.height) - itemCurrentYPercent;
+
+        const maxAllowedHalfWidthPercent = Math.min(distToBoxLeftEdge, distToBoxRightEdge);
+        const maxAllowedHalfHeightPercent = Math.min(distToBoxTopEdge, distToBoxBottomEdge);
+
+        if (maxAllowedHalfWidthPercent < 0 || maxAllowedHalfHeightPercent < 0) {
+            if (newScale > initialScale) { 
+                 newScale = initialScale;
+            }
+        } else {
+            const maxAllowedWidthPx = (maxAllowedHalfWidthPercent * 2 / 100) * canvasRect.width;
+            const maxAllowedHeightPx = (maxAllowedHalfHeightPercent * 2 / 100) * canvasRect.height;
+
+            const maxScaleBasedOnWidth = maxAllowedWidthPx / itemInitialWidth;
+            const maxScaleBasedOnHeight = maxAllowedHeightPx / itemInitialHeight;
+            
+            newScale = Math.min(newScale, maxScaleBasedOnWidth, maxScaleBasedOnHeight);
+        }
+        newScale = Math.max(0.1, newScale); 
+      }
       
       if (itemType === 'image') updateCanvasImage(itemId, { scale: newScale });
       else if (itemType === 'text') updateCanvasText(itemId, { scale: newScale });
@@ -277,13 +300,16 @@ export default function DesignCanvas({
         let newY = initialY + dyPercent;
         
         const currentItemScaleFactor = activeItemData?.scale || initialScale;
-        const scaledItemWidthPx = itemInitialWidth * currentItemScaleFactor;
-        const scaledItemHeightPx = itemInitialHeight * currentItemScaleFactor;
-        const itemHalfWidthPercent = (scaledItemWidthPx / 2 / canvasRect.width) * 100;
-        const itemHalfHeightPercent = (scaledItemHeightPx / 2 / canvasRect.height) * 100;
+        // Ensure itemInitialWidth and itemInitialHeight are not zero before division
+        const scaledItemWidthPx = itemInitialWidth > 0 ? itemInitialWidth * currentItemScaleFactor : 0;
+        const scaledItemHeightPx = itemInitialHeight > 0 ? itemInitialHeight * currentItemScaleFactor : 0;
+
+        const itemHalfWidthPercent = canvasRect.width > 0 ? (scaledItemWidthPx / 2 / canvasRect.width) * 100 : 0;
+        const itemHalfHeightPercent = canvasRect.height > 0 ? (scaledItemHeightPx / 2 / canvasRect.height) * 100 : 0;
+
 
         if (productDefinedBoundaryBoxes && productDefinedBoundaryBoxes.length > 0) {
-            const targetBox = productDefinedBoundaryBoxes[0]; // Constrain to the first boundary box
+            const targetBox = productDefinedBoundaryBoxes[0]; 
 
             const boxMinXCanvasPercent = targetBox.x;
             const boxMaxXCanvasPercent = targetBox.x + targetBox.width;
@@ -299,16 +325,15 @@ export default function DesignCanvas({
                 Math.min(newY, boxMaxYCanvasPercent - itemHalfHeightPercent)
             );
 
-            if (itemHalfWidthPercent * 2 > targetBox.width) { // Item wider than box
-                clampedX = targetBox.x + targetBox.width / 2; // Center it
+            if (itemHalfWidthPercent * 2 > targetBox.width) { 
+                clampedX = targetBox.x + targetBox.width / 2; 
             }
-             if (itemHalfHeightPercent * 2 > targetBox.height) { // Item taller than box
-                clampedY = targetBox.y + targetBox.height / 2; // Center it
+             if (itemHalfHeightPercent * 2 > targetBox.height) { 
+                clampedY = targetBox.y + targetBox.height / 2; 
             }
             newX = clampedX;
             newY = clampedY;
         } else {
-            // Default canvas boundary clamping if no specific boxes
             newX = Math.max(itemHalfWidthPercent, Math.min(newX, 100 - itemHalfWidthPercent));
             newY = Math.max(itemHalfHeightPercent, Math.min(newY, 100 - itemHalfHeightPercent));
         }
@@ -347,26 +372,22 @@ export default function DesignCanvas({
   return (
     <div
       className="w-full h-full flex items-center justify-center bg-card border border-dashed border-border rounded-lg shadow-inner p-4 min-h-[500px] lg:min-h-[700px] relative overflow-hidden select-none product-image-outer-container"
-      onClick={handleCanvasClick} // For deselecting items by clicking canvas background
+      onClick={handleCanvasClick} 
       onTouchStart={handleCanvasClick as any} 
     >
-      <div className="text-center"> {/* This div helps with centering the content below */}
+      <div className="text-center"> 
         <div
-          ref={canvasRef} // canvasRef is now on the direct product image container
-          className="relative product-image-canvas-area bg-muted/10" // Added a class for clarity
+          ref={canvasRef} 
+          className="relative product-image-canvas-area bg-muted/10" 
           style={{ 
             width: productToDisplay.width, 
             height: productToDisplay.height,
-            // backgroundImage: `url(${productToDisplay.imageUrl})`, // Optional: use as background
-            // backgroundSize: 'contain',
-            // backgroundRepeat: 'no-repeat',
-            // backgroundPosition: 'center',
           }}
         >
           <Image
             src={productToDisplay.imageUrl}
             alt={productToDisplay.imageAlt}
-            fill // Use fill to make image cover the canvasRef container
+            fill 
             className="rounded-md object-contain pointer-events-none select-none" 
             data-ai-hint={productToDisplay.aiHint}
             priority
@@ -438,5 +459,3 @@ export default function DesignCanvas({
     </div>
   );
 }
-
-    
