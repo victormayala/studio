@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation'; // Added useRouter
 import Link from 'next/link';
 import NextImage from 'next/image';
 import { Button, buttonVariants } from '@/components/ui/button';
@@ -11,7 +11,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, PlusCircle, Trash2, Image as ImageIcon, Maximize2, Loader2, AlertTriangle, LayersIcon, Shirt, RefreshCcw, CheckSquare, Square as SquareIcon, Eye, Edit3 } from 'lucide-react';
+import { ArrowLeft, PlusCircle, Trash2, Image as ImageIcon, Maximize2, Loader2, AlertTriangle, LayersIcon, Shirt, RefreshCcw, CheckSquare, Square as SquareIcon, Eye, Edit3, ExternalLink } from 'lucide-react'; // Added ExternalLink
 import { Checkbox } from "@/components/ui/checkbox";
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
@@ -81,6 +81,7 @@ const MAX_PRODUCT_VIEWS = 4;
 
 export default function ProductOptionsPage() {
   const params = useParams();
+  const router = useRouter(); // Initialized useRouter
   const productId = params.productId as string;
   const { toast } = useToast();
   const { user } = useAuth();
@@ -96,6 +97,7 @@ export default function ProductOptionsPage() {
   const [variationsError, setVariationsError] = useState<string | null>(null);
 
   const [selectedVariationIdsForCstmzr, setSelectedVariationIdsForCstmzr] = useState<string[]>([]);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(true); // New state
 
   const [selectedBoundaryBoxId, setSelectedBoundaryBoxId] = useState<string | null>(null);
   const imageWrapperRef = useRef<HTMLDivElement>(null);
@@ -118,6 +120,7 @@ export default function ProductOptionsPage() {
       setIsRefreshing(false);
       if (!user) setError("User not authenticated. Please sign in.");
       else setError("Product ID is missing.");
+      setHasUnsavedChanges(true);
       return;
     }
 
@@ -129,11 +132,13 @@ export default function ProductOptionsPage() {
     setActiveViewId(null); 
 
     let localOptions: LocalStorageOptions | null = null;
+    let localOptionsLoadedSuccessfully = false;
     const localStorageKey = `cstmzr_product_options_${user.id}_${productId}`;
     try {
       const savedOptions = localStorage.getItem(localStorageKey);
       if (savedOptions) {
         localOptions = JSON.parse(savedOptions) as LocalStorageOptions;
+        localOptionsLoadedSuccessfully = true;
       }
     } catch (e) {
       console.error("Error parsing local CSTMZR options from localStorage:", e);
@@ -164,6 +169,7 @@ export default function ProductOptionsPage() {
       setIsLoading(false);
       setIsRefreshing(false);
       toast({ title: "Error Fetching Product", description: fetchError || `Product ${productId} not found.`, variant: "destructive"});
+      setHasUnsavedChanges(true);
       return;
     }
 
@@ -197,6 +203,12 @@ export default function ProductOptionsPage() {
     setSelectedBoundaryBoxId(null); 
     setSelectedVariationIdsForCstmzr(localOptions?.cstmzrSelectedVariationIds || []); 
 
+    if (isRefreshing) {
+      setHasUnsavedChanges(true); // After refresh, consider changes unsaved
+    } else {
+      setHasUnsavedChanges(!localOptionsLoadedSuccessfully); // If local options were loaded, changes are "saved"
+    }
+
     if (wcProduct.type === 'variable') {
       setIsLoadingVariations(true);
       const { variations: fetchedVariations, error: variationsFetchError } = await fetchWooCommerceProductVariations(productId, userCredentials);
@@ -221,7 +233,7 @@ export default function ProductOptionsPage() {
 
   const handleRefreshData = () => {
     setIsRefreshing(true); 
-    fetchAndSetProductData();
+    fetchAndSetProductData(); // This will set hasUnsavedChanges to true
   };
 
   const getPointerCoords = (e: MouseEvent | TouchEvent | React.MouseEvent | React.TouchEvent) => {
@@ -319,6 +331,7 @@ export default function ProductOptionsPage() {
         )
       };
     });
+    setHasUnsavedChanges(true);
   }, [activeDrag, productOptions, activeViewId]);
 
   const handleInteractionEnd = useCallback(() => setActiveDrag(null), []);
@@ -351,15 +364,25 @@ export default function ProductOptionsPage() {
     try {
       localStorage.setItem(localStorageKey, JSON.stringify(dataToSave));
       toast({ title: "CSTMZR Options Saved", description: "Custom views, areas and variation selections have been saved locally." });
+      setHasUnsavedChanges(false); // Set to false after successful save
     } catch (e) {
       console.error("Error saving to localStorage:", e);
       toast({ title: "Save Error", description: "Could not save CSTMZR options.", variant: "destructive"});
     }
   };
 
+  const handleOpenInCustomizer = () => {
+    if (!productOptions || hasUnsavedChanges) return;
+    router.push(`/customizer?productId=${productOptions.id}`);
+  };
+
+
   const handleSelectView = (viewId: string) => {
     setActiveViewId(viewId);
     setSelectedBoundaryBoxId(null);
+    // Selecting a view itself doesn't make changes unsaved unless it alters data.
+    // If data associated with views is considered 'options' that can be saved,
+    // then this *might* set hasUnsavedChanges(true), but typically view switching is not a saveable change.
   };
 
   const handleAddNewView = () => {
@@ -378,6 +401,7 @@ export default function ProductOptionsPage() {
     setProductOptions({ ...productOptions, views: updatedViews });
     setActiveViewId(newView.id);
     setSelectedBoundaryBoxId(null);
+    setHasUnsavedChanges(true);
   };
 
   const handleDeleteView = (viewId: string) => {
@@ -400,6 +424,7 @@ export default function ProductOptionsPage() {
     setIsDeleteViewDialogOpen(false);
     setViewIdToDelete(null);
     toast({title: "View Deleted", description: `The view has been removed.`});
+    setHasUnsavedChanges(true);
   };
 
   const handleViewDetailChange = (viewId: string, field: keyof Pick<ProductView, 'name' | 'imageUrl' | 'aiHint'>, value: string) => {
@@ -408,6 +433,7 @@ export default function ProductOptionsPage() {
       v.id === viewId ? { ...v, [field]: value } : v
     );
     setProductOptions({ ...productOptions, views: updatedViews });
+    setHasUnsavedChanges(true);
   };
 
   const handleAddBoundaryBox = () => {
@@ -428,6 +454,7 @@ export default function ProductOptionsPage() {
     );
     setProductOptions({ ...productOptions, views: updatedViews });
     setSelectedBoundaryBoxId(newBox.id);
+    setHasUnsavedChanges(true);
   };
 
   const handleRemoveBoundaryBox = (boxId: string) => {
@@ -437,6 +464,7 @@ export default function ProductOptionsPage() {
     );
     setProductOptions({ ...productOptions, views: updatedViews });
     if (selectedBoundaryBoxId === boxId) setSelectedBoundaryBoxId(null);
+    setHasUnsavedChanges(true);
   };
   
   const handleBoundaryBoxNameChange = (boxId: string, newName: string) => {
@@ -448,6 +476,7 @@ export default function ProductOptionsPage() {
       } : v
     );
     setProductOptions({ ...productOptions, views: updatedViews });
+    setHasUnsavedChanges(true);
   };
 
   const handleBoundaryBoxPropertyChange = (
@@ -483,14 +512,17 @@ export default function ProductOptionsPage() {
         })
       };
     });
+    setHasUnsavedChanges(true);
   };
 
   const handleSelectAllVariations = (checked: boolean) => {
     setSelectedVariationIdsForCstmzr(checked ? variations.map(v => v.id.toString()) : []);
+    setHasUnsavedChanges(true);
   };
 
   const handleVariationSelectionChange = (variationId: string, checked: boolean) => {
     setSelectedVariationIdsForCstmzr(prev => checked ? [...prev, variationId] : prev.filter(id => id !== variationId));
+    setHasUnsavedChanges(true);
   };
 
   const allVariationsSelected = variations.length > 0 && selectedVariationIdsForCstmzr.length === variations.length;
@@ -735,8 +767,20 @@ export default function ProductOptionsPage() {
           </Card>
         </div>
       </div>
-      <div className="mt-10 flex justify-end">
-        <Button onClick={handleSaveChanges} size="lg" className="bg-primary text-primary-foreground hover:bg-primary/90">Save CSTMZR Options</Button>
+      <div className="mt-10 flex justify-end gap-3"> {/* Added gap-3 for spacing */}
+        <Button onClick={handleSaveChanges} size="lg" className="bg-primary text-primary-foreground hover:bg-primary/90">
+          Save
+        </Button>
+        <Button 
+          variant="outline" 
+          size="lg" 
+          onClick={handleOpenInCustomizer} 
+          disabled={hasUnsavedChanges}
+          className="hover:bg-accent hover:text-accent-foreground"
+        >
+          <ExternalLink className="mr-2 h-4 w-4" /> {/* Added icon */}
+          Open in Customizer
+        </Button>
       </div>
 
       <AlertDialog open={isDeleteViewDialogOpen} onOpenChange={setIsDeleteViewDialogOpen}>
