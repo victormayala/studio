@@ -22,8 +22,7 @@ const defaultProductBase = {
   name: 'Plain White T-shirt (Default)',
   imageUrl: 'https://placehold.co/700x700.png',
   imageAlt: 'Plain white T-shirt ready for customization',
-  width: 700,
-  height: 700,
+  // width and height removed as they are no longer used for fixed sizing
   aiHint: 't-shirt mockup',
 };
 
@@ -55,13 +54,14 @@ export default function DesignCanvas({
     imageUrl: productImageUrl || defaultProductBase.imageUrl,
     imageAlt: productImageAlt || defaultProductBase.imageAlt,
     aiHint: productImageAiHint || defaultProductBase.aiHint,
+    name: productImageAlt || defaultProductBase.name, // Use alt as name if available
   };
   
   const {
     canvasImages, selectCanvasImage, selectedCanvasImageId, updateCanvasImage, removeCanvasImage,
     canvasTexts, selectCanvasText, selectedCanvasTextId, updateCanvasText, removeCanvasText,
     canvasShapes, selectCanvasShape, selectedCanvasShapeId, updateCanvasShape, removeCanvasShape,
-    startInteractiveOperation, endInteractiveOperation, // Import new functions
+    startInteractiveOperation, endInteractiveOperation,
   } = useUploads();
 
   const [activeDrag, setActiveDrag] = useState<{
@@ -93,9 +93,9 @@ export default function DesignCanvas({
         const newX = firstBox.x + firstBox.width / 2;
         const newY = firstBox.y + firstBox.height / 2;
         
-        startInteractiveOperation(); // Wrap this single update as an operation for consistency if needed, or decide if it's too minor
+        startInteractiveOperation(); 
         updateFunc(item.id, { x: newX, y: newY });
-        endInteractiveOperation(); // Or simply call updateFunc if it's atomic enough not to warrant undo batching
+        endInteractiveOperation(); 
 
         setLastAddedItemId(null); 
       }
@@ -143,7 +143,11 @@ export default function DesignCanvas({
 
   const handleCanvasClick = (e: ReactMouseEvent<HTMLDivElement>) => {
     const target = e.target as HTMLElement;
-    if (target === canvasRef.current || target.classList.contains('product-image-outer-container')) {
+     // Check if the click is on the canvasRef div or its direct parent, or the designated outer container
+    if (target === canvasRef.current || 
+        target === canvasRef.current?.parentElement ||
+        target.classList.contains('product-image-outer-container') ||
+        target.classList.contains('product-canvas-wrapper')) {
         selectCanvasImage(null);
         selectCanvasText(null);
         selectCanvasShape(null);
@@ -218,7 +222,7 @@ export default function DesignCanvas({
         itemInitialUnscaledHeight = shapeItem.height;
     }
 
-    startInteractiveOperation(); // Call before setting activeDrag
+    startInteractiveOperation(); 
 
     setActiveDrag({
       type, itemId: item.id, itemType,
@@ -356,7 +360,7 @@ export default function DesignCanvas({
   }, [activeDrag, updateCanvasImage, canvasImages, updateCanvasText, canvasTexts, updateCanvasShape, canvasShapes, productDefinedBoundaryBoxes]);
 
   const handleDragEnd = useCallback(() => {
-    endInteractiveOperation(); // Call when drag ends
+    endInteractiveOperation(); 
     setActiveDrag(null);
   }, [endInteractiveOperation]);
 
@@ -388,18 +392,15 @@ export default function DesignCanvas({
 
   return (
     <div
-      className="w-full h-full flex items-center justify-center bg-card border border-dashed border-border rounded-lg shadow-inner p-4 relative overflow-hidden select-none product-image-outer-container"
+      className="w-full h-full flex flex-col items-center justify-center bg-card border border-dashed border-border rounded-lg shadow-inner p-4 relative overflow-hidden select-none product-image-outer-container"
       onClick={handleCanvasClick} 
       onTouchStart={handleCanvasClick as any} 
     >
-      <div className="text-center"> 
+      <div className="relative w-full flex-1 min-h-0 flex items-center justify-center product-canvas-wrapper"> {/* New wrapper for canvasRef */}
         <div
           ref={canvasRef} 
-          className="relative product-image-canvas-area bg-muted/10" 
-          style={{ 
-            width: productToDisplay.width, 
-            height: productToDisplay.height,
-          }}
+          className="relative product-image-canvas-area bg-muted/10 aspect-square max-w-full max-h-full" 
+          // Removed fixed style width/height
         >
           <Image
             src={productToDisplay.imageUrl}
@@ -486,7 +487,9 @@ export default function DesignCanvas({
             />
           ))}
         </div>
-        <p className="mt-4 text-muted-foreground font-medium">{productToDisplay.name}</p>
+      </div>
+      <div className="text-center pt-2 flex-shrink-0"> {/* Product name and instructions moved here */}
+        <p className="mt-2 text-muted-foreground font-medium">{productToDisplay.name}</p>
         <p className="text-sm text-muted-foreground">
           {productDefinedBoundaryBoxes.length > 0 ? "Items will be kept within the dashed areas. " : ""}
           {visibleImages.length > 0 || visibleTexts.length > 0 || visibleShapes.length > 0 ? 
@@ -497,5 +500,6 @@ export default function DesignCanvas({
     </div>
   );
 }
-
     
+
+  
