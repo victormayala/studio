@@ -13,6 +13,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { Badge } from '@/components/ui/badge';
 import { ArrowLeft, PlusCircle, Trash2, Image as ImageIcon, Maximize2, Loader2, AlertTriangle, LayersIcon, Shirt, RefreshCcw, CheckSquare, Square as SquareIcon, Eye, Edit3 } from 'lucide-react';
 import { Checkbox } from "@/components/ui/checkbox";
+import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
@@ -43,12 +44,12 @@ interface ProductOptionsData {
   description: string;
   price: number;      
   type: 'simple' | 'variable' | 'grouped' | 'external'; 
-  views: ProductView[]; // Changed from single imageUrl/aiHint/boundaryBoxes
+  views: ProductView[];
   cstmzrSelectedVariationIds: string[]; 
 }
 
 interface LocalStorageOptions {
-  views: ProductView[]; // Changed from boundaryBoxes
+  views: ProductView[];
   cstmzrSelectedVariationIds: string[]; 
 }
 
@@ -137,8 +138,8 @@ export default function ProductOptionsPage() {
         userCredentials = { storeUrl: userStoreUrl, consumerKey: userConsumerKey, consumerSecret: userConsumerSecret };
       }
     } catch (storageError) {
-      console.error("Error accessing localStorage for WC credentials:", storageError);
-      toast({ title: "Local Storage Error", description: "Could not access WooCommerce credentials.", variant: "destructive" });
+      console.warn("Error accessing localStorage for WC credentials:", storageError);
+      // toast({ title: "Local Storage Error", description: "Could not access WooCommerce credentials.", variant: "destructive" });
     }
     
     ({ product: wcProduct, error: fetchError } = await fetchWooCommerceProductById(productId, userCredentials));
@@ -159,7 +160,6 @@ export default function ProductOptionsPage() {
     if (localOptions?.views && localOptions.views.length > 0) {
       viewsToSet = localOptions.views;
     } else {
-      // Create a default "Front" view if no views are saved
       viewsToSet.push({
         id: crypto.randomUUID(),
         name: "Front",
@@ -342,10 +342,9 @@ export default function ProductOptionsPage() {
     }
   };
 
-  // View Management Handlers
   const handleSelectView = (viewId: string) => {
     setActiveViewId(viewId);
-    setSelectedBoundaryBoxId(null); // Reset selected box when view changes
+    setSelectedBoundaryBoxId(null);
   };
 
   const handleAddNewView = () => {
@@ -374,7 +373,7 @@ export default function ProductOptionsPage() {
     const updatedViews = productOptions.views.filter(v => v.id !== viewIdToDelete);
     setProductOptions({ ...productOptions, views: updatedViews });
     if (activeViewId === viewIdToDelete) {
-      setActiveViewId(updatedViews[0]?.id || null); // Select the first remaining view
+      setActiveViewId(updatedViews[0]?.id || null);
       setSelectedBoundaryBoxId(null);
     }
   };
@@ -387,7 +386,6 @@ export default function ProductOptionsPage() {
     setProductOptions({ ...productOptions, views: updatedViews });
   };
 
-  // Boundary Box Handlers (adapted for active view)
   const handleAddBoundaryBox = () => {
     if (!productOptions || !activeViewId) return;
     const currentView = productOptions.views.find(v => v.id === activeViewId);
@@ -463,7 +461,6 @@ export default function ProductOptionsPage() {
     });
   };
 
-  // Variation Selection Handlers
   const handleSelectAllVariations = (checked: boolean) => {
     setSelectedVariationIdsForCstmzr(checked ? variations.map(v => v.id.toString()) : []);
   };
@@ -504,148 +501,162 @@ export default function ProductOptionsPage() {
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
         <div className="md:col-span-1 space-y-6">
-        <Card className="shadow-md">
+          <Card className="shadow-md">
             <CardHeader>
-              <CardTitle className="font-headline text-lg">Product Views</CardTitle>
-              <CardDescription>Manage different views (e.g., Front, Back). Max {MAX_PRODUCT_VIEWS} views.</CardDescription>
+              <CardTitle className="font-headline text-lg">Product View & Customization Setup</CardTitle>
+              <CardDescription>Manage views and define customization areas for each.</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex flex-wrap gap-2 mb-4">
-                {productOptions.views.map(view => (
-                  <Button 
-                    key={view.id} 
-                    variant={activeViewId === view.id ? "default" : "outline"}
-                    onClick={() => handleSelectView(view.id)}
-                    className="flex-grow sm:flex-grow-0"
-                  >
-                    {view.name}
+            <CardContent className="space-y-6">
+              {/* View Management Section */}
+              <div>
+                <h4 className="text-base font-semibold text-foreground mb-3">View Management</h4>
+                {productOptions.views.length < MAX_PRODUCT_VIEWS && (
+                  <Button onClick={handleAddNewView} variant="outline" className="w-full mb-4 hover:bg-accent hover:text-accent-foreground">
+                    <PlusCircle className="mr-2 h-4 w-4" /> Add New View
                   </Button>
-                ))}
-              </div>
-              {productOptions.views.length < MAX_PRODUCT_VIEWS && (
-                <Button onClick={handleAddNewView} variant="outline" className="w-full hover:bg-accent hover:text-accent-foreground">
-                  <PlusCircle className="mr-2 h-4 w-4" /> Add New View
-                </Button>
-              )}
-              {currentActiveView && (
-                <div className="mt-4 pt-4 border-t space-y-3">
-                  <h4 className="text-sm font-medium text-muted-foreground">Editing: {currentActiveView.name}</h4>
-                  <div>
-                    <Label htmlFor={`viewName-${currentActiveView.id}`} className="text-xs">View Name</Label>
-                    <Input 
-                      id={`viewName-${currentActiveView.id}`} 
-                      value={currentActiveView.name} 
-                      onChange={(e) => handleViewDetailChange(currentActiveView.id, 'name', e.target.value)} 
-                      className="mt-1 h-8"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor={`viewImageUrl-${currentActiveView.id}`} className="text-xs">Image URL</Label>
-                    <Input 
-                      id={`viewImageUrl-${currentActiveView.id}`} 
-                      value={currentActiveView.imageUrl} 
-                      onChange={(e) => handleViewDetailChange(currentActiveView.id, 'imageUrl', e.target.value)} 
-                      placeholder="https://placehold.co/600x600.png"
-                      className="mt-1 h-8"
-                    />
-                  </div>
-                   <div>
-                    <Label htmlFor={`viewAiHint-${currentActiveView.id}`} className="text-xs">AI Hint (for image search)</Label>
-                    <Input 
-                      id={`viewAiHint-${currentActiveView.id}`} 
-                      value={currentActiveView.aiHint || ''} 
-                      onChange={(e) => handleViewDetailChange(currentActiveView.id, 'aiHint', e.target.value)} 
-                      placeholder="e.g., t-shirt back"
-                      className="mt-1 h-8"
-                    />
-                  </div>
-                  {productOptions.views.length > 1 && (
-                    <Button 
-                      variant="destructive" 
-                      onClick={() => handleDeleteView(currentActiveView.id)} 
-                      size="sm"
-                      className="w-full"
-                    >
-                      <Trash2 className="mr-2 h-4 w-4" /> Delete Current View
-                    </Button>
-                  )}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          <Card className="shadow-md">
-            <CardHeader>
-              <CardTitle className="font-headline text-lg">Image & Areas for: <span className="text-primary">{currentActiveView?.name || "N/A"}</span></CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div 
-                ref={imageWrapperRef} 
-                className="relative w-full aspect-square border rounded-md overflow-hidden group bg-muted/20 select-none"
-                onMouseDown={(e) => { if (e.target === imageWrapperRef.current) setSelectedBoundaryBoxId(null); }}
-              >
-                {currentActiveView?.imageUrl ? (
-                  <NextImage src={currentActiveView.imageUrl} alt={currentActiveView.name} fill className="object-contain pointer-events-none" data-ai-hint={currentActiveView.aiHint || "product view"} priority />
-                ) : (
-                  <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none"><ImageIcon className="w-16 h-16 text-muted-foreground" /><p className="text-sm text-muted-foreground mt-2">No image for this view</p></div>
                 )}
-                {currentActiveView?.boundaryBoxes.map((box) => (
-                  <div
-                    key={box.id}
-                    className={cn("absolute transition-colors duration-100 ease-in-out group/box", selectedBoundaryBoxId === box.id ? 'border-primary ring-2 ring-primary ring-offset-1 bg-primary/10' : 'border-dashed border-muted-foreground/50 hover:border-primary/70 hover:bg-primary/5', activeDrag?.boxId === box.id && activeDrag.type === 'move' ? 'cursor-grabbing' : 'cursor-grab')}
-                    style={{ left: `${box.x}%`, top: `${box.y}%`, width: `${box.width}%`, height: `${box.height}%`, zIndex: selectedBoundaryBoxId === box.id ? 10 : 1 }}
-                    onMouseDown={(e) => handleInteractionStart(e, box.id, 'move')}
-                    onTouchStart={(e) => handleInteractionStart(e, box.id, 'move')}
-                  >
-                    {selectedBoundaryBoxId === box.id && (<>
-                        <div className="absolute -top-1.5 -left-1.5 w-4 h-4 bg-primary rounded-full border-2 border-background shadow-md cursor-nwse-resize hover:opacity-80 active:opacity-100" title="Resize (Top-Left)" onMouseDown={(e) => handleInteractionStart(e, box.id, 'resize_tl')} onTouchStart={(e) => handleInteractionStart(e, box.id, 'resize_tl')}><Maximize2 className="w-2.5 h-2.5 text-primary-foreground absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" /></div>
-                        <div className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-primary rounded-full border-2 border-background shadow-md cursor-nesw-resize hover:opacity-80 active:opacity-100" title="Resize (Top-Right)" onMouseDown={(e) => handleInteractionStart(e, box.id, 'resize_tr')} onTouchStart={(e) => handleInteractionStart(e, box.id, 'resize_tr')}><Maximize2 className="w-2.5 h-2.5 text-primary-foreground absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" /></div>
-                        <div className="absolute -bottom-1.5 -left-1.5 w-4 h-4 bg-primary rounded-full border-2 border-background shadow-md cursor-nesw-resize hover:opacity-80 active:opacity-100" title="Resize (Bottom-Left)" onMouseDown={(e) => handleInteractionStart(e, box.id, 'resize_bl')} onTouchStart={(e) => handleInteractionStart(e, box.id, 'resize_bl')}><Maximize2 className="w-2.5 h-2.5 text-primary-foreground absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" /></div>
-                        <div className="absolute -bottom-1.5 -right-1.5 w-4 h-4 bg-primary rounded-full border-2 border-background shadow-md cursor-nwse-resize hover:opacity-80 active:opacity-100" title="Resize (Bottom-Right)" onMouseDown={(e) => handleInteractionStart(e, box.id, 'resize_br')} onTouchStart={(e) => handleInteractionStart(e, box.id, 'resize_br')}><Maximize2 className="w-2.5 h-2.5 text-primary-foreground absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" /></div>
-                    </>)}
-                    <div className="absolute top-0.5 left-0.5 text-[8px] text-primary-foreground bg-primary/70 px-1 py-0.5 rounded-br-sm opacity-0 group-hover/box:opacity-100 group-[.is-selected]/box:opacity-100 transition-opacity select-none pointer-events-none">{box.name}</div>
-                  </div>
-                ))}
-              </div>
-              <p className="text-xs text-muted-foreground mt-2 text-center">Click & drag areas. Use handles to resize.</p>
-            </CardContent>
-          </Card>
+                {productOptions.views.length >= MAX_PRODUCT_VIEWS && (
+                    <p className="text-xs text-muted-foreground mb-4 text-center">Maximum {MAX_PRODUCT_VIEWS} views reached.</p>
+                )}
 
-          <Card className="shadow-md">
-            <CardHeader className="flex flex-row items-center justify-between pb-4">
-              <div><CardTitle className="font-headline text-lg">Customization Areas</CardTitle><CardDescription>Define printable regions for <span className="text-primary">{currentActiveView?.name || "N/A"}</span>. (Max 3)</CardDescription></div>
-            </CardHeader>
-            <CardContent>
-              {currentActiveView && currentActiveView.boundaryBoxes.length > 0 && (
-                <div className="space-y-3 mb-4">
-                  {currentActiveView.boundaryBoxes.map((box) => (
-                    <div key={box.id} className={cn("p-3 border rounded-md transition-all", selectedBoundaryBoxId === box.id ? 'bg-primary/10 border-primary shadow-md' : 'bg-muted/30 hover:bg-muted/50', "cursor-pointer")} onClick={() => setSelectedBoundaryBoxId(box.id)}>
-                      <div className="flex justify-between items-center mb-1.5">
-                        <Input value={box.name} onChange={(e) => handleBoundaryBoxNameChange(box.id, e.target.value)} className="text-sm font-semibold text-foreground h-8 flex-grow mr-2 bg-transparent border-0 focus-visible:ring-1 focus-visible:ring-ring p-1" onClick={(e) => e.stopPropagation()} />
-                        <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); handleRemoveBoundaryBox(box.id);}} className="text-destructive hover:bg-destructive/10 hover:text-destructive h-7 w-7" title="Remove Area"><Trash2 className="h-4 w-4" /></Button>
-                      </div>
-                      {selectedBoundaryBoxId === box.id ? (
-                        <div className="mt-3 pt-3 border-t border-border/50"><h4 className="text-xs font-medium mb-1.5 text-muted-foreground">Edit Dimensions (%):</h4>
-                          <div className="grid grid-cols-2 gap-x-3 gap-y-2">
-                            <div><Label htmlFor={`box-x-${box.id}`} className="text-xs">X</Label><Input type="number" step="0.1" min="0" max="100" id={`box-x-${box.id}`} value={box.x.toFixed(1)} onChange={(e) => handleBoundaryBoxPropertyChange(box.id, 'x', e.target.value)} className="h-8 text-xs w-full" onClick={(e) => e.stopPropagation()} /></div>
-                            <div><Label htmlFor={`box-y-${box.id}`} className="text-xs">Y</Label><Input type="number" step="0.1" min="0" max="100" id={`box-y-${box.id}`} value={box.y.toFixed(1)} onChange={(e) => handleBoundaryBoxPropertyChange(box.id, 'y', e.target.value)} className="h-8 text-xs w-full" onClick={(e) => e.stopPropagation()} /></div>
-                            <div><Label htmlFor={`box-w-${box.id}`} className="text-xs">Width</Label><Input type="number" step="0.1" min={MIN_BOX_SIZE_PERCENT.toString()} max="100" id={`box-w-${box.id}`} value={box.width.toFixed(1)} onChange={(e) => handleBoundaryBoxPropertyChange(box.id, 'width', e.target.value)} className="h-8 text-xs w-full" onClick={(e) => e.stopPropagation()} /></div>
-                            <div><Label htmlFor={`box-h-${box.id}`} className="text-xs">Height</Label><Input type="number" step="0.1" min={MIN_BOX_SIZE_PERCENT.toString()} max="100" id={`box-h-${box.id}`} value={box.height.toFixed(1)} onChange={(e) => handleBoundaryBoxPropertyChange(box.id, 'height', e.target.value)} className="h-8 text-xs w-full" onClick={(e) => e.stopPropagation()} /></div>
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="text-xs text-muted-foreground space-y-0.5"><p><strong>X:</strong> {box.x.toFixed(1)}% | <strong>Y:</strong> {box.y.toFixed(1)}%</p><p><strong>W:</strong> {box.width.toFixed(1)}% | <strong>H:</strong> {box.height.toFixed(1)}%</p></div>
-                      )}
+                {currentActiveView && (
+                  <div className="space-y-3 p-3 border rounded-md bg-muted/20">
+                    <h5 className="text-sm font-medium text-muted-foreground">Editing View: <span className="text-primary font-semibold">{currentActiveView.name}</span></h5>
+                    <div>
+                      <Label htmlFor={`viewName-${currentActiveView.id}`} className="text-xs">View Name</Label>
+                      <Input 
+                        id={`viewName-${currentActiveView.id}`} 
+                        value={currentActiveView.name} 
+                        onChange={(e) => handleViewDetailChange(currentActiveView.id, 'name', e.target.value)} 
+                        className="mt-1 h-8 bg-background"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor={`viewImageUrl-${currentActiveView.id}`} className="text-xs">Image URL</Label>
+                      <Input 
+                        id={`viewImageUrl-${currentActiveView.id}`} 
+                        value={currentActiveView.imageUrl} 
+                        onChange={(e) => handleViewDetailChange(currentActiveView.id, 'imageUrl', e.target.value)} 
+                        placeholder="https://placehold.co/600x600.png"
+                        className="mt-1 h-8 bg-background"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor={`viewAiHint-${currentActiveView.id}`} className="text-xs">AI Hint (for image search)</Label>
+                      <Input 
+                        id={`viewAiHint-${currentActiveView.id}`} 
+                        value={currentActiveView.aiHint || ''} 
+                        onChange={(e) => handleViewDetailChange(currentActiveView.id, 'aiHint', e.target.value)} 
+                        placeholder="e.g., t-shirt back"
+                        className="mt-1 h-8 bg-background"
+                      />
+                    </div>
+                    {productOptions.views.length > 1 && (
+                      <Button 
+                        variant="destructive" 
+                        onClick={() => handleDeleteView(currentActiveView.id)} 
+                        size="sm"
+                        className="w-full mt-2"
+                      >
+                        <Trash2 className="mr-2 h-4 w-4" /> Delete This View
+                      </Button>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              <Separator />
+
+              {/* Image Display & View Selection Section */}
+              <div>
+                 <h4 className="text-base font-semibold text-foreground mb-1">Image for: <span className="text-primary">{currentActiveView?.name || "N/A"}</span></h4>
+                 <p className="text-xs text-muted-foreground mb-3">Click & drag areas. Use handles to resize. Select a view below to change image.</p
+                 >
+                <div 
+                  ref={imageWrapperRef} 
+                  className="relative w-full aspect-square border rounded-md overflow-hidden group bg-muted/20 select-none mb-4"
+                  onMouseDown={(e) => { if (e.target === imageWrapperRef.current) setSelectedBoundaryBoxId(null); }}
+                >
+                  {currentActiveView?.imageUrl ? (
+                    <NextImage src={currentActiveView.imageUrl} alt={currentActiveView.name} fill className="object-contain pointer-events-none" data-ai-hint={currentActiveView.aiHint || "product view"} priority />
+                  ) : (
+                    <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none"><ImageIcon className="w-16 h-16 text-muted-foreground" /><p className="text-sm text-muted-foreground mt-2">No image for this view. Set URL above.</p></div>
+                  )}
+                  {currentActiveView?.boundaryBoxes.map((box) => (
+                    <div
+                      key={box.id}
+                      className={cn("absolute transition-colors duration-100 ease-in-out group/box", selectedBoundaryBoxId === box.id ? 'border-primary ring-2 ring-primary ring-offset-1 bg-primary/10' : 'border-dashed border-muted-foreground/50 hover:border-primary/70 hover:bg-primary/5', activeDrag?.boxId === box.id && activeDrag.type === 'move' ? 'cursor-grabbing' : 'cursor-grab')}
+                      style={{ left: `${box.x}%`, top: `${box.y}%`, width: `${box.width}%`, height: `${box.height}%`, zIndex: selectedBoundaryBoxId === box.id ? 10 : 1 }}
+                      onMouseDown={(e) => handleInteractionStart(e, box.id, 'move')}
+                      onTouchStart={(e) => handleInteractionStart(e, box.id, 'move')}
+                    >
+                      {selectedBoundaryBoxId === box.id && (<>
+                          <div className="absolute -top-1.5 -left-1.5 w-4 h-4 bg-primary rounded-full border-2 border-background shadow-md cursor-nwse-resize hover:opacity-80 active:opacity-100" title="Resize (Top-Left)" onMouseDown={(e) => handleInteractionStart(e, box.id, 'resize_tl')} onTouchStart={(e) => handleInteractionStart(e, box.id, 'resize_tl')}><Maximize2 className="w-2.5 h-2.5 text-primary-foreground absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" /></div>
+                          <div className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-primary rounded-full border-2 border-background shadow-md cursor-nesw-resize hover:opacity-80 active:opacity-100" title="Resize (Top-Right)" onMouseDown={(e) => handleInteractionStart(e, box.id, 'resize_tr')} onTouchStart={(e) => handleInteractionStart(e, box.id, 'resize_tr')}><Maximize2 className="w-2.5 h-2.5 text-primary-foreground absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" /></div>
+                          <div className="absolute -bottom-1.5 -left-1.5 w-4 h-4 bg-primary rounded-full border-2 border-background shadow-md cursor-nesw-resize hover:opacity-80 active:opacity-100" title="Resize (Bottom-Left)" onMouseDown={(e) => handleInteractionStart(e, box.id, 'resize_bl')} onTouchStart={(e) => handleInteractionStart(e, box.id, 'resize_bl')}><Maximize2 className="w-2.5 h-2.5 text-primary-foreground absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" /></div>
+                          <div className="absolute -bottom-1.5 -right-1.5 w-4 h-4 bg-primary rounded-full border-2 border-background shadow-md cursor-nwse-resize hover:opacity-80 active:opacity-100" title="Resize (Bottom-Right)" onMouseDown={(e) => handleInteractionStart(e, box.id, 'resize_br')} onTouchStart={(e) => handleInteractionStart(e, box.id, 'resize_br')}><Maximize2 className="w-2.5 h-2.5 text-primary-foreground absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" /></div>
+                      </>)}
+                      <div className="absolute top-0.5 left-0.5 text-[8px] text-primary-foreground bg-primary/70 px-1 py-0.5 rounded-br-sm opacity-0 group-hover/box:opacity-100 group-[.is-selected]/box:opacity-100 transition-opacity select-none pointer-events-none">{box.name}</div>
                     </div>
                   ))}
                 </div>
-              )}
-              {currentActiveView && currentActiveView.boundaryBoxes.length < 3 ? (
-                <Button onClick={handleAddBoundaryBox} variant="outline" className="w-full hover:bg-accent hover:text-accent-foreground" disabled={!activeViewId}><PlusCircle className="mr-2 h-4 w-4" />Add Area</Button>
-              ) : currentActiveView && (
-                <p className="text-sm text-muted-foreground text-center py-2">Max 3 areas for this view.</p>
-              )}
-              {!currentActiveView && <p className="text-sm text-muted-foreground text-center py-2">Select a product view to manage its areas.</p>}
+                 <div className="flex flex-wrap gap-2 justify-center">
+                    {productOptions.views.map(view => (
+                    <Button 
+                        key={view.id} 
+                        variant={activeViewId === view.id ? "default" : "outline"}
+                        onClick={() => handleSelectView(view.id)}
+                        size="sm"
+                        className="flex-grow sm:flex-grow-0"
+                    >
+                        {view.name}
+                    </Button>
+                    ))}
+                </div>
+              </div>
+              
+              <Separator />
+
+              {/* Customization Areas Section */}
+              <div>
+                <div className="flex justify-between items-center mb-3">
+                    <h4 className="text-base font-semibold text-foreground">Customization Areas</h4>
+                    {currentActiveView && currentActiveView.boundaryBoxes.length < 3 ? (
+                        <Button onClick={handleAddBoundaryBox} variant="outline" size="sm" className="hover:bg-accent hover:text-accent-foreground" disabled={!activeViewId}><PlusCircle className="mr-1.5 h-4 w-4" />Add Area</Button>
+                    ) : null}
+                </div>
+                {currentActiveView && currentActiveView.boundaryBoxes.length > 0 && (
+                  <div className="space-y-3">
+                    {currentActiveView.boundaryBoxes.map((box) => (
+                      <div key={box.id} className={cn("p-3 border rounded-md transition-all", selectedBoundaryBoxId === box.id ? 'bg-primary/10 border-primary shadow-md' : 'bg-muted/30 hover:bg-muted/50', "cursor-pointer")} onClick={() => setSelectedBoundaryBoxId(box.id)}>
+                        <div className="flex justify-between items-center mb-1.5">
+                          <Input value={box.name} onChange={(e) => handleBoundaryBoxNameChange(box.id, e.target.value)} className="text-sm font-semibold text-foreground h-8 flex-grow mr-2 bg-transparent border-0 focus-visible:ring-1 focus-visible:ring-ring p-1" onClick={(e) => e.stopPropagation()} />
+                          <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); handleRemoveBoundaryBox(box.id);}} className="text-destructive hover:bg-destructive/10 hover:text-destructive h-7 w-7" title="Remove Area"><Trash2 className="h-4 w-4" /></Button>
+                        </div>
+                        {selectedBoundaryBoxId === box.id ? (
+                          <div className="mt-3 pt-3 border-t border-border/50"><h4 className="text-xs font-medium mb-1.5 text-muted-foreground">Edit Dimensions (%):</h4>
+                            <div className="grid grid-cols-2 gap-x-3 gap-y-2">
+                              <div><Label htmlFor={`box-x-${box.id}`} className="text-xs">X</Label><Input type="number" step="0.1" min="0" max="100" id={`box-x-${box.id}`} value={box.x.toFixed(1)} onChange={(e) => handleBoundaryBoxPropertyChange(box.id, 'x', e.target.value)} className="h-8 text-xs w-full bg-background" onClick={(e) => e.stopPropagation()} /></div>
+                              <div><Label htmlFor={`box-y-${box.id}`} className="text-xs">Y</Label><Input type="number" step="0.1" min="0" max="100" id={`box-y-${box.id}`} value={box.y.toFixed(1)} onChange={(e) => handleBoundaryBoxPropertyChange(box.id, 'y', e.target.value)} className="h-8 text-xs w-full bg-background" onClick={(e) => e.stopPropagation()} /></div>
+                              <div><Label htmlFor={`box-w-${box.id}`} className="text-xs">Width</Label><Input type="number" step="0.1" min={MIN_BOX_SIZE_PERCENT.toString()} max="100" id={`box-w-${box.id}`} value={box.width.toFixed(1)} onChange={(e) => handleBoundaryBoxPropertyChange(box.id, 'width', e.target.value)} className="h-8 text-xs w-full bg-background" onClick={(e) => e.stopPropagation()} /></div>
+                              <div><Label htmlFor={`box-h-${box.id}`} className="text-xs">Height</Label><Input type="number" step="0.1" min={MIN_BOX_SIZE_PERCENT.toString()} max="100" id={`box-h-${box.id}`} value={box.height.toFixed(1)} onChange={(e) => handleBoundaryBoxPropertyChange(box.id, 'height', e.target.value)} className="h-8 text-xs w-full bg-background" onClick={(e) => e.stopPropagation()} /></div>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="text-xs text-muted-foreground space-y-0.5"><p><strong>X:</strong> {box.x.toFixed(1)}% | <strong>Y:</strong> {box.y.toFixed(1)}%</p><p><strong>W:</strong> {box.width.toFixed(1)}% | <strong>H:</strong> {box.height.toFixed(1)}%</p></div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+                 {currentActiveView && currentActiveView.boundaryBoxes.length === 0 && (
+                     <p className="text-sm text-muted-foreground text-center py-2">No customization areas defined for this view. Click "Add Area".</p>
+                 )}
+                 {currentActiveView && currentActiveView.boundaryBoxes.length >= 3 && (
+                     <p className="text-sm text-muted-foreground text-center py-2">Max 3 areas for this view.</p>
+                 )}
+                {!currentActiveView && <p className="text-sm text-muted-foreground text-center py-2">Select or add a product view to manage its areas.</p>}
+              </div>
             </CardContent>
           </Card>
         </div>
@@ -698,3 +709,4 @@ export default function ProductOptionsPage() {
     </div>
   );
 }
+
