@@ -71,3 +71,38 @@ export interface WCCustomProduct {
   meta_data: Array<{ id: number; key: string; value: any }>;
   // ... and more fields
 }
+
+export interface WCVariationAttribute {
+  id: number;
+  name: string;
+  option: string;
+}
+
+export interface WCVariationImage {
+  id: number;
+  src: string;
+  alt: string;
+  name: string;
+}
+
+export interface WCVariation {
+  id: number;
+  date_created: string;
+  date_modified: string;
+  description: string;
+  permalink: string;
+  sku: string;
+  price: string;
+  regular_price: string;
+  sale_price: string;
+  on_sale: boolean;
+  status: 'publish' | 'private' | 'draft';
+  purchasable: boolean;
+  virtual: boolean;
+  downloadable: boolean;
+  stock_quantity: number | null;
+  stock_status: 'instock' | 'outofstock' | 'onbackorder';
+  image: WCVariationImage | null; // Can be null if variation uses parent image
+  attributes: WCVariationAttribute[];
+  meta_data: Array<{ id: number; key: string; value: any }>;
+}

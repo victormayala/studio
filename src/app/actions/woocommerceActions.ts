@@ -1,7 +1,7 @@
 
 'use server';
 
-import type { WCCustomProduct } from '@/types/woocommerce';
+import type { WCCustomProduct, WCVariation } from '@/types/woocommerce';
 
 interface FetchWooCommerceProductsResponse {
   products?: WCCustomProduct[];
@@ -10,6 +10,11 @@ interface FetchWooCommerceProductsResponse {
 
 interface FetchWooCommerceProductByIdResponse {
   product?: WCCustomProduct;
+  error?: string;
+}
+
+interface FetchWooCommerceProductVariationsResponse {
+  variations?: WCVariation[];
   error?: string;
 }
 
@@ -115,5 +120,53 @@ export async function fetchWooCommerceProductById(productId: string, credentials
       return { error: `An unexpected error occurred: ${error.message}` };
     }
     return { error: `An unexpected error occurred while fetching product ${productId}.` };
+  }
+}
+
+export async function fetchWooCommerceProductVariations(productId: string, credentials?: WooCommerceCredentials): Promise<FetchWooCommerceProductVariationsResponse> {
+  const { storeUrl, consumerKey, consumerSecret, isUserProvided } = getApiCredentials(credentials);
+
+  if (!productId) {
+    return { error: 'Product ID is required to fetch variations.' };
+  }
+
+  if (!storeUrl || !consumerKey || !consumerSecret) {
+    const missingFields = [];
+    if (!storeUrl) missingFields.push('Store URL');
+    if (!consumerKey) missingFields.push('Consumer Key');
+    if (!consumerSecret) missingFields.push('Consumer Secret');
+    
+    const message = isUserProvided
+      ? `User-specific WooCommerce API credentials for variations missing: ${missingFields.join(', ')}.`
+      : `Global WooCommerce API credentials for variations are not set in .env.`;
+    
+    console.error(message);
+    return { error: `Server configuration error: ${message}` };
+  }
+
+  const apiUrl = `${storeUrl}/wp-json/wc/v3/products/${productId}/variations`;
+
+  try {
+    const response = await fetch(apiUrl, {
+      headers: {
+        Authorization: `Basic ${Buffer.from(`${consumerKey}:${consumerSecret}`).toString('base64')}`,
+      },
+      cache: 'no-store', 
+    });
+
+    if (!response.ok) {
+      const errorBody = await response.text();
+      console.error(`WooCommerce API error for product ${productId} variations: ${response.status} ${response.statusText}`, errorBody);
+      return { error: `Failed to fetch variations for product ${productId}. Status: ${response.status}. ${errorBody}` };
+    }
+
+    const variations: WCVariation[] = await response.json();
+    return { variations };
+  } catch (error) {
+    console.error(`Error fetching WooCommerce variations for product ${productId}:`, error);
+    if (error instanceof Error) {
+      return { error: `An unexpected error occurred: ${error.message}` };
+    }
+    return { error: `An unexpected error occurred while fetching variations for product ${productId}.` };
   }
 }

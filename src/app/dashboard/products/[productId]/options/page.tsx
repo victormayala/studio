@@ -9,15 +9,15 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { ArrowLeft, PlusCircle, Trash2, Image as ImageIcon, Maximize2, Loader2, AlertTriangle } from 'lucide-react';
+import { ArrowLeft, PlusCircle, Trash2, Image as ImageIcon, Maximize2, Loader2, AlertTriangle, PackageVariantIcon, Shirt } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
-import { fetchWooCommerceProductById } from '@/app/actions/woocommerceActions';
-import type { WCCustomProduct } from '@/types/woocommerce';
+import { fetchWooCommerceProductById, fetchWooCommerceProductVariations } from '@/app/actions/woocommerceActions';
+import type { WCCustomProduct, WCVariation } from '@/types/woocommerce';
 
 interface BoundaryBox {
   id: string;
@@ -34,6 +34,7 @@ interface ProductOptionsData {
   name: string;       // WC Product Name
   description: string;// WC Product Description (plain text)
   price: number;      // WC Product Price (parsed)
+  type: 'simple' | 'variable' | 'grouped' | 'external'; // Added product type
   imageUrl: string;   // WC Product Image URL
   aiHint?: string;     // WC Product Image AI Hint
 
@@ -76,6 +77,10 @@ export default function ProductOptionsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   
+  const [variations, setVariations] = useState<WCVariation[]>([]);
+  const [isLoadingVariations, setIsLoadingVariations] = useState(false);
+  const [variationsError, setVariationsError] = useState<string | null>(null);
+
   const [newColorHex, setNewColorHex] = useState<string>('#CCCCCC');
   const [newColorSwatch, setNewColorSwatch] = useState<string>('#CCCCCC');
   const [newSize, setNewSize] = useState<string>('');
@@ -86,6 +91,7 @@ export default function ProductOptionsPage() {
 
   useEffect(() => {
     const stripHtml = (html: string): string => {
+      if (typeof window === 'undefined') return html; // Avoid error during SSR or if document is not available
       const tempDiv = document.createElement('div');
       tempDiv.innerHTML = html;
       return tempDiv.textContent || tempDiv.innerText || "";
@@ -101,6 +107,8 @@ export default function ProductOptionsPage() {
 
       setIsLoading(true);
       setError(null);
+      setVariationsError(null);
+      setVariations([]);
 
       const localStorageKey = `cstmzr_product_options_${user.id}_${productId}`;
       let localOptions: LocalStorageOptions | null = null;
@@ -120,13 +128,10 @@ export default function ProductOptionsPage() {
       const userStoreUrl = localStorage.getItem(`wc_store_url_${user.id}`);
       const userConsumerKey = localStorage.getItem(`wc_consumer_key_${user.id}`);
       const userConsumerSecret = localStorage.getItem(`wc_consumer_secret_${user.id}`);
+      const credentials = (userStoreUrl && userConsumerKey && userConsumerSecret) ? { storeUrl: userStoreUrl, consumerKey: userConsumerKey, consumerSecret: userConsumerSecret } : undefined;
 
-      if (userStoreUrl && userConsumerKey && userConsumerSecret) {
-        ({ product: wcProduct, error: fetchError } = await fetchWooCommerceProductById(productId, { storeUrl: userStoreUrl, consumerKey: userConsumerKey, consumerSecret: userConsumerSecret }));
-      } else {
-        ({ product: wcProduct, error: fetchError } = await fetchWooCommerceProductById(productId));
-      }
-
+      ({ product: wcProduct, error: fetchError } = await fetchWooCommerceProductById(productId, credentials));
+      
       if (fetchError || !wcProduct) {
         setError(fetchError || `Product with ID ${productId} not found or failed to load.`);
         setIsLoading(false);
@@ -144,6 +149,7 @@ export default function ProductOptionsPage() {
         name: wcProduct.name || `Product ${productId}`,
         description: plainTextDescription,
         price: parseFloat(wcProduct.price) || 0,
+        type: wcProduct.type,
         imageUrl: wcProduct.images && wcProduct.images.length > 0 ? wcProduct.images[0].src : defaultImageUrl,
         aiHint: wcProduct.images && wcProduct.images.length > 0 && wcProduct.images[0].alt ? wcProduct.images[0].alt.split(" ").slice(0,2).join(" ") : defaultAiHint,
         cstmzrColors: localOptions?.cstmzrColors || [],
@@ -152,6 +158,18 @@ export default function ProductOptionsPage() {
       });
       setSelectedBoundaryBoxId(null);
       setIsLoading(false);
+
+      if (wcProduct.type === 'variable') {
+        setIsLoadingVariations(true);
+        const { variations: fetchedVariations, error: variationsFetchError } = await fetchWooCommerceProductVariations(productId, credentials);
+        if (variationsFetchError) {
+          setVariationsError(variationsFetchError);
+          toast({ title: "Error Loading Variations", description: variationsFetchError, variant: "destructive"});
+        } else if (fetchedVariations) {
+          setVariations(fetchedVariations);
+        }
+        setIsLoadingVariations(false);
+      }
     };
 
     loadProductData();
@@ -402,13 +420,6 @@ export default function ProductOptionsPage() {
       console.error("Error saving to localStorage:", e);
       toast({ title: "Save Error", description: "Could not save CSTMZR options to local storage.", variant: "destructive"});
     }
-    
-    console.log("Current WC Product Info (not saved back to WC):", {
-        id: productOptions.id,
-        name: productOptions.name,
-        description: productOptions.description, // This will be the plain text version
-        price: productOptions.price,
-    });
   };
 
   const handleAddBoundaryBox = () => {
@@ -439,7 +450,6 @@ export default function ProductOptionsPage() {
   
   const handleWCProductDetailChange = (field: 'name' | 'description' | 'price', value: string | number) => {
     if (productOptions) {
-      // For description, if user edits, it's already plain text
       setProductOptions({ ...productOptions, [field]: value });
     }
   };
@@ -524,6 +534,7 @@ export default function ProductOptionsPage() {
       </p>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+        {/* Left Column: Image & Boundary Boxes */}
         <div className="md:col-span-1 space-y-6">
            <Card className="shadow-md">
             <CardHeader>
@@ -706,6 +717,7 @@ export default function ProductOptionsPage() {
           </Card>
         </div>
 
+        {/* Right Column: Product Info, Variations, Colors, Sizes */}
         <div className="md:col-span-2 space-y-6">
           <Card className="shadow-md">
             <CardHeader>
@@ -734,20 +746,112 @@ export default function ProductOptionsPage() {
                     readOnly
                 />
               </div>
-              <div>
-                <Label htmlFor="productPrice">Product Price ($)</Label>
-                <Input 
-                    id="productPrice" 
-                    type="number" 
-                    value={productOptions.price} 
-                    onChange={(e) => handleWCProductDetailChange('price', parseFloat(e.target.value) || 0)}
-                    className="mt-1 bg-muted/50" 
-                    step="0.01" 
-                    readOnly
-                />
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="productPrice">Product Price ($)</Label>
+                  <Input 
+                      id="productPrice" 
+                      type="number" 
+                      value={productOptions.price} 
+                      onChange={(e) => handleWCProductDetailChange('price', parseFloat(e.target.value) || 0)}
+                      className="mt-1 bg-muted/50" 
+                      step="0.01" 
+                      readOnly
+                  />
+                </div>
+                <div>
+                    <Label htmlFor="productType">Product Type</Label>
+                    <Input 
+                        id="productType" 
+                        value={productOptions.type.charAt(0).toUpperCase() + productOptions.type.slice(1)} 
+                        className="mt-1 bg-muted/50" 
+                        readOnly 
+                    />
+                </div>
               </div>
             </CardContent>
           </Card>
+
+          {/* Product Variations Card */}
+          {productOptions.type === 'variable' && (
+            <Card className="shadow-md">
+              <CardHeader>
+                <CardTitle className="font-headline text-lg">Product Variations</CardTitle>
+                <CardDescription>Available variations from your WooCommerce store.</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {isLoadingVariations ? (
+                  <div className="flex items-center justify-center py-6">
+                    <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                    <p className="ml-2 text-muted-foreground">Loading variations...</p>
+                  </div>
+                ) : variationsError ? (
+                  <div className="text-center py-6">
+                    <AlertTriangle className="mx-auto h-10 w-10 text-destructive" />
+                    <p className="mt-3 text-destructive font-semibold">Error loading variations</p>
+                    <p className="text-sm text-muted-foreground mt-1">{variationsError}</p>
+                  </div>
+                ) : variations.length > 0 ? (
+                  <div className="space-y-3 max-h-96 overflow-y-auto pr-2">
+                    {variations.map((variation) => (
+                      <div key={variation.id} className="p-3 border rounded-md bg-muted/30">
+                        <div className="flex items-start gap-3">
+                          <div className="relative h-16 w-16 rounded-md overflow-hidden border bg-card flex-shrink-0">
+                            <NextImage 
+                              src={variation.image?.src || productOptions.imageUrl || 'https://placehold.co/100x100.png'} 
+                              alt={variation.image?.alt || productOptions.name} 
+                              fill 
+                              className="object-contain"
+                              data-ai-hint={variation.image?.alt ? variation.image.alt.split(" ").slice(0,2).join(" ") : "variation image"}
+                            />
+                          </div>
+                          <div className="flex-grow">
+                            <p className="text-sm font-medium text-foreground">
+                              {variation.attributes.map(attr => `${attr.name}: ${attr.option}`).join(' / ')}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              SKU: {variation.sku || 'N/A'}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              Price: ${parseFloat(variation.price).toFixed(2)}
+                            </p>
+                          </div>
+                          <Badge 
+                            variant={variation.stock_status === 'instock' ? 'default' : (variation.stock_status === 'onbackorder' ? 'secondary' : 'destructive')}
+                            className={cn(
+                              variation.stock_status === 'instock' && 'bg-green-500/10 text-green-700 border-green-500/30',
+                              variation.stock_status === 'onbackorder' && 'bg-yellow-500/10 text-yellow-700 border-yellow-500/30',
+                              variation.stock_status === 'outofstock' && 'bg-red-500/10 text-red-700 border-red-500/30'
+                            )}
+                          >
+                            {variation.stock_status === 'instock' ? 'In Stock' : variation.stock_status === 'onbackorder' ? 'On Backorder' : 'Out of Stock'}
+                            {variation.stock_quantity !== null && ` (${variation.stock_quantity})`}
+                          </Badge>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-6">
+                    <PackageVariantIcon className="mx-auto h-10 w-10 text-muted-foreground" />
+                    <p className="mt-3 text-muted-foreground">No variations found for this product.</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
+          {productOptions.type !== 'variable' && (
+            <Card className="shadow-md">
+                <CardHeader>
+                    <CardTitle className="font-headline text-lg">Product Variations</CardTitle>
+                </CardHeader>
+                <CardContent className="text-center py-8 text-muted-foreground">
+                    <Shirt className="mx-auto h-10 w-10 mb-2" />
+                    This is a simple product and does not have variations.
+                </CardContent>
+            </Card>
+          )}
+
 
           <Card className="shadow-md">
             <CardHeader>
@@ -863,4 +967,3 @@ export default function ProductOptionsPage() {
     </div>
   );
 }
-
