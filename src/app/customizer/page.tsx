@@ -372,7 +372,7 @@ function CustomizerLayoutAndLogic() {
           </main>
           <RightPanel /> 
         </div>
-        <footer className="h-20 border-t bg-card shadow-md p-4 flex items-center justify-between flex-shrink-0">
+        <footer className="h-20 border-t bg-card shadow-md p-4 flex items-center justify-end gap-4 flex-shrink-0">
             <div className="text-lg font-semibold text-foreground">Total: $0.00</div>
             <Button size="lg" className="bg-primary text-primary-foreground hover:bg-primary/90" onClick={handleAddToCart}>
               <ShoppingCart className="mr-2 h-5 w-5" /> Add to Cart
