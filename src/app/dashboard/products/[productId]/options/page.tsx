@@ -12,7 +12,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { ArrowLeft, PlusCircle, Trash2, Image as ImageIcon, Maximize2, Loader2, AlertTriangle, LayersIcon, Shirt } from 'lucide-react';
+import { ArrowLeft, PlusCircle, Trash2, Image as ImageIcon, Maximize2, Loader2, AlertTriangle, LayersIcon, Shirt, RefreshCcw } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
@@ -75,6 +75,7 @@ export default function ProductOptionsPage() {
 
   const [productOptions, setProductOptions] = useState<ProductOptionsData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   
   const [variations, setVariations] = useState<WCVariation[]>([]);
@@ -88,106 +89,116 @@ export default function ProductOptionsPage() {
   const imageWrapperRef = useRef<HTMLDivElement>(null);
   const [activeDrag, setActiveDrag] = useState<ActiveDragState | null>(null);
 
+  const stripHtml = (html: string): string => {
+    if (typeof window === 'undefined') return html; 
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = html;
+    return tempDiv.textContent || tempDiv.innerText || "";
+  };
+
+  const fetchAndSetProductData = useCallback(async () => {
+    if (!productId || !user) {
+      setIsLoading(false);
+      setIsRefreshing(false);
+      if (!user) setError("User not authenticated. Please sign in.");
+      else setError("Product ID is missing.");
+      return;
+    }
+
+    setIsLoading(true); // Overall loading for initial or full refresh
+    setError(null);
+    setVariationsError(null);
+    setVariations([]);
+
+    let localOptions: LocalStorageOptions | null = null;
+    const localStorageKey = `cstmzr_product_options_${user.id}_${productId}`;
+    try {
+      const savedOptions = localStorage.getItem(localStorageKey);
+      if (savedOptions) {
+        localOptions = JSON.parse(savedOptions) as LocalStorageOptions;
+      }
+    } catch (e) {
+      console.error("Error parsing local CSTMZR options from localStorage:", e);
+      toast({ title: "Error Loading Local Settings", description: "Could not load saved CSTMZR settings. Using defaults.", variant: "warning"});
+    }
+
+    let wcProduct: WCCustomProduct | undefined;
+    let fetchError: string | undefined;
+    let userCredentials;
+
+    try {
+      const userStoreUrl = localStorage.getItem(`wc_store_url_${user.id}`);
+      const userConsumerKey = localStorage.getItem(`wc_consumer_key_${user.id}`);
+      const userConsumerSecret = localStorage.getItem(`wc_consumer_secret_${user.id}`);
+      if (userStoreUrl && userConsumerKey && userConsumerSecret) {
+        userCredentials = { storeUrl: userStoreUrl, consumerKey: userConsumerKey, consumerSecret: userConsumerSecret };
+      }
+    } catch (storageError) {
+      console.error("Error accessing localStorage for WC credentials:", storageError);
+      toast({
+        title: "Local Storage Error",
+        description: "Could not access WooCommerce credentials. Using global settings if available.",
+        variant: "destructive"
+      });
+    }
+    
+    ({ product: wcProduct, error: fetchError } = await fetchWooCommerceProductById(productId, userCredentials));
+    
+    if (fetchError || !wcProduct) {
+      setError(fetchError || `Product with ID ${productId} not found or failed to load.`);
+      setIsLoading(false);
+      setIsRefreshing(false);
+      toast({ title: "Error Fetching Product", description: fetchError || `Product ${productId} not found.`, variant: "destructive"});
+      return;
+    }
+
+    const defaultImageUrl = 'https://placehold.co/600x600.png';
+    const defaultAiHint = 'product image';
+    
+    const rawDescription = wcProduct.description || wcProduct.short_description || 'No description available.';
+    const plainTextDescription = stripHtml(rawDescription);
+
+    setProductOptions({
+      id: wcProduct.id.toString(),
+      name: wcProduct.name || `Product ${productId}`,
+      description: plainTextDescription,
+      price: parseFloat(wcProduct.price) || 0,
+      type: wcProduct.type,
+      imageUrl: wcProduct.images && wcProduct.images.length > 0 ? wcProduct.images[0].src : defaultImageUrl,
+      aiHint: wcProduct.images && wcProduct.images.length > 0 && wcProduct.images[0].alt ? wcProduct.images[0].alt.split(" ").slice(0,2).join(" ") : defaultAiHint,
+      cstmzrColors: localOptions?.cstmzrColors || [],
+      cstmzrSizes: localOptions?.cstmzrSizes || [],
+      boundaryBoxes: localOptions?.boundaryBoxes || [],
+    });
+    setSelectedBoundaryBoxId(null); // Reset selection on data load/refresh
+
+    if (wcProduct.type === 'variable') {
+      setIsLoadingVariations(true);
+      const { variations: fetchedVariations, error: variationsFetchError } = await fetchWooCommerceProductVariations(productId, userCredentials);
+      if (variationsFetchError) {
+        setVariationsError(variationsFetchError);
+        toast({ title: "Error Loading Variations", description: variationsFetchError, variant: "destructive"});
+      } else if (fetchedVariations) {
+        setVariations(fetchedVariations);
+        if (isRefreshing) toast({ title: "Variations Refreshed", description: "Product variations updated from store."});
+      }
+      setIsLoadingVariations(false);
+    }
+    setIsLoading(false);
+    setIsRefreshing(false);
+    if (isRefreshing) toast({ title: "Product Data Refreshed", description: "Base product details updated from store."});
+
+  }, [productId, user, toast, isRefreshing]); // Added isRefreshing to dependency list
 
   useEffect(() => {
-    const stripHtml = (html: string): string => {
-      if (typeof window === 'undefined') return html; // Avoid error during SSR or if document is not available
-      const tempDiv = document.createElement('div');
-      tempDiv.innerHTML = html;
-      return tempDiv.textContent || tempDiv.innerText || "";
-    };
+    fetchAndSetProductData();
+  }, [fetchAndSetProductData]); // useEffect now only depends on the memoized fetchAndSetProductData
 
-    const loadProductData = async () => {
-      if (!productId || !user) {
-        setIsLoading(false);
-        if (!user) setError("User not authenticated. Please sign in.");
-        else setError("Product ID is missing.");
-        return;
-      }
+  const handleRefreshData = () => {
+    setIsRefreshing(true); // Set refreshing true before calling
+    fetchAndSetProductData();
+  };
 
-      setIsLoading(true);
-      setError(null);
-      setVariationsError(null);
-      setVariations([]);
-
-      const localStorageKey = `cstmzr_product_options_${user.id}_${productId}`;
-      let localOptions: LocalStorageOptions | null = null;
-      try {
-        const savedOptions = localStorage.getItem(localStorageKey);
-        if (savedOptions) {
-          localOptions = JSON.parse(savedOptions) as LocalStorageOptions;
-        }
-      } catch (e) {
-        console.error("Error parsing local CSTMZR options from localStorage:", e);
-        toast({ title: "Error Loading Settings", description: "Could not load saved CSTMZR settings from local storage.", variant: "destructive"});
-      }
-
-      let wcProduct: WCCustomProduct | undefined;
-      let fetchError: string | undefined;
-      let userCredentials;
-
-      try {
-        const userStoreUrl = localStorage.getItem(`wc_store_url_${user.id}`);
-        const userConsumerKey = localStorage.getItem(`wc_consumer_key_${user.id}`);
-        const userConsumerSecret = localStorage.getItem(`wc_consumer_secret_${user.id}`);
-        if (userStoreUrl && userConsumerKey && userConsumerSecret) {
-          userCredentials = { storeUrl: userStoreUrl, consumerKey: userConsumerKey, consumerSecret: userConsumerSecret };
-        }
-      } catch (storageError) {
-        console.error("Error accessing localStorage for WC credentials:", storageError);
-        toast({
-          title: "Local Storage Error",
-          description: "Could not access WooCommerce credentials. Using global settings if available.",
-          variant: "destructive"
-        });
-        // Proceed without user-specific credentials, fetchWooCommerceProductById will use global if userCredentials is undefined
-      }
-      
-      ({ product: wcProduct, error: fetchError } = await fetchWooCommerceProductById(productId, userCredentials));
-      
-      if (fetchError || !wcProduct) {
-        setError(fetchError || `Product with ID ${productId} not found or failed to load.`);
-        setIsLoading(false);
-        return;
-      }
-
-      const defaultImageUrl = 'https://placehold.co/600x600.png';
-      const defaultAiHint = 'product image';
-      
-      const rawDescription = wcProduct.description || wcProduct.short_description || 'No description available.';
-      const plainTextDescription = stripHtml(rawDescription);
-
-      setProductOptions({
-        id: wcProduct.id.toString(),
-        name: wcProduct.name || `Product ${productId}`,
-        description: plainTextDescription,
-        price: parseFloat(wcProduct.price) || 0,
-        type: wcProduct.type,
-        imageUrl: wcProduct.images && wcProduct.images.length > 0 ? wcProduct.images[0].src : defaultImageUrl,
-        aiHint: wcProduct.images && wcProduct.images.length > 0 && wcProduct.images[0].alt ? wcProduct.images[0].alt.split(" ").slice(0,2).join(" ") : defaultAiHint,
-        cstmzrColors: localOptions?.cstmzrColors || [],
-        cstmzrSizes: localOptions?.cstmzrSizes || [],
-        boundaryBoxes: localOptions?.boundaryBoxes || [],
-      });
-      setSelectedBoundaryBoxId(null);
-      setIsLoading(false);
-
-      if (wcProduct.type === 'variable') {
-        setIsLoadingVariations(true);
-        // Use same userCredentials for variations or fallback to global within the action
-        const { variations: fetchedVariations, error: variationsFetchError } = await fetchWooCommerceProductVariations(productId, userCredentials);
-        if (variationsFetchError) {
-          setVariationsError(variationsFetchError);
-          toast({ title: "Error Loading Variations", description: variationsFetchError, variant: "destructive"});
-        } else if (fetchedVariations) {
-          setVariations(fetchedVariations);
-        }
-        setIsLoadingVariations(false);
-      }
-    };
-
-    loadProductData();
-  }, [productId, user, toast]);
 
   const getPointerCoords = (e: MouseEvent | TouchEvent | React.MouseEvent | React.TouchEvent) => {
     if ('touches' in e && e.touches.length > 0) {
@@ -331,7 +342,7 @@ export default function ProductOptionsPage() {
   }, [activeDrag, handleDragging, handleInteractionEnd]);
 
 
-  if (isLoading) {
+  if (isLoading && !isRefreshing) { // Show main loader only on initial load
     return (
       <div className="flex items-center justify-center min-h-screen bg-background">
         <Loader2 className="h-10 w-10 animate-spin text-primary" />
@@ -340,7 +351,7 @@ export default function ProductOptionsPage() {
     );
   }
 
-  if (error) {
+  if (error && !productOptions) { // Show critical error if productOptions is null
      return (
       <div className="flex flex-col items-center justify-center min-h-screen bg-background p-4">
         <AlertTriangle className="h-12 w-12 text-destructive mb-4" />
@@ -356,7 +367,7 @@ export default function ProductOptionsPage() {
     );
   }
   
-  if (!productOptions) {
+  if (!productOptions) { // Fallback if still no productOptions but not in error or loading state
     return (
       <div className="flex flex-col items-center justify-center min-h-screen bg-background p-4">
         <ImageIcon className="h-12 w-12 text-muted-foreground mb-4" />
@@ -531,12 +542,16 @@ export default function ProductOptionsPage() {
 
   return (
     <div className="container mx-auto p-4 md:p-6 lg:p-8 bg-background min-h-screen">
-      <div className="mb-6">
+      <div className="mb-6 flex justify-between items-center">
         <Button variant="outline" asChild className="hover:bg-accent hover:text-accent-foreground">
           <Link href="/dashboard">
             <ArrowLeft className="mr-2 h-4 w-4" />
             Back to Dashboard
           </Link>
+        </Button>
+        <Button variant="outline" onClick={handleRefreshData} disabled={isRefreshing || isLoading} className="hover:bg-accent hover:text-accent-foreground">
+          {isRefreshing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCcw className="mr-2 h-4 w-4" />}
+          Refresh Product Data
         </Button>
       </div>
 
@@ -546,6 +561,15 @@ export default function ProductOptionsPage() {
       <p className="text-muted-foreground mb-8">
         Editing options for: <span className="font-semibold text-foreground">{productOptions.name}</span> (ID: {productOptions.id})
       </p>
+      {/* Display non-critical errors (e.g., variation fetch error) if productOptions is available */}
+       {error && productOptions && (
+        <Alert variant="destructive" className="mb-6">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertTitle>Product Data Error</AlertTitle>
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
+
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
         {/* Left Column: Image & Boundary Boxes */}
@@ -794,7 +818,7 @@ export default function ProductOptionsPage() {
                 <CardDescription>Available variations from your WooCommerce store.</CardDescription>
               </CardHeader>
               <CardContent>
-                {isLoadingVariations ? (
+                {isLoadingVariations || (isRefreshing && isLoading) ? (
                   <div className="flex items-center justify-center py-6">
                     <Loader2 className="h-6 w-6 animate-spin text-primary" />
                     <p className="ml-2 text-muted-foreground">Loading variations...</p>
@@ -981,7 +1005,4 @@ export default function ProductOptionsPage() {
     </div>
   );
 }
-
-    
-
     
