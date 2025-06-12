@@ -12,7 +12,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { ArrowLeft, PlusCircle, Trash2, Image as ImageIcon, Maximize2, Loader2, AlertTriangle, Shirt, LayersIcon } from 'lucide-react';
+import { ArrowLeft, PlusCircle, Trash2, Image as ImageIcon, Maximize2, Loader2, AlertTriangle, LayersIcon, Shirt } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
@@ -118,19 +118,32 @@ export default function ProductOptionsPage() {
           localOptions = JSON.parse(savedOptions) as LocalStorageOptions;
         }
       } catch (e) {
-        console.error("Error parsing local options:", e);
-        toast({ title: "Error", description: "Could not load saved local settings.", variant: "destructive"});
+        console.error("Error parsing local CSTMZR options from localStorage:", e);
+        toast({ title: "Error Loading Settings", description: "Could not load saved CSTMZR settings from local storage.", variant: "destructive"});
       }
 
       let wcProduct: WCCustomProduct | undefined;
       let fetchError: string | undefined;
+      let userCredentials;
 
-      const userStoreUrl = localStorage.getItem(`wc_store_url_${user.id}`);
-      const userConsumerKey = localStorage.getItem(`wc_consumer_key_${user.id}`);
-      const userConsumerSecret = localStorage.getItem(`wc_consumer_secret_${user.id}`);
-      const credentials = (userStoreUrl && userConsumerKey && userConsumerSecret) ? { storeUrl: userStoreUrl, consumerKey: userConsumerKey, consumerSecret: userConsumerSecret } : undefined;
-
-      ({ product: wcProduct, error: fetchError } = await fetchWooCommerceProductById(productId, credentials));
+      try {
+        const userStoreUrl = localStorage.getItem(`wc_store_url_${user.id}`);
+        const userConsumerKey = localStorage.getItem(`wc_consumer_key_${user.id}`);
+        const userConsumerSecret = localStorage.getItem(`wc_consumer_secret_${user.id}`);
+        if (userStoreUrl && userConsumerKey && userConsumerSecret) {
+          userCredentials = { storeUrl: userStoreUrl, consumerKey: userConsumerKey, consumerSecret: userConsumerSecret };
+        }
+      } catch (storageError) {
+        console.error("Error accessing localStorage for WC credentials:", storageError);
+        toast({
+          title: "Local Storage Error",
+          description: "Could not access WooCommerce credentials. Using global settings if available.",
+          variant: "destructive"
+        });
+        // Proceed without user-specific credentials, fetchWooCommerceProductById will use global if userCredentials is undefined
+      }
+      
+      ({ product: wcProduct, error: fetchError } = await fetchWooCommerceProductById(productId, userCredentials));
       
       if (fetchError || !wcProduct) {
         setError(fetchError || `Product with ID ${productId} not found or failed to load.`);
@@ -161,7 +174,8 @@ export default function ProductOptionsPage() {
 
       if (wcProduct.type === 'variable') {
         setIsLoadingVariations(true);
-        const { variations: fetchedVariations, error: variationsFetchError } = await fetchWooCommerceProductVariations(productId, credentials);
+        // Use same userCredentials for variations or fallback to global within the action
+        const { variations: fetchedVariations, error: variationsFetchError } = await fetchWooCommerceProductVariations(productId, userCredentials);
         if (variationsFetchError) {
           setVariationsError(variationsFetchError);
           toast({ title: "Error Loading Variations", description: variationsFetchError, variant: "destructive"});
