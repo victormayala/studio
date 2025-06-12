@@ -25,12 +25,15 @@ import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import { Bold, Italic, Underline, CaseUpper, CaseLower, Type, Palette, Blend, PenLine, Pilcrow } from 'lucide-react';
 import { useUploads, type CanvasText } from '@/contexts/UploadContext';
 import { googleFonts } from '@/lib/google-fonts';
-import { ScrollArea } from '@/components/ui/scroll-area';
+// ScrollArea is removed as parent handles scrolling
 import { useToast } from '@/hooks/use-toast';
 
 // Helper to validate and sanitize hex color
 const sanitizeHex = (hex: string): string => {
   let sanitized = hex.replace(/[^0-9a-fA-F]/g, '');
+  if (sanitized.startsWith('#')) {
+    sanitized = sanitized.substring(1);
+  }
   if (sanitized.length > 6) {
     sanitized = sanitized.substring(0, 6);
   }
@@ -45,17 +48,30 @@ interface TextToolPanelProps {
 }
 
 export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
-  const { addCanvasText, selectedCanvasTextId, canvasTexts, updateCanvasText } = useUploads();
+  const { 
+    addCanvasText, 
+    selectedCanvasTextId, 
+    canvasTexts, 
+    updateCanvasText,
+    startInteractiveOperation, // Import for sliders
+    endInteractiveOperation    // Import for sliders
+  } = useUploads();
   const { toast } = useToast();
   const [textValue, setTextValue] = useState('');
 
   const selectedText = canvasTexts.find(t => t.id === selectedCanvasTextId && t.viewId === activeViewId);
 
+  // Local state for hex inputs to update onBlur
+  const [localTextColorHex, setLocalTextColorHex] = useState(selectedText?.color || '#333333');
+  const [localOutlineColorHex, setLocalOutlineColorHex] = useState(selectedText?.outlineColor || '#000000');
+  const [localShadowColorHex, setLocalShadowColorHex] = useState(selectedText?.shadowColor || '#000000');
+
+
   const [currentStyle, setCurrentStyle] = useState<Partial<CanvasText>>({});
 
   useEffect(() => {
     if (selectedText) {
-      setCurrentStyle({
+      const styleToSet: Partial<CanvasText> = {
         fontFamily: selectedText.fontFamily,
         fontSize: selectedText.fontSize,
         textTransform: selectedText.textTransform,
@@ -75,10 +91,14 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
         shadowOffsetY: selectedText.shadowOffsetY,
         shadowBlur: selectedText.shadowBlur,
         content: selectedText.content,
-      });
+      };
+      setCurrentStyle(styleToSet);
       setTextValue(selectedText.content);
+      setLocalTextColorHex(selectedText.color);
+      setLocalOutlineColorHex(selectedText.outlineColor);
+      setLocalShadowColorHex(selectedText.shadowColor);
     } else {
-      setCurrentStyle({ 
+      const defaultStyle: Partial<CanvasText> = { 
         fontFamily: googleFonts.find(f => f.name === 'Arial')?.family || 'Arial, sans-serif',
         fontSize: 24,
         textTransform: 'none',
@@ -97,8 +117,11 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
         shadowOffsetX: 0,
         shadowOffsetY: 0,
         shadowBlur: 0,
-      });
-      // Do not reset textValue here if no text is selected, user might be typing new text.
+      };
+      setCurrentStyle(defaultStyle);
+      setLocalTextColorHex(defaultStyle.color!);
+      setLocalOutlineColorHex(defaultStyle.outlineColor!);
+      setLocalShadowColorHex(defaultStyle.shadowColor!);
     }
   }, [selectedText, activeViewId]);
 
@@ -124,8 +147,6 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
     }
     if (textValue.trim()) {
       addCanvasText(textValue.trim(), activeViewId, currentStyle);
-      // Optionally clear textValue after adding if it's for new text only:
-      // if (!selectedText) setTextValue(''); 
     }
   };
   
@@ -137,8 +158,6 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
   };
 
   const renderControls = () => (
-    // ScrollArea is now handled by the parent, this one can be removed or simplified
-    // For simplicity, keeping the structure, but it might not scroll independently if parent ScrollArea is tight.
     <div className="space-y-4 py-2">
       <Accordion type="multiple" defaultValue={['font-settings', 'color-settings']} className="w-full">
         <AccordionItem value="font-settings">
@@ -216,6 +235,8 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
                 defaultValue={[24]}
                 value={[currentStyle.fontSize || 24]}
                 onValueChange={([value]) => handleStyleChange('fontSize', value)}
+                onPointerDownCapture={startInteractiveOperation}
+                onPointerUpCapture={endInteractiveOperation}
               />
             </div>
             <div>
@@ -226,6 +247,8 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
                 defaultValue={[1.2]}
                 value={[currentStyle.lineHeight || 1.2]}
                 onValueChange={([value]) => handleStyleChange('lineHeight', value)}
+                onPointerDownCapture={startInteractiveOperation}
+                onPointerUpCapture={endInteractiveOperation}
               />
             </div>
             <div>
@@ -236,6 +259,8 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
                 defaultValue={[0]}
                 value={[currentStyle.letterSpacing || 0]}
                 onValueChange={([value]) => handleStyleChange('letterSpacing', value)}
+                onPointerDownCapture={startInteractiveOperation}
+                onPointerUpCapture={endInteractiveOperation}
               />
             </div>
             <div className="flex items-center space-x-2 pt-1">
@@ -261,13 +286,16 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
                 id="textColorSwatch"
                 className="h-8 w-10 p-0.5 border-none rounded" 
                 value={currentStyle.color || '#333333'}
-                onChange={(e) => handleStyleChange('color', e.target.value)}
+                onChange={(e) => {
+                    handleStyleChange('color', e.target.value);
+                    setLocalTextColorHex(e.target.value);
+                }}
               />
               <Input
                 id="textColorHex"
                 className="h-8 text-xs flex-grow max-w-[100px]" 
-                value={currentStyle.color || '#333333'}
-                onChange={(e) => handleStyleChange('color', sanitizeHex(e.target.value))}
+                value={localTextColorHex}
+                onChange={(e) => setLocalTextColorHex(e.target.value)}
                 onBlur={(e) => handleStyleChange('color', sanitizeHex(e.target.value))}
                 maxLength={7}
               />
@@ -293,15 +321,34 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
                     <>
                       <div className="flex items-center space-x-2">
                         <Label htmlFor="outlineColorSwatch" className="text-xs shrink-0">Color</Label>
-                        <Input type="color" id="outlineColorSwatch" className="h-8 w-10 p-0.5 border-none rounded" value={currentStyle.outlineColor || '#000000'} onChange={(e) => handleStyleChange('outlineColor', e.target.value)}/>
-                        <Input id="outlineColorHex" className="h-8 text-xs flex-grow max-w-[100px]" value={currentStyle.outlineColor || '#000000'} 
-                               onChange={(e) => handleStyleChange('outlineColor', sanitizeHex(e.target.value))}
-                               onBlur={(e) => handleStyleChange('outlineColor', sanitizeHex(e.target.value))}
-                               maxLength={7}/>
+                        <Input 
+                            type="color" 
+                            id="outlineColorSwatch" 
+                            className="h-8 w-10 p-0.5 border-none rounded" 
+                            value={currentStyle.outlineColor || '#000000'} 
+                            onChange={(e) => {
+                                handleStyleChange('outlineColor', e.target.value);
+                                setLocalOutlineColorHex(e.target.value);
+                            }}/>
+                        <Input 
+                            id="outlineColorHex" 
+                            className="h-8 text-xs flex-grow max-w-[100px]" 
+                            value={localOutlineColorHex} 
+                            onChange={(e) => setLocalOutlineColorHex(e.target.value)}
+                            onBlur={(e) => handleStyleChange('outlineColor', sanitizeHex(e.target.value))}
+                            maxLength={7}/>
                       </div>
                       <div>
                         <Label htmlFor="outlineWidthSlider" className="text-xs mb-1 block">Width: {currentStyle.outlineWidth?.toFixed(1) || 0}px</Label>
-                        <Slider id="outlineWidthSlider" min={0} max={10} step={0.5} defaultValue={[1]} value={[currentStyle.outlineWidth || 0]} onValueChange={([value]) => handleStyleChange('outlineWidth', value)}/>
+                        <Slider 
+                            id="outlineWidthSlider" 
+                            min={0} max={10} step={0.5} 
+                            defaultValue={[1]} 
+                            value={[currentStyle.outlineWidth || 0]} 
+                            onValueChange={([value]) => handleStyleChange('outlineWidth', value)}
+                            onPointerDownCapture={startInteractiveOperation}
+                            onPointerUpCapture={endInteractiveOperation}
+                        />
                       </div>
                     </>
                   )}
@@ -329,25 +376,60 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
                     <>
                       <div className="flex items-center space-x-2">
                         <Label htmlFor="shadowColorSwatch" className="text-xs shrink-0">Color</Label>
-                        <Input type="color" id="shadowColorSwatch" className="h-8 w-10 p-0.5 border-none rounded" value={currentStyle.shadowColor || '#000000'} onChange={(e) => handleStyleChange('shadowColor', e.target.value)}/>
-                        <Input id="shadowColorHex" className="h-8 text-xs flex-grow max-w-[100px]" value={currentStyle.shadowColor || '#000000'} 
-                               onChange={(e) => handleStyleChange('shadowColor', sanitizeHex(e.target.value))}
-                               onBlur={(e) => handleStyleChange('shadowColor', sanitizeHex(e.target.value))}
-                               maxLength={7}/>
+                        <Input 
+                            type="color" 
+                            id="shadowColorSwatch" 
+                            className="h-8 w-10 p-0.5 border-none rounded" 
+                            value={currentStyle.shadowColor || '#000000'} 
+                            onChange={(e) => {
+                                handleStyleChange('shadowColor', e.target.value);
+                                setLocalShadowColorHex(e.target.value);
+                            }}/>
+                        <Input 
+                            id="shadowColorHex" 
+                            className="h-8 text-xs flex-grow max-w-[100px]" 
+                            value={localShadowColorHex} 
+                            onChange={(e) => setLocalShadowColorHex(e.target.value)}
+                            onBlur={(e) => handleStyleChange('shadowColor', sanitizeHex(e.target.value))}
+                            maxLength={7}/>
                       </div>
                       <div className="grid grid-cols-2 gap-3">
                         <div>
                             <Label htmlFor="shadowOffsetXSlider" className="text-xs mb-1 block">Offset X: {currentStyle.shadowOffsetX?.toFixed(0) || 0}px</Label>
-                            <Slider id="shadowOffsetXSlider" min={-20} max={20} step={1} defaultValue={[0]} value={[currentStyle.shadowOffsetX || 0]} onValueChange={([value]) => handleStyleChange('shadowOffsetX', value)}/>
+                            <Slider 
+                                id="shadowOffsetXSlider" 
+                                min={-20} max={20} step={1} 
+                                defaultValue={[0]} 
+                                value={[currentStyle.shadowOffsetX || 0]} 
+                                onValueChange={([value]) => handleStyleChange('shadowOffsetX', value)}
+                                onPointerDownCapture={startInteractiveOperation}
+                                onPointerUpCapture={endInteractiveOperation}
+                            />
                         </div>
                         <div>
                             <Label htmlFor="shadowOffsetYSlider" className="text-xs mb-1 block">Offset Y: {currentStyle.shadowOffsetY?.toFixed(0) || 0}px</Label>
-                            <Slider id="shadowOffsetYSlider" min={-20} max={20} step={1} defaultValue={[0]} value={[currentStyle.shadowOffsetY || 0]} onValueChange={([value]) => handleStyleChange('shadowOffsetY', value)}/>
+                            <Slider 
+                                id="shadowOffsetYSlider" 
+                                min={-20} max={20} step={1} 
+                                defaultValue={[0]} 
+                                value={[currentStyle.shadowOffsetY || 0]} 
+                                onValueChange={([value]) => handleStyleChange('shadowOffsetY', value)}
+                                onPointerDownCapture={startInteractiveOperation}
+                                onPointerUpCapture={endInteractiveOperation}
+                            />
                         </div>
                       </div>
                       <div>
                         <Label htmlFor="shadowBlurSlider" className="text-xs mb-1 block">Blur: {currentStyle.shadowBlur?.toFixed(0) || 0}px</Label>
-                        <Slider id="shadowBlurSlider" min={0} max={30} step={1} defaultValue={[0]} value={[currentStyle.shadowBlur || 0]} onValueChange={([value]) => handleStyleChange('shadowBlur', value)}/>
+                        <Slider 
+                            id="shadowBlurSlider" 
+                            min={0} max={30} step={1} 
+                            defaultValue={[0]} 
+                            value={[currentStyle.shadowBlur || 0]} 
+                            onValueChange={([value]) => handleStyleChange('shadowBlur', value)}
+                            onPointerDownCapture={startInteractiveOperation}
+                            onPointerUpCapture={endInteractiveOperation}
+                        />
                       </div>
                     </>
                   )}
@@ -361,7 +443,6 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
   );
 
   return (
-    // Removed outer padding, should be handled by the parent ScrollArea's content container
     <div className="space-y-4 h-full flex flex-col"> 
       <div>
         <Label htmlFor="textInput" className="text-sm font-medium">Text Content</Label>
@@ -381,7 +462,6 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
             <Type className="mr-2 h-4 w-4" />
             Add Text to Canvas
           </Button>
-          {/* Render controls for new text below the add button */}
           <div className="flex-grow mt-2">
             {renderControls()}
           </div>
@@ -396,3 +476,6 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
     </div>
   );
 }
+
+
+    
