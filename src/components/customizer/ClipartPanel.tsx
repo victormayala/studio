@@ -26,8 +26,8 @@ export default function ClipartPanel({ activeViewId }: ClipartPanelProps) {
   };
 
   return (
-    <div className="space-y-4 h-full flex flex-col p-4">
-      <h3 className="text-md font-semibold text-foreground mb-0 px-1 font-headline">Clipart Library</h3>
+    // Removed outer padding, should be handled by the parent ScrollArea's content container
+    <div className="space-y-4 h-full flex flex-col"> 
       <p className="text-xs text-muted-foreground px-1">Click an item to add it to the canvas.</p>
 
       {clipartData.length > 0 ? (

@@ -98,11 +98,12 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
         shadowOffsetY: 0,
         shadowBlur: 0,
       });
+      // Do not reset textValue here if no text is selected, user might be typing new text.
     }
-  }, [selectedText, activeViewId]); // Add activeViewId dependency
+  }, [selectedText, activeViewId]);
 
   const handleStyleChange = useCallback(<K extends keyof CanvasText>(property: K, value: CanvasText[K]) => {
-    if (selectedCanvasTextId && selectedText) { // Ensure selectedText is for the activeViewId
+    if (selectedCanvasTextId && selectedText) { 
       updateCanvasText(selectedCanvasTextId, { [property]: value });
     }
     setCurrentStyle(prev => ({ ...prev, [property]: value }));
@@ -123,6 +124,8 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
     }
     if (textValue.trim()) {
       addCanvasText(textValue.trim(), activeViewId, currentStyle);
+      // Optionally clear textValue after adding if it's for new text only:
+      // if (!selectedText) setTextValue(''); 
     }
   };
   
@@ -134,7 +137,8 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
   };
 
   const renderControls = () => (
-    <ScrollArea className="flex-grow pr-1 -mr-1"> 
+    // ScrollArea is now handled by the parent, this one can be removed or simplified
+    // For simplicity, keeping the structure, but it might not scroll independently if parent ScrollArea is tight.
     <div className="space-y-4 py-2">
       <Accordion type="multiple" defaultValue={['font-settings', 'color-settings']} className="w-full">
         <AccordionItem value="font-settings">
@@ -354,11 +358,11 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
         </AccordionItem>
       </Accordion>
     </div>
-    </ScrollArea>
   );
 
   return (
-    <div className="p-4 space-y-4 h-full flex flex-col">
+    // Removed outer padding, should be handled by the parent ScrollArea's content container
+    <div className="space-y-4 h-full flex flex-col"> 
       <div>
         <Label htmlFor="textInput" className="text-sm font-medium">Text Content</Label>
         <Textarea
@@ -377,10 +381,9 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
             <Type className="mr-2 h-4 w-4" />
             Add Text to Canvas
           </Button>
-          <div className="flex-grow flex flex-col items-center justify-center text-center p-4 border border-dashed rounded-md bg-muted/20 mt-2">
-              <Type className="h-10 w-10 text-muted-foreground mb-2" />
-              <p className="text-sm text-muted-foreground">Edit text properties for new text above.</p>
-              <p className="text-xs text-muted-foreground mt-1">Or select an existing text item on the canvas to edit its properties here.</p>
+          {/* Render controls for new text below the add button */}
+          <div className="flex-grow mt-2">
+            {renderControls()}
           </div>
         </>
       )}

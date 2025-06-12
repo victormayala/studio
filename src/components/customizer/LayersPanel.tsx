@@ -38,7 +38,7 @@ export default function LayersPanel({ activeViewId }: LayersPanelProps) {
 
   if (!activeViewId) {
     return (
-      <div className="p-6 text-center text-muted-foreground h-full flex flex-col items-center justify-center">
+      <div className="p-6 text-center text-muted-foreground h-full flex flex-col items-center justify-center flex-1">
         <Layers className="w-12 h-12 mb-4 text-muted-foreground/50" />
         <h3 className="text-lg font-semibold mb-1">Canvas Layers</h3>
         <p className="text-sm">Select a product view to see its layers.</p>
@@ -48,7 +48,7 @@ export default function LayersPanel({ activeViewId }: LayersPanelProps) {
   
   if (combinedItems.length === 0) {
     return (
-      <div className="p-6 text-center text-muted-foreground h-full flex flex-col items-center justify-center">
+      <div className="p-6 text-center text-muted-foreground h-full flex flex-col items-center justify-center flex-1">
         <Layers className="w-12 h-12 mb-4 text-muted-foreground/50" />
         <h3 className="text-lg font-semibold mb-1">Canvas Layers</h3>
         <p className="text-sm">No items on this view yet.</p>
@@ -59,9 +59,9 @@ export default function LayersPanel({ activeViewId }: LayersPanelProps) {
 
 
   return (
-    <div className="p-4 h-full flex flex-col">
-      <h3 className="text-md font-semibold text-foreground mb-3 px-1 font-headline">Canvas Layers</h3>
-      <ScrollArea className="flex-grow border rounded-md bg-background">
+    // Removed outer padding, should be handled by the parent ScrollArea's content container
+    <div className="h-full flex flex-col"> 
+      <ScrollArea className="flex-grow border-none rounded-none bg-transparent"> {/* Adjusted ScrollArea to fit new layout */}
         <div className="p-2 space-y-1">
           {combinedItems.map((item, index) => {
             const isSelected = 
@@ -70,7 +70,6 @@ export default function LayersPanel({ activeViewId }: LayersPanelProps) {
                 item.itemType === 'shape' ? item.id === selectedCanvasShapeId :
                 false;
 
-            // Determine if item is topmost or bottommost *within the current view's items*
             const isTopmostInView = item.zIndex === combinedItems[0]?.zIndex;
             const isBottommostInView = item.zIndex === combinedItems[combinedItems.length - 1]?.zIndex;
 

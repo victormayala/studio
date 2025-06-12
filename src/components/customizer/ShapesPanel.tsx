@@ -4,7 +4,7 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { useUploads, type ShapeType, type CanvasShape } from '@/contexts/UploadContext';
-import { Square, Circle, Shapes as ShapesIcon, Palette, PenLine } from 'lucide-react';
+import { Square, Circle, Shapes as ShapesIconLucide, Palette, PenLine } from 'lucide-react'; // Renamed Shapes to ShapesIconLucide
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
@@ -62,11 +62,15 @@ export default function ShapesPanel({ activeViewId }: ShapesPanelProps) {
       toast({ title: "No Active View", description: "Please select a product view first.", variant: "info" });
       return;
     }
-    addCanvasShape(shapeType, activeViewId);
+    addCanvasShape(shapeType, activeViewId, {
+      color: fillColorHex, // Use current picker color for new shapes
+      strokeColor: strokeColorHex, // Use current picker stroke for new shapes
+      strokeWidth: selectedShape?.strokeWidth ?? 0, // Use current stroke width or default
+    });
   };
 
   const handleStyleChange = <K extends keyof CanvasShape>(property: K, value: CanvasShape[K]) => {
-    if (selectedCanvasShapeId && selectedShape) { // Ensure selectedShape is for the activeViewId
+    if (selectedCanvasShapeId && selectedShape) { 
       updateCanvasShape(selectedCanvasShapeId, { [property]: value });
     }
   };
@@ -83,10 +87,10 @@ export default function ShapesPanel({ activeViewId }: ShapesPanelProps) {
 
 
   return (
-    <div className="p-4 space-y-4 h-full flex flex-col">
+    // Removed outer padding, should be handled by the parent ScrollArea's content container
+    <div className="space-y-4 h-full flex flex-col"> 
       <div>
-        <h3 className="text-md font-semibold text-foreground mb-1 px-1 font-headline">Add a Shape</h3>
-        <p className="text-xs text-muted-foreground px-1 mb-3">Click a shape to add it to the canvas.</p>
+        <p className="text-xs text-muted-foreground mb-3">Click a shape to add it to the canvas.</p>
         {shapeOptions.length > 0 ? (
             <div className="grid grid-cols-2 gap-2">
               {shapeOptions.map((shape) => (
@@ -104,7 +108,7 @@ export default function ShapesPanel({ activeViewId }: ShapesPanelProps) {
             </div>
         ) : (
           <div className="flex-grow flex flex-col items-center justify-center text-center p-4 border border-dashed rounded-md bg-muted/20">
-            <ShapesIcon className="h-12 w-12 text-muted-foreground mb-2" />
+            <ShapesIconLucide className="h-12 w-12 text-muted-foreground mb-2" />
             <p className="text-sm text-muted-foreground">No shapes available.</p>
           </div>
         )}
@@ -113,9 +117,8 @@ export default function ShapesPanel({ activeViewId }: ShapesPanelProps) {
       <Separator />
 
       {selectedShape ? (
-        <ScrollArea className="flex-grow pr-1 -mr-1">
-          <div className="space-y-4 py-2">
-            <h3 className="text-md font-semibold text-foreground mb-2 px-1 font-headline">Edit Shape Properties</h3>
+        // ScrollArea handled by parent
+        <div className="flex-grow space-y-4 py-2 pr-1 -mr-1"> 
             <Accordion type="multiple" defaultValue={['shape-colors']} className="w-full">
               <AccordionItem value="shape-colors">
                 <AccordionTrigger className="font-medium text-sm py-3 px-1">
@@ -181,11 +184,11 @@ export default function ShapesPanel({ activeViewId }: ShapesPanelProps) {
               </AccordionItem>
             </Accordion>
           </div>
-        </ScrollArea>
       ) : (
         <div className="flex-grow flex flex-col items-center justify-center text-center p-4 border border-dashed rounded-md bg-muted/20 mt-2">
             <PenLine className="h-10 w-10 text-muted-foreground mb-2" />
             <p className="text-sm text-muted-foreground">Select a shape on the canvas to edit its properties.</p>
+            <p className="text-xs text-muted-foreground mt-1">Or, use the controls above to set properties for new shapes.</p>
         </div>
       )}
     </div>

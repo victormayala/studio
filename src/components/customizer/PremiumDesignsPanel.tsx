@@ -28,8 +28,8 @@ export default function PremiumDesignsPanel({ activeViewId }: PremiumDesignsPane
   };
 
   return (
-    <div className="space-y-4 h-full flex flex-col p-4">
-      <h3 className="text-md font-semibold text-foreground mb-0 px-1 font-headline">Premium Designs</h3>
+    // Removed outer padding, should be handled by the parent ScrollArea's content container
+    <div className="space-y-4 h-full flex flex-col"> 
       <p className="text-xs text-muted-foreground px-1">Click a design to add it to the canvas. Costs vary.</p>
 
       {premiumDesignsData.length > 0 ? (

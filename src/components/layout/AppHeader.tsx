@@ -4,22 +4,25 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Button } from "@/components/ui/button";
-import { SidebarTrigger } from "@/components/ui/sidebar";
+// Removed SidebarTrigger as the new desktop layout doesn't use it in the same way.
+// Mobile responsiveness will need a different approach for the new layout.
 import { Logo } from "@/components/icons/Logo";
 import { EmbedCodeModal } from "@/components/customizer/EmbedCodeModal";
-import { CodeXml, LayoutDashboard, Send, LogOut } from "lucide-react";
+import { CodeXml, LayoutDashboard, Send, LogOut, Menu } from "lucide-react"; // Added Menu for potential mobile
 import { useUploads } from '@/contexts/UploadContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { usePathname, useSearchParams } from 'next/navigation';
+import { useIsMobile } from '@/hooks/use-mobile'; // For potential mobile sheet later
 
 export default function AppHeader() {
   const [isEmbedModalOpen, setIsEmbedModalOpen] = useState(false);
   const { canvasImages, canvasTexts, canvasShapes } = useUploads();
-  const { user, signOut, isLoading: authIsLoading } = useAuth(); // user object is available
+  const { user, signOut, isLoading: authIsLoading } = useAuth();
   const { toast } = useToast();
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const isMobile = useIsMobile(); // For future mobile sheet toggle
 
   const [customizerShareUrlPath, setCustomizerShareUrlPath] = useState<string | null>(null);
 
@@ -33,10 +36,9 @@ export default function AppHeader() {
         }
         setCustomizerShareUrlPath(urlPath);
       } else {
-        // Generic customizer link if no productId
         let urlPath = `/customizer`;
         if (user?.id) {
-          urlPath += `?userId=${user.id}`; // Note: might need a '?' or '&' depending on if other params exist
+          urlPath += `?userId=${user.id}`; 
         }
          setCustomizerShareUrlPath(urlPath);
       }
@@ -45,7 +47,7 @@ export default function AppHeader() {
     }
   }, [pathname, searchParams, user]);
 
-  const showSidebarTrigger = pathname.startsWith('/customizer');
+  // const showSidebarTrigger = pathname.startsWith('/customizer') && isMobile; // Example for future mobile
 
   const handleApplyDesign = () => {
     if (!user) {
@@ -57,14 +59,14 @@ export default function AppHeader() {
       return;
     }
 
-    const currentProductIdFromParams = searchParams.get('productId'); // Get it fresh for this action
+    const currentProductIdFromParams = searchParams.get('productId'); 
 
     const designData = {
       images: canvasImages,
       texts: canvasTexts,
       shapes: canvasShapes,
       productId: currentProductIdFromParams, 
-      userId: user?.id, // Include userId in the posted message
+      userId: user?.id, 
     };
 
     let targetOrigin = '*'; 
@@ -98,9 +100,15 @@ export default function AppHeader() {
   };
 
   return (
-    <header className="flex items-center justify-between h-16 border-b bg-card shadow-sm px-4 md:px-6">
+    <header className="flex items-center justify-between h-16 border-b bg-card shadow-sm px-4 md:px-6 w-full flex-shrink-0">
       <div className="flex items-center gap-4">
-        {showSidebarTrigger && <SidebarTrigger className="md:hidden" />}
+        {/* Example for future mobile sheet trigger:
+        {showSidebarTrigger && (
+          <Button variant="ghost" size="icon" onClick={() => { console.log("Mobile menu clicked") }}>
+            <Menu className="h-6 w-6" />
+          </Button>
+        )}
+        */}
         <Link href={user ? "/dashboard" : "/"} aria-label="Go to main app page">
             <Logo />
         </Link>
@@ -128,7 +136,7 @@ export default function AppHeader() {
             onClick={() => setIsEmbedModalOpen(true)} 
             variant="outline" 
             className="hover:bg-accent hover:text-accent-foreground"
-            disabled={!customizerShareUrlPath} // Disable if path isn't ready
+            disabled={!customizerShareUrlPath} 
           >
             <CodeXml className="mr-2 h-4 w-4" />
             Embed Code
