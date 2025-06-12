@@ -201,8 +201,8 @@ export default function ShapesPanel({ activeViewId }: ShapesPanelProps) {
                 </div>
               </div>
 
-              <div className="space-y-1.5 mb-5">
-                <Label htmlFor="shapeStrokeWidthSlider" className="text-xs">
+              <div className="space-y-1.5">
+                <Label htmlFor="shapeStrokeWidthSlider" className="text-xs mb-5 block">
                   Outline Width: {currentStrokeWidth.toFixed(1)}px
                 </Label>
                 <Slider
@@ -230,3 +230,4 @@ export default function ShapesPanel({ activeViewId }: ShapesPanelProps) {
     </div>
   );
 }
+

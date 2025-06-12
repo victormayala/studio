@@ -16,11 +16,12 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
-import { Bold, Italic, Underline, CaseUpper, CaseLower, Type, Palette, Blend, PenLine, Pilcrow, TextCursorInput, Pipette, Settings2 } from 'lucide-react';
+import { Bold, Italic, Underline, CaseUpper, CaseLower, Type, Palette, Blend, PenLine, Pilcrow, TextCursorInput, Pipette, Settings2, AlignJustify } from 'lucide-react';
 import { useUploads, type CanvasText } from '@/contexts/UploadContext';
 import { googleFonts } from '@/lib/google-fonts';
 import { useToast } from '@/hooks/use-toast';
 import { Separator } from '@/components/ui/separator';
+import { cn } from '@/lib/utils';
 
 const sanitizeHex = (hex: string): string => {
   let sanitized = hex.replace(/[^0-9a-fA-F]/g, '');
@@ -147,11 +148,10 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
        handleStyleChange('content', newContent);
     }
   };
-
+  
   const renderControls = () => (
     <div className="space-y-6 py-2">
       
-      {/* Font Basics Section */}
       <section className="space-y-4">
         <h3 className="text-sm font-medium text-muted-foreground flex items-center"><Pilcrow className="mr-2 h-4 w-4 text-primary" />Font</h3>
         <div>
@@ -173,8 +173,8 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
           </Select>
         </div>
 
-        <div className="mb-5">
-          <Label htmlFor="fontSizeSlider" className="text-xs mb-1 block">Size: {currentStyle.fontSize?.toFixed(0) || 24}px</Label>
+        <div>
+          <Label htmlFor="fontSizeSlider" className="text-xs mb-5 block">Size: {currentStyle.fontSize?.toFixed(0) || 24}px</Label>
           <Slider
             id="fontSizeSlider"
             min={8} max={128} step={1}
@@ -232,11 +232,10 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
 
       <Separator />
 
-      {/* Spacing Section */}
       <section className="space-y-4">
         <h3 className="text-sm font-medium text-muted-foreground flex items-center"><TextCursorInput className="mr-2 h-4 w-4 text-primary" />Spacing</h3>
-        <div className="mb-5">
-          <Label htmlFor="lineHeightSlider" className="text-xs mb-1 block">Line Height: {(currentStyle.lineHeight || 1.2).toFixed(1)}</Label>
+        <div>
+          <Label htmlFor="lineHeightSlider" className="text-xs mb-5 block">Line Height: {(currentStyle.lineHeight || 1.2).toFixed(1)}</Label>
           <Slider
             id="lineHeightSlider"
             min={0.5} max={3} step={0.1}
@@ -247,8 +246,8 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
             onPointerUpCapture={endInteractiveOperation}
           />
         </div>
-        <div className="mb-5">
-          <Label htmlFor="letterSpacingSlider" className="text-xs mb-1 block">Letter Spacing: {currentStyle.letterSpacing?.toFixed(1) || 0}px</Label>
+        <div>
+          <Label htmlFor="letterSpacingSlider" className="text-xs mb-5 block">Letter Spacing: {currentStyle.letterSpacing?.toFixed(1) || 0}px</Label>
           <Slider
             id="letterSpacingSlider"
             min={-5} max={20} step={0.5}
@@ -263,7 +262,6 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
       
       <Separator />
 
-      {/* Color Section */}
       <section className="space-y-4">
         <h3 className="text-sm font-medium text-muted-foreground flex items-center"><Pipette className="mr-2 h-4 w-4 text-primary" />Color</h3>
         <div className="flex items-center space-x-2">
@@ -305,7 +303,6 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
 
       <Separator />
 
-      {/* Effects Section */}
       <section className="space-y-4">
         <h3 className="text-sm font-medium text-muted-foreground flex items-center mb-2"><Settings2 className="mr-2 h-4 w-4 text-primary" />Effects</h3>
         
@@ -356,8 +353,8 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
                     }}
                     maxLength={7}/>
               </div>
-              <div className="mb-5">
-                <Label htmlFor="outlineWidthSlider" className="text-xs mb-1 block">Width: {currentStyle.outlineWidth?.toFixed(1) || 0}px</Label>
+              <div>
+                <Label htmlFor="outlineWidthSlider" className="text-xs mb-5 block">Width: {currentStyle.outlineWidth?.toFixed(1) || 0}px</Label>
                 <Slider 
                     id="outlineWidthSlider" 
                     min={0} max={10} step={0.5} 
@@ -421,9 +418,9 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
                     }}
                     maxLength={7}/>
               </div>
-              <div className="grid grid-cols-2 gap-x-4 gap-y-2 mb-5">
+              <div className="grid grid-cols-2 gap-x-4 gap-y-2">
                 <div>
-                    <Label htmlFor="shadowOffsetXSlider" className="text-xs mb-1 block">Offset X: {currentStyle.shadowOffsetX?.toFixed(0) || 0}px</Label>
+                    <Label htmlFor="shadowOffsetXSlider" className="text-xs mb-5 block">Offset X: {currentStyle.shadowOffsetX?.toFixed(0) || 0}px</Label>
                     <Slider 
                         id="shadowOffsetXSlider" 
                         min={-20} max={20} step={1} 
@@ -435,7 +432,7 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
                     />
                 </div>
                 <div>
-                    <Label htmlFor="shadowOffsetYSlider" className="text-xs mb-1 block">Offset Y: {currentStyle.shadowOffsetY?.toFixed(0) || 0}px</Label>
+                    <Label htmlFor="shadowOffsetYSlider" className="text-xs mb-5 block">Offset Y: {currentStyle.shadowOffsetY?.toFixed(0) || 0}px</Label>
                     <Slider 
                         id="shadowOffsetYSlider" 
                         min={-20} max={20} step={1} 
@@ -447,8 +444,8 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
                     />
                 </div>
               </div>
-              <div className="mb-5">
-                <Label htmlFor="shadowBlurSlider" className="text-xs mb-1 block">Blur: {currentStyle.shadowBlur?.toFixed(0) || 0}px</Label>
+              <div>
+                <Label htmlFor="shadowBlurSlider" className="text-xs mb-5 block">Blur: {currentStyle.shadowBlur?.toFixed(0) || 0}px</Label>
                 <Slider 
                     id="shadowBlurSlider" 
                     min={0} max={30} step={1} 
@@ -512,3 +509,4 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
     </div>
   );
 }
+
