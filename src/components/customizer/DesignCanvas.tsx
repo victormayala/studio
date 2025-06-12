@@ -412,10 +412,10 @@ export default function DesignCanvas({
                 zIndex: 0, 
                 overflow: 'hidden',
                 backgroundImage: `
-                  repeating-linear-gradient(to right, hsla(var(--border) / 0.2) 0, hsla(var(--border) / 0.2) 1px, transparent 1px, transparent 100%),
-                  repeating-linear-gradient(to bottom, hsla(var(--border) / 0.2) 0, hsla(var(--border) / 0.2) 1px, transparent 1px, transparent 100%)
+                  repeating-linear-gradient(to right, hsla(var(--border) / 0.8) 0, hsla(var(--border) / 0.8) 1px, transparent 1px, transparent 100%),
+                  repeating-linear-gradient(to bottom, hsla(var(--border) / 0.8) 0, hsla(var(--border) / 0.8) 1px, transparent 1px, transparent 100%)
                 `,
-                backgroundSize: '10% 10%', // 10 lines in each direction
+                backgroundSize: '10% 10%', 
               }}
               className="grid-overlay"
             />
