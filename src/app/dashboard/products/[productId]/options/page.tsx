@@ -32,7 +32,7 @@ interface BoundaryBox {
 interface ProductOptionsData {
   id: string;         // WC Product ID
   name: string;       // WC Product Name
-  description: string;// WC Product Description
+  description: string;// WC Product Description (plain text)
   price: number;      // WC Product Price (parsed)
   imageUrl: string;   // WC Product Image URL
   aiHint?: string;     // WC Product Image AI Hint
@@ -48,7 +48,6 @@ interface LocalStorageOptions {
   cstmzrColors: string[];
   cstmzrSizes: string[];
   boundaryBoxes: BoundaryBox[];
-  // We can add lastModifiedWC timestamp here to check if WC data changed
 }
 
 
@@ -86,6 +85,12 @@ export default function ProductOptionsPage() {
 
 
   useEffect(() => {
+    const stripHtml = (html: string): string => {
+      const tempDiv = document.createElement('div');
+      tempDiv.innerHTML = html;
+      return tempDiv.textContent || tempDiv.innerText || "";
+    };
+
     const loadProductData = async () => {
       if (!productId || !user) {
         setIsLoading(false);
@@ -109,7 +114,6 @@ export default function ProductOptionsPage() {
         toast({ title: "Error", description: "Could not load saved local settings.", variant: "destructive"});
       }
 
-      // Fetch WooCommerce product details
       let wcProduct: WCCustomProduct | undefined;
       let fetchError: string | undefined;
 
@@ -125,19 +129,20 @@ export default function ProductOptionsPage() {
 
       if (fetchError || !wcProduct) {
         setError(fetchError || `Product with ID ${productId} not found or failed to load.`);
-        // If WC fetch fails but we have local data, we could potentially show that, or a fallback
-        // For now, just error out if WC product isn't found.
         setIsLoading(false);
         return;
       }
 
       const defaultImageUrl = 'https://placehold.co/600x600.png';
       const defaultAiHint = 'product image';
+      
+      const rawDescription = wcProduct.description || wcProduct.short_description || 'No description available.';
+      const plainTextDescription = stripHtml(rawDescription);
 
       setProductOptions({
         id: wcProduct.id.toString(),
         name: wcProduct.name || `Product ${productId}`,
-        description: wcProduct.description || wcProduct.short_description || 'No description available.',
+        description: plainTextDescription,
         price: parseFloat(wcProduct.price) || 0,
         imageUrl: wcProduct.images && wcProduct.images.length > 0 ? wcProduct.images[0].src : defaultImageUrl,
         aiHint: wcProduct.images && wcProduct.images.length > 0 && wcProduct.images[0].alt ? wcProduct.images[0].alt.split(" ").slice(0,2).join(" ") : defaultAiHint,
@@ -398,11 +403,10 @@ export default function ProductOptionsPage() {
       toast({ title: "Save Error", description: "Could not save CSTMZR options to local storage.", variant: "destructive"});
     }
     
-    // Log WC-related fields that are not being saved back to WC
     console.log("Current WC Product Info (not saved back to WC):", {
         id: productOptions.id,
         name: productOptions.name,
-        description: productOptions.description,
+        description: productOptions.description, // This will be the plain text version
         price: productOptions.price,
     });
   };
@@ -433,10 +437,9 @@ export default function ProductOptionsPage() {
     }
   };
   
-  // Handler for WC Product Detail Changes (Name, Description, Price)
-  // These changes are only reflected in local state and logged, not saved back to WC.
   const handleWCProductDetailChange = (field: 'name' | 'description' | 'price', value: string | number) => {
     if (productOptions) {
+      // For description, if user edits, it's already plain text
       setProductOptions({ ...productOptions, [field]: value });
     }
   };
@@ -717,7 +720,7 @@ export default function ProductOptionsPage() {
                     value={productOptions.name} 
                     onChange={(e) => handleWCProductDetailChange('name', e.target.value)}
                     className="mt-1 bg-muted/50" 
-                    readOnly // Or disabled, as changes are not saved to WC
+                    readOnly 
                 />
               </div>
               <div>
