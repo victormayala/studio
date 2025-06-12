@@ -18,6 +18,7 @@ import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import CustomizerIconNav, { type CustomizerTool } from '@/components/customizer/CustomizerIconNav';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { useUploads } from '@/contexts/UploadContext'; // Added for Add to Cart functionality
 
 // Panel Content Components
 import UploadArea from '@/components/customizer/UploadArea';
@@ -27,7 +28,6 @@ import ShapesPanel from '@/components/customizer/ShapesPanel';
 import ClipartPanel from '@/components/customizer/ClipartPanel';
 import FreeDesignsPanel from '@/components/customizer/FreeDesignsPanel';
 import PremiumDesignsPanel from '@/components/customizer/PremiumDesignsPanel';
-import AiAssistant from '@/components/customizer/AiAssistant'; // For RightPanel, but could be a tool too
 
 interface BoundaryBox {
   id: string;
@@ -74,7 +74,6 @@ const defaultFallbackProduct: ProductForCustomizer = {
 };
 
 const toolItems: CustomizerTool[] = [
-  // { id: "products", label: "Products", icon: PackageIcon }, // Products usually not in customizer tools
   { id: "layers", label: "Layers", icon: Layers },
   { id: "uploads", label: "Uploads", icon: UploadCloud },
   { id: "text", label: "Text", icon: Type },
@@ -82,7 +81,6 @@ const toolItems: CustomizerTool[] = [
   { id: "clipart", label: "Clipart", icon: Smile },
   { id: "free-designs", label: "Free Designs", icon: Palette },
   { id: "premium-designs", label: "Premium Designs", icon: GemIcon },
-  // { id: "ai-assistant", label: "AI Assistant", icon: SparklesIcon }, // This is the RightPanel for now
 ];
 
 
@@ -91,6 +89,7 @@ export default function CustomizerPage() {
   const productId = searchParams.get('productId');
   const { user, isLoading: authLoading } = useAuth();
   const { toast } = useToast();
+  const { canvasImages, canvasTexts, canvasShapes } = useUploads();
 
   const [productDetails, setProductDetails] = useState<ProductForCustomizer | null>(null);
   const [activeViewId, setActiveViewId] = useState<string | null>(null);
@@ -191,7 +190,7 @@ export default function CustomizerPage() {
   };
 
   const renderActiveToolPanelContent = () => {
-     if (!activeViewId && (activeTool !== "products" && activeTool !== "layers")) {
+     if (!activeViewId && (activeTool !== "layers")) { // Layers panel can show without an active view (global layers for all views could be a concept)
        return (
          <div className="p-6 text-center text-muted-foreground h-full flex flex-col items-center justify-center flex-1">
            <SettingsIcon className="w-12 h-12 mb-4 text-muted-foreground/50" />
@@ -208,7 +207,6 @@ export default function CustomizerPage() {
       case "clipart": return <ClipartPanel activeViewId={activeViewId} />;
       case "free-designs": return <FreeDesignsPanel activeViewId={activeViewId} />;
       case "premium-designs": return <PremiumDesignsPanel activeViewId={activeViewId} />;
-      // case "ai-assistant": return <AiAssistant />; // This is the RightPanel
       default:
         return (
           <div className="p-6 text-center text-muted-foreground h-full flex flex-col items-center justify-center flex-1">
@@ -217,6 +215,63 @@ export default function CustomizerPage() {
             <p className="text-sm">Tool panel not yet implemented.</p>
           </div>
         );
+    }
+  };
+
+  const handleAddToCart = () => {
+    if (!user && (canvasImages.length === 0 && canvasTexts.length === 0 && canvasShapes.length === 0)) {
+      toast({
+        title: "Cannot Add to Cart",
+        description: "Please add some design elements or sign in.",
+        variant: "info",
+      });
+      return;
+    }
+    
+    if (!user && (canvasImages.length > 0 || canvasTexts.length > 0 || canvasShapes.length > 0)) {
+       toast({
+        title: "Please Sign In",
+        description: "Sign in to save your design and add to cart.",
+        variant: "info",
+      });
+      // Optionally redirect to sign-in or show sign-in modal
+      return;
+    }
+
+
+    const currentProductIdFromParams = searchParams.get('productId'); 
+
+    const designData = {
+      images: canvasImages.filter(item => item.viewId === activeViewId), // Send only items for current view for now, or all if needed
+      texts: canvasTexts.filter(item => item.viewId === activeViewId),
+      shapes: canvasShapes.filter(item => item.viewId === activeViewId),
+      productId: currentProductIdFromParams, 
+      userId: user?.id, 
+      activeViewId: activeViewId, // Include active view context
+      // Potentially include all views' data if WordPress needs it:
+      // allViewsData: { images: canvasImages, texts: canvasTexts, shapes: canvasShapes }
+    };
+
+    let targetOrigin = '*'; 
+    if (process.env.NODE_ENV === 'production' && process.env.NEXT_PUBLIC_WORDPRESS_SITE_ORIGIN) {
+        targetOrigin = process.env.NEXT_PUBLIC_WORDPRESS_SITE_ORIGIN;
+    }
+    
+    if (window.parent !== window) {
+      window.parent.postMessage({ cstmzrDesignData: designData }, targetOrigin);
+      toast({
+        title: "Design Sent!",
+        description: "Your design details have been sent. Proceeding to cart...",
+      });
+      // Here, you might also trigger navigation or further actions on the parent page
+      // For example, window.parent.postMessage({ cstmzrAction: 'addToCart', product: productDetails, design: designData }, targetOrigin);
+    } else {
+       toast({
+        title: "Add to Cart Clicked",
+        description: "This action is intended to send data to an embedded store. (Not in iframe).",
+        variant: "info"
+      });
+      console.log("Add to Cart - Design Data:", designData);
     }
   };
 
@@ -269,7 +324,6 @@ export default function CustomizerPage() {
                 {getToolPanelTitle(activeTool)}
               </h2>
             </div>
-            {/* ScrollArea applied here for the content of the active tool panel */}
             <ScrollArea className="flex-grow">
                {renderActiveToolPanelContent()}
             </ScrollArea>
@@ -328,7 +382,7 @@ export default function CustomizerPage() {
         </div>
         <footer className="h-20 border-t bg-card shadow-md p-4 flex items-center justify-between flex-shrink-0">
             <div className="text-lg font-semibold text-foreground">Total: $0.00</div> {/* Placeholder */}
-            <Button size="lg" className="bg-primary text-primary-foreground hover:bg-primary/90">
+            <Button size="lg" className="bg-primary text-primary-foreground hover:bg-primary/90" onClick={handleAddToCart}>
               <ShoppingCart className="mr-2 h-5 w-5" /> Add to Cart
             </Button>
         </footer>
@@ -336,3 +390,4 @@ export default function CustomizerPage() {
     </UploadProvider>
   );
 }
+
