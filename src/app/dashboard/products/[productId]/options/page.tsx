@@ -12,7 +12,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { ArrowLeft, PlusCircle, Trash2, Image as ImageIcon, Maximize2, Loader2, AlertTriangle, PackageVariantIcon, Shirt } from 'lucide-react';
+import { ArrowLeft, PlusCircle, Trash2, Image as ImageIcon, Maximize2, Loader2, AlertTriangle, Shirt, LayersIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
@@ -833,7 +833,7 @@ export default function ProductOptionsPage() {
                   </div>
                 ) : (
                   <div className="text-center py-6">
-                    <PackageVariantIcon className="mx-auto h-10 w-10 text-muted-foreground" />
+                    <LayersIcon className="mx-auto h-10 w-10 text-muted-foreground" />
                     <p className="mt-3 text-muted-foreground">No variations found for this product.</p>
                   </div>
                 )}
@@ -967,3 +967,7 @@ export default function ProductOptionsPage() {
     </div>
   );
 }
+
+    
+
+    
