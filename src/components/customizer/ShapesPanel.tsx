@@ -11,6 +11,7 @@ import { Input } from '@/components/ui/input';
 import { Slider } from '@/components/ui/slider';
 import { Separator } from '@/components/ui/separator';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import { useToast } from '@/hooks/use-toast';
 
 interface ShapeOption {
   type: ShapeType;
@@ -21,11 +22,8 @@ interface ShapeOption {
 const shapeOptions: ShapeOption[] = [
   { type: 'rectangle', label: 'Rectangle', icon: Square },
   { type: 'circle', label: 'Circle', icon: Circle },
-  // { type: 'triangle', label: 'Triangle', icon: Triangle },
-  // { type: 'star', label: 'Star', icon: Star },
 ];
 
-// Helper to validate and sanitize hex color
 const sanitizeHex = (hex: string): string => {
   let sanitized = hex.replace(/[^0-9a-fA-F]/g, '');
   if (sanitized.length > 6) {
@@ -37,13 +35,15 @@ const sanitizeHex = (hex: string): string => {
   return `#${sanitized.padEnd(6, '0').substring(0,6)}`;
 };
 
+interface ShapesPanelProps {
+  activeViewId: string | null;
+}
 
-export default function ShapesPanel() {
+export default function ShapesPanel({ activeViewId }: ShapesPanelProps) {
   const { addCanvasShape, selectedCanvasShapeId, canvasShapes, updateCanvasShape } = useUploads();
+  const { toast } = useToast();
+  const selectedShape = canvasShapes.find(s => s.id === selectedCanvasShapeId && s.viewId === activeViewId);
 
-  const selectedShape = canvasShapes.find(s => s.id === selectedCanvasShapeId);
-
-  // Local state for hex inputs to allow intermediate typing
   const [fillColorHex, setFillColorHex] = useState(selectedShape?.color || '#468189');
   const [strokeColorHex, setStrokeColorHex] = useState(selectedShape?.strokeColor || '#000000');
 
@@ -52,29 +52,32 @@ export default function ShapesPanel() {
       setFillColorHex(selectedShape.color);
       setStrokeColorHex(selectedShape.strokeColor);
     } else {
-      // Reset to defaults or last add-shape defaults if desired
       setFillColorHex('#468189');
       setStrokeColorHex('#000000');
     }
   }, [selectedShape]);
 
   const handleAddShape = (shapeType: ShapeType) => {
-    addCanvasShape(shapeType); // Default colors are handled in context
+    if (!activeViewId) {
+      toast({ title: "No Active View", description: "Please select a product view first.", variant: "info" });
+      return;
+    }
+    addCanvasShape(shapeType, activeViewId);
   };
 
   const handleStyleChange = <K extends keyof CanvasShape>(property: K, value: CanvasShape[K]) => {
-    if (selectedCanvasShapeId) {
+    if (selectedCanvasShapeId && selectedShape) { // Ensure selectedShape is for the activeViewId
       updateCanvasShape(selectedCanvasShapeId, { [property]: value });
     }
   };
 
   const handleFillColorChange = (value: string) => {
-    setFillColorHex(value); // Update local hex for input field
+    setFillColorHex(value); 
     handleStyleChange('color', sanitizeHex(value));
   };
   
   const handleStrokeColorChange = (value: string) => {
-    setStrokeColorHex(value); // Update local hex for input field
+    setStrokeColorHex(value); 
     handleStyleChange('strokeColor', sanitizeHex(value));
   };
 
@@ -119,7 +122,6 @@ export default function ShapesPanel() {
                   <Palette className="mr-2 h-4 w-4" /> Color Settings
                 </AccordionTrigger>
                 <AccordionContent className="space-y-4 pt-3 pb-1 px-1">
-                  {/* Fill Color */}
                   <div className="space-y-1.5">
                     <Label htmlFor="shapeFillColorSwatch" className="text-xs">Fill Color</Label>
                     <div className="flex items-center space-x-2">
@@ -127,13 +129,13 @@ export default function ShapesPanel() {
                         type="color"
                         id="shapeFillColorSwatch"
                         className="h-8 w-10 p-0.5 border-none rounded"
-                        value={selectedShape.color} // Bind to actual context state for swatch
+                        value={selectedShape.color} 
                         onChange={(e) => handleStyleChange('color', e.target.value)}
                       />
                       <Input
                         id="shapeFillColorHex"
                         className="h-8 text-xs flex-grow max-w-[100px]"
-                        value={fillColorHex} // Bind to local state for typing
+                        value={fillColorHex} 
                         onChange={(e) => setFillColorHex(e.target.value)}
                         onBlur={(e) => handleFillColorChange(e.target.value)}
                         maxLength={7}
@@ -141,7 +143,6 @@ export default function ShapesPanel() {
                     </div>
                   </div>
 
-                  {/* Outline Color */}
                   <div className="space-y-1.5">
                     <Label htmlFor="shapeStrokeColorSwatch" className="text-xs">Outline Color</Label>
                     <div className="flex items-center space-x-2">
@@ -149,13 +150,13 @@ export default function ShapesPanel() {
                         type="color"
                         id="shapeStrokeColorSwatch"
                         className="h-8 w-10 p-0.5 border-none rounded"
-                        value={selectedShape.strokeColor} // Bind to actual context state for swatch
+                        value={selectedShape.strokeColor} 
                         onChange={(e) => handleStyleChange('strokeColor', e.target.value)}
                       />
                       <Input
                         id="shapeStrokeColorHex"
                         className="h-8 text-xs flex-grow max-w-[100px]"
-                        value={strokeColorHex} // Bind to local state for typing
+                        value={strokeColorHex} 
                         onChange={(e) => setStrokeColorHex(e.target.value)}
                         onBlur={(e) => handleStrokeColorChange(e.target.value)}
                         maxLength={7}
@@ -163,7 +164,6 @@ export default function ShapesPanel() {
                     </div>
                   </div>
 
-                  {/* Outline Width */}
                   <div className="space-y-1.5">
                     <Label htmlFor="shapeStrokeWidthSlider" className="text-xs">
                       Outline Width: {selectedShape.strokeWidth.toFixed(1)}px
@@ -191,4 +191,3 @@ export default function ShapesPanel() {
     </div>
   );
 }
-

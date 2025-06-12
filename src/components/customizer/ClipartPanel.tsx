@@ -7,12 +7,22 @@ import { clipartData, type ClipartItem } from '@/lib/clipart-data';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import Image from 'next/image';
 import { Smile, PlusCircle } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
 
-export default function ClipartPanel() {
+interface ClipartPanelProps {
+  activeViewId: string | null;
+}
+
+export default function ClipartPanel({ activeViewId }: ClipartPanelProps) {
   const { addCanvasImageFromUrl } = useUploads();
+  const { toast } = useToast();
 
   const handleClipartClick = (clipart: ClipartItem) => {
-    addCanvasImageFromUrl(clipart.name, clipart.imageUrl, clipart.type, clipart.id);
+    if (!activeViewId) {
+      toast({ title: "No Active View", description: "Please select a product view first.", variant: "info" });
+      return;
+    }
+    addCanvasImageFromUrl(clipart.name, clipart.imageUrl, clipart.type, activeViewId, clipart.id);
   };
 
   return (

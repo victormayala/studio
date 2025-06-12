@@ -29,8 +29,8 @@ import TextToolPanel from "./TextToolPanel";
 import ShapesPanel from "./ShapesPanel";
 import ClipartPanel from "./ClipartPanel";
 import FreeDesignsPanel from "./FreeDesignsPanel";
-import PremiumDesignsPanel from "./PremiumDesignsPanel"; // Added import
-import { useUploads } from "@/contexts/UploadContext";
+import PremiumDesignsPanel from "./PremiumDesignsPanel";
+import type { ProductView } from '@/app/customizer/page'; // Assuming ProductView is exported
 
 const menuItems = [
   { id: "products", label: "Products", icon: Package },
@@ -43,9 +43,12 @@ const menuItems = [
   { id: "premium-designs", label: "Premium Designs", icon: Gem },
 ];
 
-export default function LeftPanel() {
+interface LeftPanelProps {
+  activeViewId: string | null;
+}
+
+export default function LeftPanel({ activeViewId }: LeftPanelProps) {
   const [activeItem, setActiveItem] = useState("products");
-  const { selectedCanvasImageId } = useUploads();
 
   const handleItemClick = (id: string) => {
     setActiveItem(id);
@@ -55,21 +58,31 @@ export default function LeftPanel() {
     const selectedMenuItem = menuItems.find(item => item.id === activeItem);
     const panelLabel = selectedMenuItem ? selectedMenuItem.label : "Panel";
 
+    if (!activeViewId && (activeItem !== "products" && activeItem !== "layers")) {
+       return (
+         <div className="p-6 text-center text-muted-foreground h-full flex flex-col items-center justify-center">
+           <Settings2 className="w-12 h-12 mb-4 text-muted-foreground/50" />
+           <h3 className="text-lg font-semibold mb-1">Select a View</h3>
+           <p className="text-sm">Please select a product view before adding elements.</p>
+         </div>
+       );
+    }
+
     switch (activeItem) {
       case "uploads":
-        return <UploadArea />;
+        return <UploadArea activeViewId={activeViewId} />;
       case "layers":
-        return <LayersPanel />;
+        return <LayersPanel activeViewId={activeViewId} />;
       case "text":
-        return <TextToolPanel />;
+        return <TextToolPanel activeViewId={activeViewId} />;
       case "shapes":
-        return <ShapesPanel />;
+        return <ShapesPanel activeViewId={activeViewId} />;
       case "clipart":
-        return <ClipartPanel />;
+        return <ClipartPanel activeViewId={activeViewId} />;
       case "free-designs":
-        return <FreeDesignsPanel />;
-      case "premium-designs": // Added case for Premium Designs Panel
-        return <PremiumDesignsPanel />;
+        return <FreeDesignsPanel activeViewId={activeViewId} />;
+      case "premium-designs": 
+        return <PremiumDesignsPanel activeViewId={activeViewId} />;
       default:
         return (
           <div className="p-6 text-center text-muted-foreground h-full flex flex-col items-center justify-center">

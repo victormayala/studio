@@ -9,12 +9,22 @@ import Image from 'next/image';
 import { Gem, PlusCircle } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
+import { useToast } from '@/hooks/use-toast';
 
-export default function PremiumDesignsPanel() {
+interface PremiumDesignsPanelProps {
+  activeViewId: string | null;
+}
+
+export default function PremiumDesignsPanel({ activeViewId }: PremiumDesignsPanelProps) {
   const { addCanvasImageFromUrl } = useUploads();
+  const { toast } = useToast();
 
   const handleDesignClick = (design: PremiumDesignItem) => {
-    addCanvasImageFromUrl(design.name, design.imageUrl, design.type, design.id);
+    if (!activeViewId) {
+      toast({ title: "No Active View", description: "Please select a product view first.", variant: "info" });
+      return;
+    }
+    addCanvasImageFromUrl(design.name, design.imageUrl, design.type, activeViewId, design.id);
   };
 
   return (
@@ -33,10 +43,10 @@ export default function PremiumDesignsPanel() {
                 title={`Add "${design.name}" to canvas - $${design.price.toFixed(2)}`}
               >
                 <Badge
-                  variant="default" // Will use primary color by default
+                  variant="default" 
                   className={cn(
                     "absolute top-1 right-1 text-xs font-semibold z-10",
-                    "bg-primary text-primary-foreground px-1.5 py-0.5 h-auto min-w-[24px] justify-center" // More specific styling for the badge
+                    "bg-primary text-primary-foreground px-1.5 py-0.5 h-auto min-w-[24px] justify-center" 
                   )}
                 >
                   ${design.price.toFixed(0)}
@@ -48,12 +58,11 @@ export default function PremiumDesignsPanel() {
                     src={design.imageUrl}
                     alt={design.name}
                     fill
-                    sizes="(max-width: 768px) 30vw, (max-width: 1200px) 20vw, 15vw" // Adjusted sizes for better rendering within square
+                    sizes="(max-width: 768px) 30vw, (max-width: 1200px) 20vw, 15vw" 
                     className="object-contain"
                     data-ai-hint={design.aiHint}
                   />
                 </div>
-                {/* Design name removed to match example */}
               </div>
             ))}
           </div>
@@ -67,4 +76,3 @@ export default function PremiumDesignsPanel() {
     </div>
   );
 }
-

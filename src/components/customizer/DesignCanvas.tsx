@@ -37,13 +37,15 @@ interface DesignCanvasProps {
   productImageAlt?: string;
   productImageAiHint?: string;
   productDefinedBoundaryBoxes?: BoundaryBox[];
+  activeViewId: string | null; // Added activeViewId
 }
 
 export default function DesignCanvas({ 
   productImageUrl,
   productImageAlt,
   productImageAiHint,
-  productDefinedBoundaryBoxes = [] 
+  productDefinedBoundaryBoxes = [],
+  activeViewId // Destructure activeViewId
 }: DesignCanvasProps) {
 
   const productToDisplay = {
@@ -80,10 +82,10 @@ export default function DesignCanvas({
 
 
   useEffect(() => {
-    if (!canvasRef.current || !productDefinedBoundaryBoxes || productDefinedBoundaryBoxes.length === 0) return;
+    if (!canvasRef.current || !productDefinedBoundaryBoxes || productDefinedBoundaryBoxes.length === 0 || !activeViewId) return;
 
     const checkAndMoveItem = (item: CanvasImage | CanvasText | CanvasShape, updateFunc: (id: string, updates: Partial<any>) => void) => {
-      if (item.x === 50 && item.y === 50 && item.id === lastAddedItemId) {
+      if (item.x === 50 && item.y === 50 && item.id === lastAddedItemId && item.viewId === activeViewId) {
         const firstBox = productDefinedBoundaryBoxes[0];
         const newX = firstBox.x + firstBox.width / 2;
         const newY = firstBox.y + firstBox.height / 2;
@@ -103,26 +105,26 @@ export default function DesignCanvas({
         if (newShape) checkAndMoveItem(newShape, updateCanvasShape);
     }
 
-  }, [canvasImages, canvasTexts, canvasShapes, productDefinedBoundaryBoxes, updateCanvasImage, updateCanvasText, updateCanvasShape, lastAddedItemId]);
+  }, [canvasImages, canvasTexts, canvasShapes, productDefinedBoundaryBoxes, updateCanvasImage, updateCanvasText, updateCanvasShape, lastAddedItemId, activeViewId]);
 
   useEffect(() => {
     if (canvasImages.length > 0) {
         const latestImage = canvasImages[canvasImages.length -1];
-        if (latestImage && latestImage.x === 50 && latestImage.y === 50) setLastAddedItemId(latestImage.id);
+        if (latestImage && latestImage.x === 50 && latestImage.y === 50 && latestImage.viewId === activeViewId) setLastAddedItemId(latestImage.id);
     }
-  }, [canvasImages]);
+  }, [canvasImages, activeViewId]);
     useEffect(() => {
     if (canvasTexts.length > 0) {
         const latestText = canvasTexts[canvasTexts.length -1];
-        if (latestText && latestText.x === 50 && latestText.y === 50) setLastAddedItemId(latestText.id);
+        if (latestText && latestText.x === 50 && latestText.y === 50 && latestText.viewId === activeViewId) setLastAddedItemId(latestText.id);
     }
-  }, [canvasTexts]);
+  }, [canvasTexts, activeViewId]);
     useEffect(() => {
     if (canvasShapes.length > 0) {
         const latestShape = canvasShapes[canvasShapes.length -1];
-        if (latestShape && latestShape.x === 50 && latestShape.y === 50) setLastAddedItemId(latestShape.id);
+        if (latestShape && latestShape.x === 50 && latestShape.y === 50 && latestShape.viewId === activeViewId) setLastAddedItemId(latestShape.id);
     }
-  }, [canvasShapes]);
+  }, [canvasShapes, activeViewId]);
 
 
   const getMouseOrTouchCoords = (e: MouseEvent | TouchEvent | ReactMouseEvent | ReactTouchEvent<SVGElement> | ReactMouseEvent<HTMLDivElement> | ReactTouchEvent<HTMLDivElement>) => {
@@ -258,7 +260,7 @@ export default function DesignCanvas({
       let newScale = initialScale * scaleRatio;
       newScale = Math.max(0.1, Math.min(newScale, itemType === 'text' ? 20 : 10)); 
       
-      if (productDefinedBoundaryBoxes && productDefinedBoundaryBoxes.length > 0 && itemInitialWidth > 0 && itemInitialHeight > 0) {
+      if (productDefinedBoundaryBoxes && productDefinedBoundaryBoxes.length > 0 && itemInitialWidth > 0 && itemInitialHeight > 0 && canvasRect.width > 0 && canvasRect.height > 0) {
         const targetBox = productDefinedBoundaryBoxes[0]; 
 
         const itemCurrentXPercent = activeItemData?.x || initialX;
@@ -300,7 +302,6 @@ export default function DesignCanvas({
         let newY = initialY + dyPercent;
         
         const currentItemScaleFactor = activeItemData?.scale || initialScale;
-        // Ensure itemInitialWidth and itemInitialHeight are not zero before division
         const scaledItemWidthPx = itemInitialWidth > 0 ? itemInitialWidth * currentItemScaleFactor : 0;
         const scaledItemHeightPx = itemInitialHeight > 0 ? itemInitialHeight * currentItemScaleFactor : 0;
 
@@ -369,6 +370,11 @@ export default function DesignCanvas({
     else if (itemType === 'shape') removeCanvasShape(itemId);
   };
 
+  // Filter items based on activeViewId
+  const visibleImages = canvasImages.filter(img => img.viewId === activeViewId);
+  const visibleTexts = canvasTexts.filter(txt => txt.viewId === activeViewId);
+  const visibleShapes = canvasShapes.filter(shp => shp.viewId === activeViewId);
+
   return (
     <div
       className="w-full h-full flex items-center justify-center bg-card border border-dashed border-border rounded-lg shadow-inner p-4 min-h-[500px] lg:min-h-[700px] relative overflow-hidden select-none product-image-outer-container"
@@ -410,7 +416,7 @@ export default function DesignCanvas({
             </div>
           ))}
 
-          {canvasImages.map((img) => (
+          {visibleImages.map((img) => (
             <InteractiveCanvasImage
               key={`${img.id}-${img.zIndex}`} image={img}
               isSelected={img.id === selectedCanvasImageId && !img.isLocked}
@@ -423,7 +429,7 @@ export default function DesignCanvas({
               onRemoveHandleClick={(e, id) => handleRemoveItem(e, id, 'image')}
             />
           ))}
-          {canvasTexts.map((textItem) => (
+          {visibleTexts.map((textItem) => (
             <InteractiveCanvasText
               key={`${textItem.id}-${textItem.zIndex}`} textItem={textItem}
               isSelected={textItem.id === selectedCanvasTextId && !textItem.isLocked}
@@ -435,7 +441,7 @@ export default function DesignCanvas({
               onRemoveHandleClick={(e, id) => handleRemoveItem(e, id, 'text')}
             />
           ))}
-          {canvasShapes.map((shape) => (
+          {visibleShapes.map((shape) => (
             <InteractiveCanvasShape
               key={`${shape.id}-${shape.zIndex}`} shape={shape}
               isSelected={shape.id === selectedCanvasShapeId && !shape.isLocked}
@@ -451,7 +457,7 @@ export default function DesignCanvas({
         <p className="mt-4 text-muted-foreground font-medium">{productToDisplay.name}</p>
         <p className="text-sm text-muted-foreground">
           {productDefinedBoundaryBoxes.length > 0 ? "Items will be kept within the dashed areas. " : ""}
-          {canvasImages.length > 0 || canvasTexts.length > 0 || canvasShapes.length > 0 ? 
+          {visibleImages.length > 0 || visibleTexts.length > 0 || visibleShapes.length > 0 ? 
             (selectedCanvasImageId || selectedCanvasTextId || selectedCanvasShapeId ? "Click & drag item or handles to transform. Click background to deselect." : "Click an item to select and transform it.") 
             : "Add images, text or shapes using the tools on the left."}
         </p>
@@ -459,3 +465,4 @@ export default function DesignCanvas({
     </div>
   );
 }
+

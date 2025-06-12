@@ -16,6 +16,7 @@ export interface UploadedImage {
 export interface CanvasImage {
   id: string; // Unique ID for THIS INSTANCE on the canvas
   sourceImageId: string; // ID of the original UploadedImage or a clipart ID
+  viewId: string; // ID of the product view this image belongs to
   name: string;
   dataUrl: string;
   type: string;
@@ -31,6 +32,7 @@ export interface CanvasImage {
 // Represents an instance of a text element on the canvas
 export interface CanvasText {
   id: string;
+  viewId: string; // ID of the product view this text belongs to
   content: string;
   x: number; // percentage for left
   y: number; // percentage for top
@@ -68,6 +70,7 @@ export type ShapeType = 'rectangle' | 'circle' | 'triangle' | 'star'; // Add mor
 
 export interface CanvasShape {
   id: string;
+  viewId: string; // ID of the product view this shape belongs to
   shapeType: ShapeType;
   x: number; // percentage for left (center of shape)
   y: number; // percentage for top (center of shape)
@@ -93,19 +96,19 @@ interface UploadContextType {
   addUploadedImage: (file: File) => Promise<void>;
   
   canvasImages: CanvasImage[];
-  addCanvasImage: (sourceImageId: string) => void;
-  addCanvasImageFromUrl: (name: string, dataUrl: string, type: string, sourceId?: string) => void; // Added sourceId
+  addCanvasImage: (sourceImageId: string, viewId: string) => void;
+  addCanvasImageFromUrl: (name: string, dataUrl: string, type: string, viewId: string, sourceId?: string) => void;
   removeCanvasImage: (canvasImageId: string) => void;
   selectedCanvasImageId: string | null;
   selectCanvasImage: (canvasImageId: string | null) => void;
-  updateCanvasImage: (canvasImageId: string, updates: Partial<Pick<CanvasImage, 'scale' | 'rotation' | 'x' | 'y' | 'zIndex' | 'isLocked'>>) => void;
+  updateCanvasImage: (canvasImageId: string, updates: Partial<CanvasImage>) => void;
   bringLayerForward: (canvasImageId: string) => void;
   sendLayerBackward: (canvasImageId: string) => void;
   duplicateCanvasImage: (canvasImageId: string) => void; 
   toggleLockCanvasImage: (canvasImageId: string) => void;
 
   canvasTexts: CanvasText[];
-  addCanvasText: (content: string, initialStyle?: Partial<CanvasText>) => void;
+  addCanvasText: (content: string, viewId: string, initialStyle?: Partial<CanvasText>) => void;
   removeCanvasText: (canvasTextId: string) => void;
   selectedCanvasTextId: string | null;
   selectCanvasText: (canvasTextId: string | null) => void;
@@ -116,7 +119,7 @@ interface UploadContextType {
   toggleLockCanvasText: (canvasTextId: string) => void;
 
   canvasShapes: CanvasShape[];
-  addCanvasShape: (shapeType: ShapeType, initialProps?: Partial<CanvasShape>) => void;
+  addCanvasShape: (shapeType: ShapeType, viewId: string, initialProps?: Partial<CanvasShape>) => void;
   removeCanvasShape: (shapeId: string) => void;
   selectedCanvasShapeId: string | null;
   selectCanvasShape: (shapeId: string | null) => void;
@@ -160,21 +163,23 @@ export function UploadProvider({ children }: { children: ReactNode }) {
     reader.readAsDataURL(file);
   }, []);
 
-  const getMaxZIndex = useCallback(() => {
-    const imageZIndexes = canvasImages.map(img => img.zIndex);
-    const textZIndexes = canvasTexts.map(txt => txt.zIndex);
-    const shapeZIndexes = canvasShapes.map(shp => shp.zIndex);
+  const getMaxZIndexForView = useCallback((viewId: string) => {
+    const imageZIndexes = canvasImages.filter(img => img.viewId === viewId).map(img => img.zIndex);
+    const textZIndexes = canvasTexts.filter(txt => txt.viewId === viewId).map(txt => txt.zIndex);
+    const shapeZIndexes = canvasShapes.filter(shp => shp.viewId === viewId).map(shp => shp.zIndex);
     return Math.max(-1, ...imageZIndexes, ...textZIndexes, ...shapeZIndexes);
   }, [canvasImages, canvasTexts, canvasShapes]);
 
   // Image Functions
-  const addCanvasImage = useCallback((sourceImageId: string) => {
+  const addCanvasImage = useCallback((sourceImageId: string, viewId: string) => {
+    if (!viewId) { console.error("addCanvasImage: viewId is required"); return; }
     const sourceImage = uploadedImages.find(img => img.id === sourceImageId);
     if (!sourceImage) return;
-    const currentMaxZIndex = getMaxZIndex();
+    const currentMaxZIndex = getMaxZIndexForView(viewId);
     const newCanvasImage: CanvasImage = {
       id: crypto.randomUUID(),
       sourceImageId: sourceImage.id,
+      viewId,
       name: sourceImage.name,
       dataUrl: sourceImage.dataUrl,
       type: sourceImage.type,
@@ -185,13 +190,15 @@ export function UploadProvider({ children }: { children: ReactNode }) {
     setSelectedCanvasImageId(newCanvasImage.id);
     setSelectedCanvasTextId(null);
     setSelectedCanvasShapeId(null);
-  }, [uploadedImages, getMaxZIndex]);
+  }, [uploadedImages, getMaxZIndexForView]);
 
-  const addCanvasImageFromUrl = useCallback((name: string, dataUrl: string, type: string, sourceId?: string) => {
-    const currentMaxZIndex = getMaxZIndex();
+  const addCanvasImageFromUrl = useCallback((name: string, dataUrl: string, type: string, viewId: string, sourceId?: string) => {
+    if (!viewId) { console.error("addCanvasImageFromUrl: viewId is required"); return; }
+    const currentMaxZIndex = getMaxZIndexForView(viewId);
     const newCanvasImage: CanvasImage = {
       id: crypto.randomUUID(),
-      sourceImageId: sourceId || `url-${crypto.randomUUID()}`, // Use provided sourceId or generate one for URL-based images
+      sourceImageId: sourceId || `url-${crypto.randomUUID()}`,
+      viewId,
       name: name,
       dataUrl: dataUrl,
       type: type,
@@ -202,7 +209,7 @@ export function UploadProvider({ children }: { children: ReactNode }) {
     setSelectedCanvasImageId(newCanvasImage.id);
     setSelectedCanvasTextId(null);
     setSelectedCanvasShapeId(null);
-  }, [getMaxZIndex]);
+  }, [getMaxZIndexForView]);
 
 
   const removeCanvasImage = useCallback((canvasImageId: string) => {
@@ -218,14 +225,14 @@ export function UploadProvider({ children }: { children: ReactNode }) {
     }
   }, []); 
 
-  const updateCanvasImage = useCallback((canvasImageId: string, updates: Partial<Pick<CanvasImage, 'scale' | 'rotation' | 'x' | 'y' | 'zIndex' | 'isLocked'>>) => {
+  const updateCanvasImage = useCallback((canvasImageId: string, updates: Partial<CanvasImage>) => {
     setCanvasImages(prev => prev.map(img => img.id === canvasImageId ? { ...img, ...updates } : img));
   }, []); 
 
   const duplicateCanvasImage = useCallback((canvasImageId: string) => {
     const originalImage = canvasImages.find(img => img.id === canvasImageId);
     if (!originalImage) return;
-    const currentMaxZIndex = getMaxZIndex();
+    const currentMaxZIndex = getMaxZIndexForView(originalImage.viewId);
     const newCanvasImage: CanvasImage = {
       ...originalImage, id: crypto.randomUUID(), x: originalImage.x + 2, y: originalImage.y + 2, 
       zIndex: currentMaxZIndex + 1, isLocked: false,
@@ -234,7 +241,7 @@ export function UploadProvider({ children }: { children: ReactNode }) {
     setSelectedCanvasImageId(newCanvasImage.id); 
     setSelectedCanvasTextId(null);
     setSelectedCanvasShapeId(null);
-  }, [canvasImages, getMaxZIndex]);
+  }, [canvasImages, getMaxZIndexForView]);
 
   const toggleLockCanvasImage = useCallback((canvasImageId: string) => {
     setCanvasImages(prevImages =>
@@ -250,11 +257,12 @@ export function UploadProvider({ children }: { children: ReactNode }) {
   }, [selectedCanvasImageId]);
 
   // Text Functions
-  const addCanvasText = useCallback((content: string, initialStyle?: Partial<CanvasText>) => {
-    const currentMaxZIndex = getMaxZIndex();
+  const addCanvasText = useCallback((content: string, viewId: string, initialStyle?: Partial<CanvasText>) => {
+    if (!viewId) { console.error("addCanvasText: viewId is required"); return; }
+    const currentMaxZIndex = getMaxZIndexForView(viewId);
     const defaultFont = googleFonts.find(f => f.name === 'Arial');
     const newText: CanvasText = {
-      id: crypto.randomUUID(), content, x: 50, y: 50, rotation: 0, scale: 1, 
+      id: crypto.randomUUID(), viewId, content, x: 50, y: 50, rotation: 0, scale: 1, 
       zIndex: currentMaxZIndex + 1, isLocked: false, itemType: 'text',
       fontFamily: initialStyle?.fontFamily || (defaultFont ? defaultFont.family : 'Arial, sans-serif'),
       fontSize: initialStyle?.fontSize || 24, textTransform: initialStyle?.textTransform || 'none',
@@ -271,7 +279,7 @@ export function UploadProvider({ children }: { children: ReactNode }) {
     setSelectedCanvasTextId(newText.id);
     setSelectedCanvasImageId(null);
     setSelectedCanvasShapeId(null);
-  }, [getMaxZIndex]);
+  }, [getMaxZIndexForView]);
 
   const removeCanvasText = useCallback((canvasTextId: string) => {
     setCanvasTexts(prev => prev.filter(txt => txt.id !== canvasTextId));
@@ -293,7 +301,7 @@ export function UploadProvider({ children }: { children: ReactNode }) {
   const duplicateCanvasText = useCallback((canvasTextId: string) => {
     const originalText = canvasTexts.find(txt => txt.id === canvasTextId);
     if (!originalText) return;
-    const currentMaxZIndex = getMaxZIndex();
+    const currentMaxZIndex = getMaxZIndexForView(originalText.viewId);
     const newText: CanvasText = {
       ...originalText, id: crypto.randomUUID(), x: originalText.x + 2, y: originalText.y + 2,
       zIndex: currentMaxZIndex + 1, isLocked: false,
@@ -302,7 +310,7 @@ export function UploadProvider({ children }: { children: ReactNode }) {
     setSelectedCanvasTextId(newText.id);
     setSelectedCanvasImageId(null);
     setSelectedCanvasShapeId(null);
-  }, [canvasTexts, getMaxZIndex]);
+  }, [canvasTexts, getMaxZIndexForView]);
 
   const toggleLockCanvasText = useCallback((canvasTextId: string) => {
     setCanvasTexts(prevTexts =>
@@ -318,10 +326,12 @@ export function UploadProvider({ children }: { children: ReactNode }) {
   }, [selectedCanvasTextId]);
 
   // Shape Functions
-  const addCanvasShape = useCallback((shapeType: ShapeType, initialProps?: Partial<CanvasShape>) => {
-    const currentMaxZIndex = getMaxZIndex();
+  const addCanvasShape = useCallback((shapeType: ShapeType, viewId: string, initialProps?: Partial<CanvasShape>) => {
+    if (!viewId) { console.error("addCanvasShape: viewId is required"); return; }
+    const currentMaxZIndex = getMaxZIndexForView(viewId);
     const defaultProps: CanvasShape = {
       id: crypto.randomUUID(),
+      viewId,
       shapeType,
       x: 50, y: 50,
       width: 100, height: 100, // Default size
@@ -342,7 +352,7 @@ export function UploadProvider({ children }: { children: ReactNode }) {
     setSelectedCanvasShapeId(defaultProps.id);
     setSelectedCanvasImageId(null);
     setSelectedCanvasTextId(null);
-  }, [getMaxZIndex]);
+  }, [getMaxZIndexForView]);
 
   const removeCanvasShape = useCallback((shapeId: string) => {
     setCanvasShapes(prev => prev.filter(shp => shp.id !== shapeId));
@@ -364,7 +374,7 @@ export function UploadProvider({ children }: { children: ReactNode }) {
   const duplicateCanvasShape = useCallback((shapeId: string) => {
     const originalShape = canvasShapes.find(shp => shp.id === shapeId);
     if (!originalShape) return;
-    const currentMaxZIndex = getMaxZIndex();
+    const currentMaxZIndex = getMaxZIndexForView(originalShape.viewId);
     const newShape: CanvasShape = {
       ...originalShape, id: crypto.randomUUID(), x: originalShape.x + 2, y: originalShape.y + 2,
       zIndex: currentMaxZIndex + 1, isLocked: false,
@@ -373,7 +383,7 @@ export function UploadProvider({ children }: { children: ReactNode }) {
     setSelectedCanvasShapeId(newShape.id);
     setSelectedCanvasImageId(null);
     setSelectedCanvasTextId(null);
-  }, [canvasShapes, getMaxZIndex]);
+  }, [canvasShapes, getMaxZIndexForView]);
 
   const toggleLockCanvasShape = useCallback((shapeId: string) => {
     setCanvasShapes(prevShapes =>
@@ -390,50 +400,58 @@ export function UploadProvider({ children }: { children: ReactNode }) {
 
   // Generic Layer Reordering
   const reorderLayers = useCallback((itemId: string, itemType: 'image' | 'text' | 'shape', direction: 'forward' | 'backward') => {
-    let allItems: CanvasItem[] = [
-      ...canvasImages.map(img => ({ ...img, itemType: 'image' as const })),
-      ...canvasTexts.map(txt => ({ ...txt, itemType: 'text' as const })),
-      ...canvasShapes.map(shp => ({ ...shp, itemType: 'shape' as const })),
+    const sourceItem = 
+      itemType === 'image' ? canvasImages.find(i => i.id === itemId) :
+      itemType === 'text' ? canvasTexts.find(t => t.id === itemId) :
+      canvasShapes.find(s => s.id === itemId);
+
+    if (!sourceItem || sourceItem.isLocked) return;
+    const currentViewId = sourceItem.viewId;
+
+    let itemsInCurrentView: CanvasItem[] = [
+      ...canvasImages.filter(img => img.viewId === currentViewId).map(img => ({ ...img, itemType: 'image' as const })),
+      ...canvasTexts.filter(txt => txt.viewId === currentViewId).map(txt => ({ ...txt, itemType: 'text' as const })),
+      ...canvasShapes.filter(shp => shp.viewId === currentViewId).map(shp => ({ ...shp, itemType: 'shape' as const })),
     ];
-    allItems.sort((a, b) => a.zIndex - b.zIndex);
+    itemsInCurrentView.sort((a, b) => a.zIndex - b.zIndex);
 
-    const currentIndex = allItems.findIndex(item => item.id === itemId && item.itemType === itemType);
-    if (currentIndex === -1 || allItems[currentIndex].isLocked) return;
+    const currentIndexInView = itemsInCurrentView.findIndex(item => item.id === itemId && item.itemType === itemType);
+    if (currentIndexInView === -1) return;
 
-    let targetIndex = -1;
+    let targetIndexInView = -1;
     if (direction === 'forward') {
-      if (currentIndex < allItems.length - 1) {
-        for (let i = currentIndex + 1; i < allItems.length; i++) {
-            if (!allItems[i].isLocked) { targetIndex = i; break; }
+      if (currentIndexInView < itemsInCurrentView.length - 1) {
+        for (let i = currentIndexInView + 1; i < itemsInCurrentView.length; i++) {
+          if (!itemsInCurrentView[i].isLocked) { targetIndexInView = i; break; }
         }
-        if (targetIndex === -1 && currentIndex + 1 < allItems.length && !allItems[currentIndex + 1].isLocked) { 
-             targetIndex = currentIndex + 1;
-        } else if (targetIndex === -1) return; 
+        if (targetIndexInView === -1) return;
       } else return;
-    } else { 
-      if (currentIndex > 0) {
-        for (let i = currentIndex - 1; i >= 0; i--) {
-            if (!allItems[i].isLocked) { targetIndex = i; break; }
+    } else {
+      if (currentIndexInView > 0) {
+        for (let i = currentIndexInView - 1; i >= 0; i--) {
+          if (!itemsInCurrentView[i].isLocked) { targetIndexInView = i; break; }
         }
-         if (targetIndex === -1 && currentIndex -1  >= 0 && !allItems[currentIndex -1].isLocked) { 
-             targetIndex = currentIndex -1;
-        } else if (targetIndex === -1) return;
+        if (targetIndexInView === -1) return;
       } else return;
     }
     
-    const itemToMove = allItems.splice(currentIndex, 1)[0];
-    allItems.splice(targetIndex, 0, itemToMove);
+    const tempZIndex = itemsInCurrentView[currentIndexInView].zIndex;
+    itemsInCurrentView[currentIndexInView].zIndex = itemsInCurrentView[targetIndexInView].zIndex;
+    itemsInCurrentView[targetIndexInView].zIndex = tempZIndex;
     
-    const newImages: CanvasImage[] = [];
-    const newTexts: CanvasText[] = [];
-    const newShapes: CanvasShape[] = [];
-
-    allItems.forEach((item, newZIndex) => {
-      const updatedItem = { ...item, zIndex: newZIndex };
-      if (updatedItem.itemType === 'image') newImages.push(updatedItem as CanvasImage);
-      else if (updatedItem.itemType === 'text') newTexts.push(updatedItem as CanvasText);
-      else if (updatedItem.itemType === 'shape') newShapes.push(updatedItem as CanvasShape);
+    const newImages = canvasImages.map(img => {
+      const updatedImgInView = itemsInCurrentView.find(i => i.id === img.id && i.itemType === 'image' && i.viewId === currentViewId);
+      return updatedImgInView ? { ...img, zIndex: updatedImgInView.zIndex } : img;
     });
+    const newTexts = canvasTexts.map(txt => {
+      const updatedTxtInView = itemsInCurrentView.find(i => i.id === txt.id && i.itemType === 'text' && i.viewId === currentViewId);
+      return updatedTxtInView ? { ...txt, zIndex: updatedTxtInView.zIndex } : txt;
+    });
+    const newShapes = canvasShapes.map(shp => {
+      const updatedShpInView = itemsInCurrentView.find(i => i.id === shp.id && i.itemType === 'shape' && i.viewId === currentViewId);
+      return updatedShpInView ? { ...shp, zIndex: updatedShpInView.zIndex } : shp;
+    });
+
     setCanvasImages(newImages);
     setCanvasTexts(newTexts);
     setCanvasShapes(newShapes);
@@ -471,3 +489,4 @@ export function useUploads() {
   }
   return context;
 }
+

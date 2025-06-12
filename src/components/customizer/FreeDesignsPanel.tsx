@@ -6,14 +6,23 @@ import { useUploads } from '@/contexts/UploadContext';
 import { freeDesignsData, type FreeDesignItem } from '@/lib/free-designs-data';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import Image from 'next/image';
-import { Palette, PlusCircle } from 'lucide-react'; // Using Palette icon for "Free Designs"
+import { Palette, PlusCircle } from 'lucide-react'; 
+import { useToast } from '@/hooks/use-toast';
 
-export default function FreeDesignsPanel() {
+interface FreeDesignsPanelProps {
+  activeViewId: string | null;
+}
+
+export default function FreeDesignsPanel({ activeViewId }: FreeDesignsPanelProps) {
   const { addCanvasImageFromUrl } = useUploads();
+  const { toast } = useToast();
 
   const handleDesignClick = (design: FreeDesignItem) => {
-    // Using the design's ID as the sourceId for better tracking if duplicated
-    addCanvasImageFromUrl(design.name, design.imageUrl, design.type, design.id);
+     if (!activeViewId) {
+      toast({ title: "No Active View", description: "Please select a product view first.", variant: "info" });
+      return;
+    }
+    addCanvasImageFromUrl(design.name, design.imageUrl, design.type, activeViewId, design.id);
   };
 
   return (
@@ -23,21 +32,21 @@ export default function FreeDesignsPanel() {
 
       {freeDesignsData.length > 0 ? (
         <ScrollArea className="flex-grow border rounded-md bg-background">
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-2 lg:grid-cols-2 gap-3 p-3"> {/* Adjusted grid for potentially larger previews */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-2 lg:grid-cols-2 gap-3 p-3"> 
             {freeDesignsData.map((design) => (
               <div
                 key={design.id}
                 onClick={() => handleDesignClick(design)}
-                className="p-2 border rounded-md cursor-pointer bg-card hover:bg-accent/5 flex flex-col items-center justify-center gap-2 transition-all border-border group aspect-video" // aspect-video for wider previews
+                className="p-2 border rounded-md cursor-pointer bg-card hover:bg-accent/5 flex flex-col items-center justify-center gap-2 transition-all border-border group aspect-video" 
                 title={`Add "${design.name}" to canvas`}
               >
-                <div className="relative w-full h-24"> {/* Adjust height as needed */}
+                <div className="relative w-full h-24"> 
                   <Image
                     src={design.imageUrl}
                     alt={design.name}
                     fill
                     sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 25vw"
-                    className="object-contain" // Use contain to show the whole design
+                    className="object-contain" 
                     data-ai-hint={design.aiHint}
                   />
                 </div>

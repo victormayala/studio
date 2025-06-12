@@ -13,13 +13,12 @@ import { fetchWooCommerceProductById } from '@/app/actions/woocommerceActions';
 import { useAuth } from '@/contexts/AuthContext';
 import { Loader2, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import NextImage from 'next/image'; // Added for thumbnails
+import NextImage from 'next/image';
 import Link from 'next/link';
 import type { WCCustomProduct } from '@/types/woocommerce';
 import { useToast } from '@/hooks/use-toast';
-import { cn } from '@/lib/utils'; // Added for thumbnail styling
+import { cn } from '@/lib/utils';
 
-// Interface for boundary boxes (consistent with options page)
 interface BoundaryBox {
   id: string;
   name: string;
@@ -29,8 +28,7 @@ interface BoundaryBox {
   height: number;
 }
 
-// Interface for a single product view
-interface ProductView {
+export interface ProductView { // Made exportable for LeftPanel
   id: string;
   name: string;
   imageUrl: string;
@@ -38,18 +36,15 @@ interface ProductView {
   boundaryBoxes: BoundaryBox[];
 }
 
-// Interface for options loaded from localStorage
 interface LocalStorageCustomizerOptions {
-  views: ProductView[]; // Updated from boundaryBoxes
+  views: ProductView[];
   cstmzrSelectedVariationIds: string[];
 }
 
-// Combined product data structure for the customizer
 interface ProductForCustomizer {
-  id: string; // Product ID from WC
-  name: string; // Product Name from WC
-  views: ProductView[]; // Array of views
-  // No top-level imageUrl, aiHint, or boundaryBoxes anymore
+  id: string;
+  name: string;
+  views: ProductView[];
 }
 
 const defaultFallbackProduct: ProductForCustomizer = {
@@ -79,15 +74,15 @@ export default function CustomizerPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const stripHtml = (html: string): string => {
-    if (typeof window === 'undefined') return html;
-    const tempDiv = document.createElement('div');
-    tempDiv.innerHTML = html;
-    return tempDiv.textContent || tempDiv.innerText || "";
-  };
+  // const stripHtml = (html: string): string => { // Not used currently, can remove if not needed later
+  //   if (typeof window === 'undefined') return html;
+  //   const tempDiv = document.createElement('div');
+  //   tempDiv.innerHTML = html;
+  //   return tempDiv.textContent || tempDiv.innerText || "";
+  // };
 
   const loadCustomizerData = useCallback(async () => {
-    setIsLoading(true); // Set loading true at the start of data fetching
+    setIsLoading(true); 
     setError(null);
     
     if (!productId) {
@@ -99,7 +94,6 @@ export default function CustomizerPage() {
     }
 
     if (authLoading) {
-      // Wait for auth state to resolve if productId is present
       return;
     }
     
@@ -132,7 +126,6 @@ export default function CustomizerPage() {
     }
 
     let loadedViews: ProductView[] = [];
-    // let loadedSelectedVariationIds: string[] = []; // For future use
 
     if (user) {
       const localStorageKey = `cstmzr_product_options_${user.id}_${productId}`;
@@ -141,23 +134,22 @@ export default function CustomizerPage() {
         if (savedOptions) {
           const parsedOptions = JSON.parse(savedOptions) as LocalStorageCustomizerOptions;
           loadedViews = parsedOptions.views || [];
-          // loadedSelectedVariationIds = parsedOptions.cstmzrSelectedVariationIds || [];
         }
       } catch (e) {
         console.warn("Customizer: Error parsing CSTMZR options from localStorage:", e);
-        toast({ title: "Local Settings Error", description: "Could not load saved CSTMZR settings for this product. Using defaults.", variant: "info"});
+        toast({ title: "Local Settings Error", description: "Could not load saved CSTMZR settings. Using defaults.", variant: "info"});
       }
     } else {
         console.info("Customizer: No CSTMZR user logged in. Views will default.");
     }
 
     const finalViews = loadedViews.length > 0 ? loadedViews : [
-      { // Default view if none saved for this product from Product Options page
+      { 
         id: `default_view_wc_${wcProduct.id}`,
         name: "Front View",
         imageUrl: wcProduct.images && wcProduct.images.length > 0 ? wcProduct.images[0].src : defaultFallbackProduct.views[0].imageUrl,
         aiHint: wcProduct.images && wcProduct.images.length > 0 && wcProduct.images[0].alt ? wcProduct.images[0].alt.split(" ").slice(0,2).join(" ") : defaultFallbackProduct.views[0].aiHint,
-        boundaryBoxes: defaultFallbackProduct.views[0].boundaryBoxes, // Default boundary boxes for the default view
+        boundaryBoxes: defaultFallbackProduct.views[0].boundaryBoxes,
       }
     ];
     
@@ -187,7 +179,6 @@ export default function CustomizerPage() {
   
   const activeViewData = productDetails?.views.find(v => v.id === activeViewId);
   
-  // Determine current product/view details for DesignCanvas, falling back to defaultFallbackProduct if needed
   const currentProductImage = activeViewData?.imageUrl || defaultFallbackProduct.views[0].imageUrl;
   const currentProductAlt = activeViewData?.name || defaultFallbackProduct.views[0].name;
   const currentProductAiHint = activeViewData?.aiHint || defaultFallbackProduct.views[0].aiHint;
@@ -195,7 +186,7 @@ export default function CustomizerPage() {
   const currentProductName = productDetails?.name || defaultFallbackProduct.name;
 
 
-  if (error && !productDetails) { // Show specific error page if product load fails critically
+  if (error && !productDetails) { 
     return (
       <div className="flex flex-col min-h-svh w-full items-center justify-center bg-background p-4">
         <AlertTriangle className="h-12 w-12 text-destructive mb-4" />
@@ -213,14 +204,14 @@ export default function CustomizerPage() {
       <SidebarProvider defaultOpen>
         <div className="flex min-h-svh w-full">
           <Sidebar className="h-full shadow-md">
-            <LeftPanel />
+            <LeftPanel activeViewId={activeViewId} />
           </Sidebar>
           
           <SidebarInset className="flex flex-col flex-1 overflow-hidden">
             <AppHeader />
             <div className="flex flex-1 overflow-hidden">
               <main className="flex-1 overflow-y-auto p-4 md:p-6 flex flex-col items-center"> 
-                {error && productDetails?.id === defaultFallbackProduct.id && ( // Show non-blocking error as toast or small message
+                {error && productDetails?.id === defaultFallbackProduct.id && ( 
                    <div className="w-full max-w-4xl p-3 mb-4 border border-destructive bg-destructive/10 rounded-md text-destructive text-sm">
                      <AlertTriangle className="inline h-4 w-4 mr-1" /> {error} Using default product view.
                    </div>
@@ -230,8 +221,8 @@ export default function CustomizerPage() {
                   productImageAlt={`${currentProductName} - ${currentProductAlt}`}
                   productImageAiHint={currentProductAiHint}
                   productDefinedBoundaryBoxes={currentBoundaryBoxes}
+                  activeViewId={activeViewId}
                 />
-                {/* View Thumbnails Section */}
                 {productDetails && productDetails.views && productDetails.views.length > 0 && (
                   <div className="mt-6 pt-4 w-full max-w-4xl border-t border-border">
                     <h4 className="text-base font-semibold mb-3 text-center text-foreground">

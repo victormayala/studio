@@ -10,7 +10,11 @@ import Image from 'next/image';
 import { UploadCloud, PlusCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
-export default function UploadArea() {
+interface UploadAreaProps {
+  activeViewId: string | null;
+}
+
+export default function UploadArea({ activeViewId }: UploadAreaProps) {
   const { uploadedImages, addUploadedImage, addCanvasImage } = useUploads();
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -43,7 +47,11 @@ export default function UploadArea() {
   };
 
   const handleImageClick = (image: UploadedImage) => {
-    addCanvasImage(image.id);
+    if (!activeViewId) {
+      toast({ title: "No Active View", description: "Please select a product view first.", variant: "info" });
+      return;
+    }
+    addCanvasImage(image.id, activeViewId);
   };
 
   return (

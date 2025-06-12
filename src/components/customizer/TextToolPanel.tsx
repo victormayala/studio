@@ -26,6 +26,7 @@ import { Bold, Italic, Underline, CaseUpper, CaseLower, Type, Palette, Blend, Pe
 import { useUploads, type CanvasText } from '@/contexts/UploadContext';
 import { googleFonts } from '@/lib/google-fonts';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { useToast } from '@/hooks/use-toast';
 
 // Helper to validate and sanitize hex color
 const sanitizeHex = (hex: string): string => {
@@ -39,12 +40,16 @@ const sanitizeHex = (hex: string): string => {
   return `#${sanitized.padEnd(6, '0').substring(0,6)}`;
 };
 
+interface TextToolPanelProps {
+  activeViewId: string | null;
+}
 
-export default function TextToolPanel() {
+export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
   const { addCanvasText, selectedCanvasTextId, canvasTexts, updateCanvasText } = useUploads();
+  const { toast } = useToast();
   const [textValue, setTextValue] = useState('');
 
-  const selectedText = canvasTexts.find(t => t.id === selectedCanvasTextId);
+  const selectedText = canvasTexts.find(t => t.id === selectedCanvasTextId && t.viewId === activeViewId);
 
   const [currentStyle, setCurrentStyle] = useState<Partial<CanvasText>>({});
 
@@ -73,7 +78,7 @@ export default function TextToolPanel() {
       });
       setTextValue(selectedText.content);
     } else {
-      setCurrentStyle({ // Default styles when no text is selected for the add text area
+      setCurrentStyle({ 
         fontFamily: googleFonts.find(f => f.name === 'Arial')?.family || 'Arial, sans-serif',
         fontSize: 24,
         textTransform: 'none',
@@ -93,30 +98,31 @@ export default function TextToolPanel() {
         shadowOffsetY: 0,
         shadowBlur: 0,
       });
-      // Do not clear textValue here, so user can type then click add
     }
-  }, [selectedText]);
+  }, [selectedText, activeViewId]); // Add activeViewId dependency
 
   const handleStyleChange = useCallback(<K extends keyof CanvasText>(property: K, value: CanvasText[K]) => {
-    if (selectedCanvasTextId) {
+    if (selectedCanvasTextId && selectedText) { // Ensure selectedText is for the activeViewId
       updateCanvasText(selectedCanvasTextId, { [property]: value });
     }
     setCurrentStyle(prev => ({ ...prev, [property]: value }));
-  }, [selectedCanvasTextId, updateCanvasText]);
+  }, [selectedCanvasTextId, updateCanvasText, selectedText]);
   
   const handleBulkStyleChange = useCallback((updates: Partial<CanvasText>) => {
-    if (selectedCanvasTextId) {
+    if (selectedCanvasTextId && selectedText) {
       updateCanvasText(selectedCanvasTextId, updates);
     }
     setCurrentStyle(prev => ({ ...prev, ...updates }));
-  }, [selectedCanvasTextId, updateCanvasText]);
+  }, [selectedCanvasTextId, updateCanvasText, selectedText]);
 
 
   const handleAddText = () => {
+    if (!activeViewId) {
+      toast({ title: "No Active View", description: "Please select a product view first.", variant: "info" });
+      return;
+    }
     if (textValue.trim()) {
-      // Pass the currentStyle object to addCanvasText
-      addCanvasText(textValue.trim(), currentStyle);
-      // setTextValue(''); // Optionally clear textarea
+      addCanvasText(textValue.trim(), activeViewId, currentStyle);
     }
   };
   
@@ -128,10 +134,9 @@ export default function TextToolPanel() {
   };
 
   const renderControls = () => (
-    <ScrollArea className="flex-grow pr-1 -mr-1"> {/* Offset scrollbar slightly */}
+    <ScrollArea className="flex-grow pr-1 -mr-1"> 
     <div className="space-y-4 py-2">
       <Accordion type="multiple" defaultValue={['font-settings', 'color-settings']} className="w-full">
-        {/* Font Settings */}
         <AccordionItem value="font-settings">
           <AccordionTrigger className="font-medium text-sm py-3 px-1">
             <Pilcrow className="mr-2 h-4 w-4" /> Font Settings
@@ -176,7 +181,7 @@ export default function TextToolPanel() {
                  <ToggleGroup 
                     type="multiple" 
                     variant="outline" 
-                    className="w-full grid grid-cols-3 gap-px" // Added gap-px for slight separation
+                    className="w-full grid grid-cols-3 gap-px" 
                     value={
                         [
                          currentStyle.fontWeight === 'bold' ? 'bold' : undefined,
@@ -240,7 +245,6 @@ export default function TextToolPanel() {
           </AccordionContent>
         </AccordionItem>
 
-        {/* Color Settings */}
         <AccordionItem value="color-settings">
           <AccordionTrigger className="font-medium text-sm py-3 px-1">
             <Palette className="mr-2 h-4 w-4" /> Color Settings
@@ -251,13 +255,13 @@ export default function TextToolPanel() {
               <Input
                 type="color"
                 id="textColorSwatch"
-                className="h-8 w-10 p-0.5 border-none rounded" // Compact swatch
+                className="h-8 w-10 p-0.5 border-none rounded" 
                 value={currentStyle.color || '#333333'}
                 onChange={(e) => handleStyleChange('color', e.target.value)}
               />
               <Input
                 id="textColorHex"
-                className="h-8 text-xs flex-grow max-w-[100px]" // Constrained width
+                className="h-8 text-xs flex-grow max-w-[100px]" 
                 value={currentStyle.color || '#333333'}
                 onChange={(e) => handleStyleChange('color', sanitizeHex(e.target.value))}
                 onBlur={(e) => handleStyleChange('color', sanitizeHex(e.target.value))}
@@ -265,7 +269,6 @@ export default function TextToolPanel() {
               />
             </div>
 
-            {/* Text Outline */}
             <Accordion type="single" collapsible className="w-full text-xs border-t pt-2 mt-3">
               <AccordionItem value="text-outline" className="border-b-0">
                 <AccordionTrigger className="py-2 text-xs hover:no-underline font-normal">
@@ -274,7 +277,7 @@ export default function TextToolPanel() {
                     Text Outline
                     <Switch
                         id="outlineEnabledSwitch"
-                        className="ml-auto scale-[0.7] origin-right" // Smaller switch
+                        className="ml-auto scale-[0.7] origin-right" 
                         checked={currentStyle.outlineEnabled || false}
                         onCheckedChange={(checked) => handleStyleChange('outlineEnabled', checked)}
                         onClick={(e) => e.stopPropagation()} 
@@ -302,7 +305,6 @@ export default function TextToolPanel() {
               </AccordionItem>
             </Accordion>
 
-            {/* Text Shadow */}
              <Accordion type="single" collapsible className="w-full text-xs border-t pt-2 mt-2">
               <AccordionItem value="text-shadow" className="border-b-0">
                 <AccordionTrigger className="py-2 text-xs hover:no-underline font-normal">
@@ -365,11 +367,11 @@ export default function TextToolPanel() {
           onChange={(e) => handleContentChange(e.target.value)}
           placeholder="Enter text here..."
           rows={3}
-          className="bg-background mt-1 text-base" // Ensure text area font is readable
+          className="bg-background mt-1 text-base" 
         />
       </div>
       
-      {selectedCanvasTextId ? renderControls() : (
+      {selectedText ? renderControls() : (
         <>
           <Button onClick={handleAddText} className="w-full bg-primary text-primary-foreground hover:bg-primary/90">
             <Type className="mr-2 h-4 w-4" />
@@ -382,12 +384,7 @@ export default function TextToolPanel() {
           </div>
         </>
       )}
-       {/* If text is selected, the controls are rendered by renderControls(). 
-           The "Add Text" button could be hidden or repurposed. 
-           For now, let's allow adding new text even if one is selected, using the current textarea content and styles.
-           If you'd prefer to change button text to "Update Text" or hide it, that's an option.
-      */}
-      {selectedCanvasTextId && (
+      {selectedText && (
          <Button onClick={handleAddText} variant="outline" className="w-full mt-auto">
             <Type className="mr-2 h-4 w-4" />
             Add as New Text
@@ -396,6 +393,3 @@ export default function TextToolPanel() {
     </div>
   );
 }
-
-
-    

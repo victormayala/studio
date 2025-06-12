@@ -11,7 +11,11 @@ import React from 'react';
 
 type CanvasItem = (CanvasImage & { itemType: 'image' }) | (CanvasText & { itemType: 'text' }) | (CanvasShape & { itemType: 'shape' });
 
-export default function LayersPanel() {
+interface LayersPanelProps {
+  activeViewId: string | null;
+}
+
+export default function LayersPanel({ activeViewId }: LayersPanelProps) {
   const { 
     canvasImages, selectedCanvasImageId, selectCanvasImage, bringLayerForward, sendLayerBackward,
     duplicateCanvasImage, removeCanvasImage, toggleLockCanvasImage,
@@ -24,23 +28,35 @@ export default function LayersPanel() {
   } = useUploads();
 
   const combinedItems: CanvasItem[] = React.useMemo(() => {
-    const imagesWithType: CanvasItem[] = canvasImages.map(img => ({ ...img, itemType: 'image' }));
-    const textsWithType: CanvasItem[] = canvasTexts.map(txt => ({ ...txt, itemType: 'text' }));
-    const shapesWithType: CanvasItem[] = canvasShapes.map(shp => ({ ...shp, itemType: 'shape' }));
+    if (!activeViewId) return [];
+    const imagesWithType: CanvasItem[] = canvasImages.filter(img => img.viewId === activeViewId).map(img => ({ ...img, itemType: 'image' }));
+    const textsWithType: CanvasItem[] = canvasTexts.filter(txt => txt.viewId === activeViewId).map(txt => ({ ...txt, itemType: 'text' }));
+    const shapesWithType: CanvasItem[] = canvasShapes.filter(shp => shp.viewId === activeViewId).map(shp => ({ ...shp, itemType: 'shape' }));
     return [...imagesWithType, ...textsWithType, ...shapesWithType].sort((a, b) => b.zIndex - a.zIndex);
-  }, [canvasImages, canvasTexts, canvasShapes]);
+  }, [canvasImages, canvasTexts, canvasShapes, activeViewId]);
 
 
+  if (!activeViewId) {
+    return (
+      <div className="p-6 text-center text-muted-foreground h-full flex flex-col items-center justify-center">
+        <Layers className="w-12 h-12 mb-4 text-muted-foreground/50" />
+        <h3 className="text-lg font-semibold mb-1">Canvas Layers</h3>
+        <p className="text-sm">Select a product view to see its layers.</p>
+      </div>
+    );
+  }
+  
   if (combinedItems.length === 0) {
     return (
       <div className="p-6 text-center text-muted-foreground h-full flex flex-col items-center justify-center">
         <Layers className="w-12 h-12 mb-4 text-muted-foreground/50" />
         <h3 className="text-lg font-semibold mb-1">Canvas Layers</h3>
-        <p className="text-sm">No items on the canvas yet.</p>
+        <p className="text-sm">No items on this view yet.</p>
         <p className="text-xs mt-2">Add images, text or shapes using the tools.</p>
       </div>
     );
   }
+
 
   return (
     <div className="p-4 h-full flex flex-col">
@@ -54,8 +70,10 @@ export default function LayersPanel() {
                 item.itemType === 'shape' ? item.id === selectedCanvasShapeId :
                 false;
 
-            const isTopmost = index === 0;
-            const isBottommost = index === combinedItems.length - 1;
+            // Determine if item is topmost or bottommost *within the current view's items*
+            const isTopmostInView = item.zIndex === combinedItems[0]?.zIndex;
+            const isBottommostInView = item.zIndex === combinedItems[combinedItems.length - 1]?.zIndex;
+
 
             const handleSelect = () => {
               if (item.itemType === 'image') selectCanvasImage(item.id);
@@ -134,7 +152,6 @@ export default function LayersPanel() {
                   </div>
                 ) : item.itemType === 'shape' ? (
                   <div className="w-8 h-8 flex items-center justify-center bg-muted-foreground/10 rounded-sm">
-                    {/* Could use specific shape icons here if available */}
                     <ShapesIcon className="h-5 w-5 text-foreground" /> 
                   </div>
                 ) : null}
@@ -149,10 +166,10 @@ export default function LayersPanel() {
                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={handleToggleLock} title={item.isLocked ? `Unlock ${item.itemType}` : `Lock ${item.itemType}`} >
                     {item.isLocked ? <Lock className="h-4 w-4 text-primary" /> : <Unlock className="h-4 w-4" />}
                   </Button>
-                  <Button variant="ghost" size="icon" className="h-7 w-7" onClick={handleBringForward} disabled={isTopmost || item.isLocked} title="Bring Forward" >
+                  <Button variant="ghost" size="icon" className="h-7 w-7" onClick={handleBringForward} disabled={isTopmostInView || item.isLocked} title="Bring Forward" >
                     <ArrowUp className="h-4 w-4" />
                   </Button>
-                  <Button variant="ghost" size="icon" className="h-7 w-7" onClick={handleSendBackward} disabled={isBottommost || item.isLocked} title="Send Backward" >
+                  <Button variant="ghost" size="icon" className="h-7 w-7" onClick={handleSendBackward} disabled={isBottommostInView || item.isLocked} title="Send Backward" >
                     <ArrowDown className="h-4 w-4" />
                   </Button>
                 </div>
