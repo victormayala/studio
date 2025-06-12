@@ -320,28 +320,30 @@ function CustomizerLayoutAndLogic() {
               </h2>
             </div>
             <ScrollArea className="flex-grow">
-              <div className="p-4 h-full">
+              <div className="p-4">
                {renderActiveToolPanelContent()}
               </div>
             </ScrollArea>
           </div>
           
-          <main className="flex-1 overflow-y-auto p-4 md:p-6 flex flex-col items-center"> 
+          <main className="flex-1 p-4 md:p-6 flex flex-col items-center overflow-hidden"> 
             {error && productDetails?.id === defaultFallbackProduct.id && ( 
-               <div className="w-full max-w-4xl p-3 mb-4 border border-destructive bg-destructive/10 rounded-md text-destructive text-sm">
+               <div className="w-full max-w-4xl p-3 mb-4 border border-destructive bg-destructive/10 rounded-md text-destructive text-sm flex-shrink-0">
                  <AlertTriangle className="inline h-4 w-4 mr-1" /> {error} Using default product view.
                </div>
             )}
-            <DesignCanvas 
-              productImageUrl={currentProductImage}
-              productImageAlt={`${currentProductName} - ${currentProductAlt}`}
-              productImageAiHint={currentProductAiHint}
-              productDefinedBoundaryBoxes={currentBoundaryBoxes}
-              activeViewId={activeViewId}
-              showGrid={showGrid}
-            />
+            <div className="flex-1 w-full flex flex-col items-center justify-center min-h-0">
+              <DesignCanvas 
+                productImageUrl={currentProductImage}
+                productImageAlt={`${currentProductName} - ${currentProductAlt}`}
+                productImageAiHint={currentProductAiHint}
+                productDefinedBoundaryBoxes={currentBoundaryBoxes}
+                activeViewId={activeViewId}
+                showGrid={showGrid}
+              />
+            </div>
             {productDetails && productDetails.views && productDetails.views.length > 0 && (
-              <div className="mt-6 pt-4 w-full max-w-4xl border-t border-border">
+              <div className="mt-6 pt-4 w-full max-w-4xl border-t border-border flex-shrink-0">
                 <h4 className="text-base font-semibold mb-3 text-center text-foreground">
                   {productDetails.views.length > 1 ? "Product Views" : "Current View"}
                 </h4>
@@ -396,5 +398,3 @@ export default function CustomizerPage() {
     </UploadProvider>
   );
 }
-
-    
