@@ -42,10 +42,10 @@ interface TextToolPanelProps {
 }
 
 export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
-  const { 
-    addCanvasText, 
-    selectedCanvasTextId, 
-    canvasTexts, 
+  const {
+    addCanvasText,
+    selectedCanvasTextId,
+    canvasTexts,
     updateCanvasText,
     startInteractiveOperation,
     endInteractiveOperation
@@ -90,7 +90,7 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
       setLocalOutlineColorHex(selectedText.outlineColor);
       setLocalShadowColorHex(selectedText.shadowColor);
     } else {
-      const defaultStyle: Partial<CanvasText> = { 
+      const defaultStyle: Partial<CanvasText> = {
         fontFamily: googleFonts.find(f => f.name === 'Arial')?.family || 'Arial, sans-serif',
         fontSize: 24,
         textTransform: 'none',
@@ -118,12 +118,12 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
   }, [selectedText, activeViewId]);
 
   const handleStyleChange = useCallback(<K extends keyof CanvasText>(property: K, value: CanvasText[K]) => {
-    if (selectedCanvasTextId && selectedText) { 
+    if (selectedCanvasTextId && selectedText) {
       updateCanvasText(selectedCanvasTextId, { [property]: value });
     }
     setCurrentStyle(prev => ({ ...prev, [property]: value }));
   }, [selectedCanvasTextId, updateCanvasText, selectedText]);
-  
+
   const handleBulkStyleChange = useCallback((updates: Partial<CanvasText>) => {
     if (selectedCanvasTextId && selectedText) {
       updateCanvasText(selectedCanvasTextId, updates);
@@ -141,17 +141,17 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
       addCanvasText(textValue.trim(), activeViewId, currentStyle);
     }
   };
-  
+
   const handleContentChange = (newContent: string) => {
     setTextValue(newContent);
     if (selectedCanvasTextId && selectedText) {
        handleStyleChange('content', newContent);
     }
   };
-  
+
   const renderControls = () => (
     <div className="space-y-6 py-2">
-      
+
       <section className="space-y-4">
         <h3 className="text-sm font-medium text-muted-foreground flex items-center"><Pilcrow className="mr-2 h-4 w-4 text-secondary" />Font</h3>
         <div>
@@ -172,14 +172,14 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
             </SelectContent>
           </Select>
         </div>
-        
+
         <div className="grid grid-cols-2 gap-x-4 gap-y-3">
           <div>
              <Label className="text-xs mb-1 block">Style</Label>
-             <ToggleGroup 
-                type="multiple" 
-                variant="outline" 
-                className="w-full grid grid-cols-3 gap-px" 
+             <ToggleGroup
+                type="multiple"
+                variant="outline"
+                className="w-full grid grid-cols-3 gap-px"
                 value={
                     [
                      currentStyle.fontWeight === 'bold' ? 'bold' : undefined,
@@ -215,7 +215,6 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
             </Select>
           </div>
         </div>
-
         <div className="mt-6 mb-6">
           <div className="flex justify-between items-center">
             <Label htmlFor="fontSizeInput" className="text-xs">Font Size (px)</Label>
@@ -238,7 +237,7 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
             onValueChange={([value]) => handleStyleChange('fontSize', value)}
             onPointerDownCapture={startInteractiveOperation}
             onPointerUpCapture={endInteractiveOperation}
-            className="mt-6"
+            className="mt-6 mb-6"
           />
         </div>
       </section>
@@ -269,7 +268,7 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
             onValueChange={([value]) => handleStyleChange('lineHeight', value)}
             onPointerDownCapture={startInteractiveOperation}
             onPointerUpCapture={endInteractiveOperation}
-            className="mt-6"
+            className="mt-6 mb-6"
           />
         </div>
         <div className="mt-6 mb-6">
@@ -294,11 +293,11 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
             onValueChange={([value]) => handleStyleChange('letterSpacing', value)}
             onPointerDownCapture={startInteractiveOperation}
             onPointerUpCapture={endInteractiveOperation}
-            className="mt-6"
+            className="mt-6 mb-6"
           />
         </div>
       </section>
-      
+
       <Separator />
 
       <section className="space-y-4">
@@ -308,22 +307,22 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
           <Input
             type="color"
             id="textColorSwatch"
-            className="h-8 w-10 p-0.5 border-none rounded" 
+            className="h-8 w-10 p-0.5 border-none rounded"
             value={localTextColorHex}
             onPointerDownCapture={startInteractiveOperation}
             onPointerUpCapture={endInteractiveOperation}
             onChange={(e) => {
-                setLocalTextColorHex(e.target.value); 
-                if (selectedCanvasTextId && selectedText) { 
+                setLocalTextColorHex(e.target.value);
+                if (selectedCanvasTextId && selectedText) {
                      updateCanvasText(selectedCanvasTextId, { color: e.target.value });
-                } else { 
+                } else {
                     setCurrentStyle(prev => ({ ...prev, color: e.target.value }));
                 }
             }}
           />
           <Input
             id="textColorHex"
-            className="h-8 text-xs flex-grow max-w-[100px]" 
+            className="h-8 text-xs flex-grow max-w-[100px]"
             value={localTextColorHex}
             onChange={(e) => setLocalTextColorHex(e.target.value)}
             onBlur={(e) => {
@@ -343,8 +342,10 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
       <Separator />
 
       <section className="space-y-4">
-        <h3 className="text-sm font-medium text-muted-foreground flex items-center mb-2"><Settings2 className="mr-2 h-4 w-4 text-secondary" />Effects</h3>
-        
+        <h3 className="text-sm font-medium text-muted-foreground flex items-center mb-2">
+          <Settings2 className="mr-2 h-4 w-4 text-secondary" />Effects
+        </h3>
+
         <div className="space-y-3">
           <div className="flex items-center justify-between">
             <Label htmlFor="outlineEnabledSwitch" className="text-xs flex items-center">
@@ -352,20 +353,20 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
             </Label>
             <Switch
                 id="outlineEnabledSwitch"
-                className="scale-[0.8] origin-right" 
+                className="scale-[0.8] origin-right"
                 checked={currentStyle.outlineEnabled || false}
                 onCheckedChange={(checked) => handleStyleChange('outlineEnabled', checked)}
             />
           </div>
           {currentStyle.outlineEnabled && (
-            <div className="space-y-3 pl-5 border-l-2 border-muted ml-1.5">
+            <div className="space-y-3 pt-2"> {/* Removed pl-5 border-l-2 border-muted ml-1.5 */}
               <div className="flex items-center space-x-2">
                 <Label htmlFor="outlineColorSwatch" className="text-xs shrink-0">Color</Label>
-                <Input 
-                    type="color" 
-                    id="outlineColorSwatch" 
-                    className="h-8 w-10 p-0.5 border-none rounded" 
-                    value={localOutlineColorHex} 
+                <Input
+                    type="color"
+                    id="outlineColorSwatch"
+                    className="h-8 w-10 p-0.5 border-none rounded"
+                    value={localOutlineColorHex}
                     onPointerDownCapture={startInteractiveOperation}
                     onPointerUpCapture={endInteractiveOperation}
                     onChange={(e) => {
@@ -376,10 +377,10 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
                             setCurrentStyle(prev => ({ ...prev, outlineColor: e.target.value }));
                         }
                     }}/>
-                <Input 
-                    id="outlineColorHex" 
-                    className="h-8 text-xs flex-grow max-w-[100px]" 
-                    value={localOutlineColorHex} 
+                <Input
+                    id="outlineColorHex"
+                    className="h-8 text-xs flex-grow max-w-[100px]"
+                    value={localOutlineColorHex}
                     onChange={(e) => setLocalOutlineColorHex(e.target.value)}
                     onBlur={(e) => {
                         const finalColor = sanitizeHex(e.target.value);
@@ -407,20 +408,20 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
                     className="h-8 w-20 text-xs"
                   />
                 </div>
-                <Slider 
-                    id="outlineWidthSlider" 
-                    min={0} max={10} step={0.5} 
-                    value={[currentStyle.outlineWidth || 0]} 
+                <Slider
+                    id="outlineWidthSlider"
+                    min={0} max={10} step={0.5}
+                    value={[currentStyle.outlineWidth || 0]}
                     onValueChange={([value]) => handleStyleChange('outlineWidth', value)}
                     onPointerDownCapture={startInteractiveOperation}
                     onPointerUpCapture={endInteractiveOperation}
-                    className="mt-6"
+                    className="mt-6 mb-6"
                 />
               </div>
             </div>
           )}
         </div>
-        
+
         <Separator className="my-3" />
 
         <div className="space-y-3">
@@ -436,14 +437,14 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
                 />
             </div>
             {currentStyle.shadowEnabled && (
-            <div className="space-y-3 pl-5 border-l-2 border-muted ml-1.5">
+            <div className="space-y-3 pt-2"> {/* Removed pl-5 border-l-2 border-muted ml-1.5 */}
               <div className="flex items-center space-x-2">
                 <Label htmlFor="shadowColorSwatch" className="text-xs shrink-0">Color</Label>
-                <Input 
-                    type="color" 
-                    id="shadowColorSwatch" 
-                    className="h-8 w-10 p-0.5 border-none rounded" 
-                    value={localShadowColorHex} 
+                <Input
+                    type="color"
+                    id="shadowColorSwatch"
+                    className="h-8 w-10 p-0.5 border-none rounded"
+                    value={localShadowColorHex}
                     onPointerDownCapture={startInteractiveOperation}
                     onPointerUpCapture={endInteractiveOperation}
                     onChange={(e) => {
@@ -454,10 +455,10 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
                              setCurrentStyle(prev => ({ ...prev, shadowColor: e.target.value }));
                         }
                     }}/>
-                <Input 
-                    id="shadowColorHex" 
-                    className="h-8 text-xs flex-grow max-w-[100px]" 
-                    value={localShadowColorHex} 
+                <Input
+                    id="shadowColorHex"
+                    className="h-8 text-xs flex-grow max-w-[100px]"
+                    value={localShadowColorHex}
                     onChange={(e) => setLocalShadowColorHex(e.target.value)}
                     onBlur={(e) => {
                         const finalColor = sanitizeHex(e.target.value);
@@ -486,14 +487,14 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
                             className="h-8 w-20 text-xs"
                         />
                     </div>
-                    <Slider 
-                        id="shadowOffsetXSlider" 
-                        min={-20} max={20} step={1} 
-                        value={[currentStyle.shadowOffsetX || 0]} 
+                    <Slider
+                        id="shadowOffsetXSlider"
+                        min={-20} max={20} step={1}
+                        value={[currentStyle.shadowOffsetX || 0]}
                         onValueChange={([value]) => handleStyleChange('shadowOffsetX', value)}
                         onPointerDownCapture={startInteractiveOperation}
                         onPointerUpCapture={endInteractiveOperation}
-                        className="mt-6"
+                        className="mt-6 mb-6"
                     />
                 </div>
                 <div className="mt-6 mb-6">
@@ -511,14 +512,14 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
                             className="h-8 w-20 text-xs"
                         />
                     </div>
-                    <Slider 
-                        id="shadowOffsetYSlider" 
-                        min={-20} max={20} step={1} 
-                        value={[currentStyle.shadowOffsetY || 0]} 
+                    <Slider
+                        id="shadowOffsetYSlider"
+                        min={-20} max={20} step={1}
+                        value={[currentStyle.shadowOffsetY || 0]}
                         onValueChange={([value]) => handleStyleChange('shadowOffsetY', value)}
                         onPointerDownCapture={startInteractiveOperation}
                         onPointerUpCapture={endInteractiveOperation}
-                        className="mt-6"
+                        className="mt-6 mb-6"
                     />
                 </div>
               </div>
@@ -537,14 +538,14 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
                         className="h-8 w-20 text-xs"
                     />
                 </div>
-                <Slider 
-                    id="shadowBlurSlider" 
-                    min={0} max={30} step={1} 
-                    value={[currentStyle.shadowBlur || 0]} 
+                <Slider
+                    id="shadowBlurSlider"
+                    min={0} max={30} step={1}
+                    value={[currentStyle.shadowBlur || 0]}
                     onValueChange={([value]) => handleStyleChange('shadowBlur', value)}
                     onPointerDownCapture={startInteractiveOperation}
                     onPointerUpCapture={endInteractiveOperation}
-                    className="mt-6"
+                    className="mt-6 mb-6"
                 />
               </div>
             </div>
@@ -567,7 +568,7 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
   );
 
   return (
-    <div className="space-y-4 h-full flex flex-col"> 
+    <div className="space-y-4 h-full flex flex-col">
       <div>
         <Label htmlFor="textInput" className="text-sm font-medium">Text Content</Label>
         <Textarea
@@ -576,17 +577,17 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
           onChange={(e) => handleContentChange(e.target.value)}
           placeholder="Enter text here..."
           rows={3}
-          className="bg-background mt-1 text-base" 
+          className="bg-background mt-1 text-base"
         />
       </div>
-      
+
       {selectedText ? renderControls() : (
         <>
           <Button onClick={handleAddText} className="w-full bg-primary text-primary-foreground hover:bg-primary/80">
             <Type className="mr-2 h-4 w-4" />
             Add Text to Canvas
           </Button>
-          <div className="flex-grow mt-2"> 
+          <div className="flex-grow mt-2">
             {renderControls()}
           </div>
         </>
@@ -600,4 +601,3 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
     </div>
   );
 }
-
