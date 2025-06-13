@@ -333,7 +333,7 @@ function CustomizerLayoutAndLogic() {
                </div>
             )}
             
-            <div className="flex-1 w-full flex flex-col items-center justify-center min-h-0"> 
+            <div className="w-full flex flex-col items-center justify-center min-h-0"> 
               <DesignCanvas 
                 productImageUrl={currentProductImage}
                 productImageAlt={`${currentProductName} - ${currentProductAlt}`}
@@ -406,3 +406,6 @@ export default function CustomizerPage() {
 
     
 
+
+
+    
