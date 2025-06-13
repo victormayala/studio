@@ -41,6 +41,40 @@ interface TextToolPanelProps {
   activeViewId: string | null;
 }
 
+const DEFAULT_FONT_FAMILY = googleFonts.find(f => f.name === 'Arial')?.family || 'Arial, sans-serif';
+// Ensure ALL CanvasText properties have defaults here, matching the CanvasText interface
+const initialTextToolPanelDefaultStyle: CanvasText = {
+  id: '', // Default, will be overridden
+  viewId: '', // Default, will be overridden
+  content: 'New Text',
+  x: 50,
+  y: 50,
+  rotation: 0,
+  scale: 1,
+  zIndex: 0,
+  isLocked: false,
+  itemType: 'text',
+  fontFamily: DEFAULT_FONT_FAMILY,
+  fontSize: 24,
+  textTransform: 'none',
+  fontWeight: 'normal',
+  fontStyle: 'normal',
+  textDecoration: 'none',
+  lineHeight: 1.2,
+  letterSpacing: 0,
+  isArchText: false,
+  color: '#333333',
+  outlineEnabled: false,
+  outlineColor: '#000000',
+  outlineWidth: 0,
+  shadowEnabled: false,
+  shadowColor: '#000000',
+  shadowOffsetX: 0,
+  shadowOffsetY: 0,
+  shadowBlur: 0,
+};
+
+
 export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
   const {
     addCanvasText,
@@ -51,85 +85,57 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
     endInteractiveOperation
   } = useUploads();
   const { toast } = useToast();
-  const [textValue, setTextValue] = useState('');
+  const [textValue, setTextValue] = useState(initialTextToolPanelDefaultStyle.content);
 
   const selectedText = canvasTexts.find(t => t.id === selectedCanvasTextId && t.viewId === activeViewId);
 
-  const [localTextColorHex, setLocalTextColorHex] = useState(selectedText?.color || '#333333');
-  const [localOutlineColorHex, setLocalOutlineColorHex] = useState(selectedText?.outlineColor || '#000000');
-  const [localShadowColorHex, setLocalShadowColorHex] = useState(selectedText?.shadowColor || '#000000');
+  // Initialize currentStyle with a fully populated default object
+  const [currentStyle, setCurrentStyle] = useState<CanvasText>(initialTextToolPanelDefaultStyle);
 
-  const [currentStyle, setCurrentStyle] = useState<Partial<CanvasText>>({});
+  const [localTextColorHex, setLocalTextColorHex] = useState(initialTextToolPanelDefaultStyle.color);
+  const [localOutlineColorHex, setLocalOutlineColorHex] = useState(initialTextToolPanelDefaultStyle.outlineColor);
+  const [localShadowColorHex, setLocalShadowColorHex] = useState(initialTextToolPanelDefaultStyle.shadowColor);
+
 
   useEffect(() => {
     if (selectedText) {
-      const styleToSet: Partial<CanvasText> = {
-        fontFamily: selectedText.fontFamily,
-        fontSize: selectedText.fontSize,
-        textTransform: selectedText.textTransform,
-        fontWeight: selectedText.fontWeight,
-        fontStyle: selectedText.fontStyle,
-        textDecoration: selectedText.textDecoration,
-        lineHeight: selectedText.lineHeight,
-        letterSpacing: selectedText.letterSpacing,
-        isArchText: selectedText.isArchText,
-        color: selectedText.color,
-        outlineEnabled: selectedText.outlineEnabled,
-        outlineColor: selectedText.outlineColor,
-        outlineWidth: selectedText.outlineWidth,
-        shadowEnabled: selectedText.shadowEnabled,
-        shadowColor: selectedText.shadowColor,
-        shadowOffsetX: selectedText.shadowOffsetX,
-        shadowOffsetY: selectedText.shadowOffsetY,
-        shadowBlur: selectedText.shadowBlur,
-        content: selectedText.content,
-      };
-      setCurrentStyle(styleToSet);
+      // Merge selectedText properties onto the full default style
+      const newStyle = { ...initialTextToolPanelDefaultStyle, ...selectedText };
+      setCurrentStyle(newStyle);
       setTextValue(selectedText.content);
       setLocalTextColorHex(selectedText.color);
       setLocalOutlineColorHex(selectedText.outlineColor);
       setLocalShadowColorHex(selectedText.shadowColor);
     } else {
-      const defaultStyle: Partial<CanvasText> = {
-        fontFamily: googleFonts.find(f => f.name === 'Arial')?.family || 'Arial, sans-serif',
-        fontSize: 24,
-        textTransform: 'none',
-        fontWeight: 'normal',
-        fontStyle: 'normal',
-        textDecoration: 'none',
-        lineHeight: 1.2,
-        letterSpacing: 0,
-        isArchText: false,
-        color: '#333333',
-        outlineEnabled: false, 
-        outlineColor: '#000000',
-        outlineWidth: 0,
-        shadowEnabled: false, 
-        shadowColor: '#000000',
-        shadowOffsetX: 0,
-        shadowOffsetY: 0,
-        shadowBlur: 0,
-      };
-      setCurrentStyle(defaultStyle);
-      setLocalTextColorHex(defaultStyle.color!);
-      setLocalOutlineColorHex(defaultStyle.outlineColor!);
-      setLocalShadowColorHex(defaultStyle.shadowColor!);
+      // Reset to full default when no text is selected or view changes
+      const resetStyle = { ...initialTextToolPanelDefaultStyle, viewId: activeViewId || '' };
+      setCurrentStyle(resetStyle);
+      setTextValue(''); // Or some default placeholder like "Enter Text"
+      setLocalTextColorHex(resetStyle.color);
+      setLocalOutlineColorHex(resetStyle.outlineColor);
+      setLocalShadowColorHex(resetStyle.shadowColor);
     }
   }, [selectedText, activeViewId]);
 
+
   const handleStyleChange = useCallback(<K extends keyof CanvasText>(property: K, value: CanvasText[K]) => {
-    if (selectedCanvasTextId && selectedText) {
-      updateCanvasText(selectedCanvasTextId, { [property]: value });
-    }
-    // Update local currentStyle for new text items or when no text is selected
-    setCurrentStyle(prev => ({ ...prev, [property]: value }));
+    setCurrentStyle(prev => {
+      const newState = { ...prev, [property]: value };
+      if (selectedCanvasTextId && selectedText) {
+        updateCanvasText(selectedCanvasTextId, { [property]: value });
+      }
+      return newState;
+    });
   }, [selectedCanvasTextId, updateCanvasText, selectedText]);
 
   const handleBulkStyleChange = useCallback((updates: Partial<CanvasText>) => {
-    if (selectedCanvasTextId && selectedText) {
-      updateCanvasText(selectedCanvasTextId, updates);
-    }
-     setCurrentStyle(prev => ({ ...prev, ...updates }));
+    setCurrentStyle(prev => {
+      const newState = { ...prev, ...updates };
+      if (selectedCanvasTextId && selectedText) {
+        updateCanvasText(selectedCanvasTextId, updates);
+      }
+      return newState;
+    });
   }, [selectedCanvasTextId, updateCanvasText, selectedText]);
 
 
@@ -138,8 +144,15 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
       toast({ title: "No Active View", description: "Please select a product view first.", variant: "info" });
       return;
     }
-    if (textValue.trim()) {
-      addCanvasText(textValue.trim(), activeViewId, currentStyle);
+    const contentToAdd = textValue.trim() || "New Text";
+    // Use the currentStyle which includes all defaults, override content
+    const styleForNewText: Partial<CanvasText> = {
+      ...currentStyle,
+      content: contentToAdd,
+    };
+    addCanvasText(contentToAdd, activeViewId, styleForNewText);
+    if (!selectedText) { // if we were editing defaults, clear input after adding
+        setTextValue('');
     }
   };
 
@@ -147,6 +160,9 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
     setTextValue(newContent);
     if (selectedCanvasTextId && selectedText) {
        handleStyleChange('content', newContent);
+    } else {
+        // Update local currentStyle's content if no text is selected (for next add)
+        setCurrentStyle(prev => ({...prev, content: newContent}));
     }
   };
 
@@ -158,7 +174,7 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
         <div>
           <Label htmlFor="fontFamilySelect" className="text-xs mb-1 block">Font Family</Label>
           <Select
-            value={currentStyle.fontFamily || 'Arial, sans-serif'}
+            value={currentStyle.fontFamily} // No || fallback needed
             onValueChange={(value) => handleStyleChange('fontFamily', value)}
           >
             <SelectTrigger id="fontFamilySelect" className="h-9">
@@ -204,7 +220,7 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
           <div>
             <Label htmlFor="textTransform" className="text-xs mb-1 block">Case</Label>
             <Select
-              value={currentStyle.textTransform || 'none'}
+              value={currentStyle.textTransform} // No || fallback
               onValueChange={(value: 'none' | 'uppercase' | 'lowercase') => handleStyleChange('textTransform', value)}
             >
               <SelectTrigger id="textTransform" className="h-9"><SelectValue/></SelectTrigger>
@@ -223,7 +239,7 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
                 id="fontSizeInput"
                 type="number"
                 min={8} max={128} step={1}
-                value={currentStyle.fontSize || 24}
+                value={currentStyle.fontSize} // No || fallback
                 onChange={(e) => {
                     const val = parseFloat(e.target.value);
                     if (!isNaN(val)) handleStyleChange('fontSize', Math.max(8, Math.min(val, 128)));
@@ -234,7 +250,7 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
             <Slider
                 id="fontSizeSlider"
                 min={8} max={128} step={1}
-                value={[currentStyle.fontSize || 24]}
+                value={[currentStyle.fontSize]} // No || fallback
                 onValueChange={([value]) => handleStyleChange('fontSize', value)}
                 onPointerDownCapture={startInteractiveOperation}
                 onPointerUpCapture={endInteractiveOperation}
@@ -254,7 +270,7 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
               id="lineHeightInput"
               type="number"
               min={0.5} max={3} step={0.1}
-              value={currentStyle.lineHeight || 1.2}
+              value={currentStyle.lineHeight} // No || fallback
               onChange={(e) => {
                 const val = parseFloat(e.target.value);
                 if (!isNaN(val)) handleStyleChange('lineHeight', Math.max(0.5, Math.min(val, 3)));
@@ -265,7 +281,7 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
           <Slider
             id="lineHeightSlider"
             min={0.5} max={3} step={0.1}
-            value={[currentStyle.lineHeight || 1.2]}
+            value={[currentStyle.lineHeight]} // No || fallback
             onValueChange={([value]) => handleStyleChange('lineHeight', value)}
             onPointerDownCapture={startInteractiveOperation}
             onPointerUpCapture={endInteractiveOperation}
@@ -279,7 +295,7 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
               id="letterSpacingInput"
               type="number"
               min={-5} max={20} step={0.5}
-              value={currentStyle.letterSpacing || 0}
+              value={currentStyle.letterSpacing} // No || fallback
               onChange={(e) => {
                 const val = parseFloat(e.target.value);
                 if (!isNaN(val)) handleStyleChange('letterSpacing', Math.max(-5, Math.min(val, 20)));
@@ -290,7 +306,7 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
           <Slider
             id="letterSpacingSlider"
             min={-5} max={20} step={0.5}
-            value={[currentStyle.letterSpacing || 0]}
+            value={[currentStyle.letterSpacing]} // No || fallback
             onValueChange={([value]) => handleStyleChange('letterSpacing', value)}
             onPointerDownCapture={startInteractiveOperation}
             onPointerUpCapture={endInteractiveOperation}
@@ -314,11 +330,7 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
             onPointerUpCapture={endInteractiveOperation}
             onChange={(e) => {
                 setLocalTextColorHex(e.target.value);
-                if (selectedCanvasTextId && selectedText) {
-                     updateCanvasText(selectedCanvasTextId, { color: e.target.value });
-                } else {
-                    setCurrentStyle(prev => ({ ...prev, color: e.target.value }));
-                }
+                handleStyleChange('color', e.target.value);
             }}
           />
           <Input
@@ -329,11 +341,7 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
             onBlur={(e) => {
                 const finalColor = sanitizeHex(e.target.value);
                 setLocalTextColorHex(finalColor);
-                if (selectedCanvasTextId && selectedText) {
-                    updateCanvasText(selectedCanvasTextId, { color: finalColor });
-                } else {
-                    setCurrentStyle(prev => ({ ...prev, color: finalColor }));
-                }
+                handleStyleChange('color', finalColor);
             }}
             maxLength={7}
           />
@@ -363,7 +371,7 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
                         setLocalOutlineColorHex(e.target.value);
                         handleStyleChange('outlineColor', e.target.value);
                     }}
-                    disabled={(currentStyle.outlineWidth ?? 0) === 0 && !selectedText} 
+                    disabled={currentStyle.outlineWidth === 0 && !selectedText} 
                 />
                 <Input
                     id="outlineColorHex"
@@ -376,7 +384,7 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
                         handleStyleChange('outlineColor', finalColor);
                     }}
                     maxLength={7}
-                    disabled={(currentStyle.outlineWidth ?? 0) === 0 && !selectedText} 
+                    disabled={currentStyle.outlineWidth === 0 && !selectedText} 
                 />
               </div>
               <div className="mt-6 mb-6">
@@ -386,7 +394,7 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
                     id="outlineWidthInput"
                     type="number"
                     min={0} max={10} step={0.5}
-                    value={currentStyle.outlineWidth || 0}
+                    value={currentStyle.outlineWidth} // No || fallback
                     onChange={(e) => {
                       const val = parseFloat(e.target.value);
                       if (!isNaN(val)) handleStyleChange('outlineWidth', Math.max(0, Math.min(val, 10)));
@@ -397,7 +405,7 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
                 <Slider
                     id="outlineWidthSlider"
                     min={0} max={10} step={0.5}
-                    value={[currentStyle.outlineWidth || 0]}
+                    value={[currentStyle.outlineWidth]} // No || fallback
                     onValueChange={([value]) => handleStyleChange('outlineWidth', value)}
                     onPointerDownCapture={startInteractiveOperation}
                     onPointerUpCapture={endInteractiveOperation}
@@ -425,7 +433,7 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
                         setLocalShadowColorHex(e.target.value);
                         handleStyleChange('shadowColor', e.target.value);
                     }}
-                    disabled={(currentStyle.shadowOffsetX ?? 0) === 0 && (currentStyle.shadowOffsetY ?? 0) === 0 && (currentStyle.shadowBlur ?? 0) === 0 && !selectedText}
+                     disabled={currentStyle.shadowOffsetX === 0 && currentStyle.shadowOffsetY === 0 && currentStyle.shadowBlur === 0 && !selectedText}
                 />
                 <Input
                     id="shadowColorHex"
@@ -438,7 +446,7 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
                         handleStyleChange('shadowColor', finalColor);
                     }}
                     maxLength={7}
-                    disabled={(currentStyle.shadowOffsetX ?? 0) === 0 && (currentStyle.shadowOffsetY ?? 0) === 0 && (currentStyle.shadowBlur ?? 0) === 0 && !selectedText}
+                    disabled={currentStyle.shadowOffsetX === 0 && currentStyle.shadowOffsetY === 0 && currentStyle.shadowBlur === 0 && !selectedText}
                 />
               </div>
               <div className="grid grid-cols-2 gap-x-4 gap-y-3">
@@ -449,7 +457,7 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
                             id="shadowOffsetXInput"
                             type="number"
                             min={-20} max={20} step={1}
-                            value={currentStyle.shadowOffsetX || 0}
+                            value={currentStyle.shadowOffsetX} // No || fallback
                             onChange={(e) => {
                                 const val = parseFloat(e.target.value);
                                 if (!isNaN(val)) handleStyleChange('shadowOffsetX', Math.max(-20, Math.min(val, 20)));
@@ -460,7 +468,7 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
                     <Slider
                         id="shadowOffsetXSlider"
                         min={-20} max={20} step={1}
-                        value={[currentStyle.shadowOffsetX || 0]}
+                        value={[currentStyle.shadowOffsetX]} // No || fallback
                         onValueChange={([value]) => handleStyleChange('shadowOffsetX', value)}
                         onPointerDownCapture={startInteractiveOperation}
                         onPointerUpCapture={endInteractiveOperation}
@@ -474,7 +482,7 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
                             id="shadowOffsetYInput"
                             type="number"
                             min={-20} max={20} step={1}
-                            value={currentStyle.shadowOffsetY || 0}
+                            value={currentStyle.shadowOffsetY} // No || fallback
                             onChange={(e) => {
                                 const val = parseFloat(e.target.value);
                                 if (!isNaN(val)) handleStyleChange('shadowOffsetY', Math.max(-20, Math.min(val, 20)));
@@ -485,7 +493,7 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
                     <Slider
                         id="shadowOffsetYSlider"
                         min={-20} max={20} step={1}
-                        value={[currentStyle.shadowOffsetY || 0]}
+                        value={[currentStyle.shadowOffsetY]} // No || fallback
                         onValueChange={([value]) => handleStyleChange('shadowOffsetY', value)}
                         onPointerDownCapture={startInteractiveOperation}
                         onPointerUpCapture={endInteractiveOperation}
@@ -500,7 +508,7 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
                         id="shadowBlurInput"
                         type="number"
                         min={0} max={30} step={1}
-                        value={currentStyle.shadowBlur || 0}
+                        value={currentStyle.shadowBlur} // No || fallback
                         onChange={(e) => {
                             const val = parseFloat(e.target.value);
                             if (!isNaN(val)) handleStyleChange('shadowBlur', Math.max(0, Math.min(val, 30)));
@@ -511,7 +519,7 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
                 <Slider
                     id="shadowBlurSlider"
                     min={0} max={30} step={1}
-                    value={[currentStyle.shadowBlur || 0]}
+                    value={[currentStyle.shadowBlur]} // No || fallback
                     onValueChange={([value]) => handleStyleChange('shadowBlur', value)}
                     onPointerDownCapture={startInteractiveOperation}
                     onPointerUpCapture={endInteractiveOperation}
@@ -526,7 +534,7 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
           <Switch
             id="archTextSwitch"
             className="scale-[0.8] origin-left"
-            checked={currentStyle.isArchText || false}
+            checked={currentStyle.isArchText} // No || fallback
             onCheckedChange={(checked) => handleStyleChange('isArchText', checked)}
           />
           <Label htmlFor="archTextSwitch" className="text-xs">Arch Text <span className="text-muted-foreground/80 text-[10px]">(Visual Only)</span></Label>
@@ -536,7 +544,7 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
   );
 
   return (
-    <div className="p-4 space-y-4">
+    <div className="p-4 space-y-4"> {/* Removed flex flex-col */}
       <div>
         <Label htmlFor="textInput" className="text-sm font-medium">Text Content</Label>
         <Textarea
@@ -569,3 +577,4 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
     </div>
   );
 }
+

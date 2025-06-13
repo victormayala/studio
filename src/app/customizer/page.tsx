@@ -320,7 +320,7 @@ function CustomizerLayoutAndLogic() {
               </h2>
             </div>
             {/* This div below is the scrollable area for the panel content */}
-            <div className="flex-1 h-full overflow-y-scroll overflow-x-hidden">
+            <div className="h-screen overflow-scroll">
                {renderActiveToolPanelContent()} {/* Assumes panels themselves add their own 'p-4' for content padding */}
             </div>
           </div>
