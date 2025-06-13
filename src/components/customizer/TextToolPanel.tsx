@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
@@ -42,10 +42,9 @@ interface TextToolPanelProps {
 }
 
 const DEFAULT_FONT_FAMILY = googleFonts.find(f => f.name === 'Arial')?.family || 'Arial, sans-serif';
-// Ensure ALL CanvasText properties have defaults here, matching the CanvasText interface
 const initialTextToolPanelDefaultStyle: CanvasText = {
-  id: '', // Default, will be overridden
-  viewId: '', // Default, will be overridden
+  id: '', 
+  viewId: '', 
   content: 'New Text',
   x: 50,
   y: 50,
@@ -53,7 +52,7 @@ const initialTextToolPanelDefaultStyle: CanvasText = {
   scale: 1,
   zIndex: 0,
   isLocked: false,
-  itemType: 'text', // Added for completeness
+  itemType: 'text', 
   fontFamily: DEFAULT_FONT_FAMILY,
   fontSize: 24,
   textTransform: 'none',
@@ -89,7 +88,6 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
 
   const selectedText = canvasTexts.find(t => t.id === selectedCanvasTextId && t.viewId === activeViewId);
 
-  // Initialize currentStyle with a fully populated default object
   const [currentStyle, setCurrentStyle] = useState<CanvasText>(initialTextToolPanelDefaultStyle);
 
   const [localTextColorHex, setLocalTextColorHex] = useState(initialTextToolPanelDefaultStyle.color);
@@ -99,23 +97,55 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
 
   useEffect(() => {
     if (selectedText) {
-      // Merge selectedText properties onto the full default style
-      const newStyle = { ...initialTextToolPanelDefaultStyle, ...selectedText };
-      setCurrentStyle(newStyle);
-      setTextValue(selectedText.content);
-      setLocalTextColorHex(selectedText.color);
-      setLocalOutlineColorHex(selectedText.outlineColor);
-      setLocalShadowColorHex(selectedText.shadowColor);
+      const newStyleCandidate = { ...initialTextToolPanelDefaultStyle, ...selectedText };
+      let needsUpdate = false;
+
+      // Compare essential style properties to avoid unnecessary updates
+      for (const key in newStyleCandidate) {
+        if (key !== 'id' && key !== 'viewId' && key !== 'content' && key !== 'itemType' &&
+            (newStyleCandidate as any)[key] !== (currentStyle as any)[key]) {
+          needsUpdate = true;
+          break;
+        }
+      }
+      if (selectedText.content !== textValue) needsUpdate = true;
+      if (selectedText.color !== localTextColorHex) needsUpdate = true;
+      if (selectedText.outlineColor !== localOutlineColorHex) needsUpdate = true;
+      if (selectedText.shadowColor !== localShadowColorHex) needsUpdate = true;
+
+
+      if (needsUpdate) {
+        setCurrentStyle(newStyleCandidate);
+        setTextValue(selectedText.content);
+        setLocalTextColorHex(selectedText.color);
+        setLocalOutlineColorHex(selectedText.outlineColor);
+        setLocalShadowColorHex(selectedText.shadowColor);
+      }
     } else {
-      // Reset to full default when no text is selected or view changes
       const resetStyle = { ...initialTextToolPanelDefaultStyle, viewId: activeViewId || '' };
-      setCurrentStyle(resetStyle);
-      setTextValue(initialTextToolPanelDefaultStyle.content); 
-      setLocalTextColorHex(resetStyle.color);
-      setLocalOutlineColorHex(resetStyle.outlineColor);
-      setLocalShadowColorHex(resetStyle.shadowColor);
+      let needsReset = false;
+      for (const key in resetStyle) {
+        if (key !== 'id' && 
+            (resetStyle as any)[key] !== (currentStyle as any)[key]) {
+              needsReset = true;
+              break;
+        }
+      }
+      if (initialTextToolPanelDefaultStyle.content !== textValue) needsReset = true;
+      if (resetStyle.color !== localTextColorHex) needsReset = true;
+      if (resetStyle.outlineColor !== localOutlineColorHex) needsReset = true;
+      if (resetStyle.shadowColor !== localShadowColorHex) needsReset = true;
+
+
+      if (needsReset) {
+        setCurrentStyle(resetStyle);
+        setTextValue(initialTextToolPanelDefaultStyle.content);
+        setLocalTextColorHex(resetStyle.color);
+        setLocalOutlineColorHex(resetStyle.outlineColor);
+        setLocalShadowColorHex(resetStyle.shadowColor);
+      }
     }
-  }, [selectedText, activeViewId]);
+  }, [selectedText, activeViewId, currentStyle, textValue, localTextColorHex, localOutlineColorHex, localShadowColorHex]);
 
 
   const handleStyleChange = useCallback(<K extends keyof CanvasText>(property: K, value: CanvasText[K]) => {
@@ -145,14 +175,13 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
       return;
     }
     const contentToAdd = textValue.trim() || "New Text";
-    // Use the currentStyle which includes all defaults, override content
     const styleForNewText: Partial<CanvasText> = {
       ...currentStyle,
       content: contentToAdd,
     };
     addCanvasText(contentToAdd, activeViewId, styleForNewText);
-    if (!selectedText) { // if we were editing defaults, clear input after adding
-        setTextValue(initialTextToolPanelDefaultStyle.content); // Reset to default content
+    if (!selectedText) { 
+        setTextValue(initialTextToolPanelDefaultStyle.content); 
     }
   };
 
@@ -161,10 +190,18 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
     if (selectedCanvasTextId && selectedText) {
        handleStyleChange('content', newContent);
     } else {
-        // Update local currentStyle's content if no text is selected (for next add)
         setCurrentStyle(prev => ({...prev, content: newContent}));
     }
   };
+
+  const toggleGroupValue = useMemo(() => {
+    return [
+      currentStyle.fontWeight === 'bold' ? 'bold' : undefined,
+      currentStyle.fontStyle === 'italic' ? 'italic' : undefined,
+      currentStyle.textDecoration === 'underline' ? 'underline' : undefined,
+    ].filter(Boolean) as string[];
+  }, [currentStyle.fontWeight, currentStyle.fontStyle, currentStyle.textDecoration]);
+
 
   const renderControls = () => (
     <div className="space-y-6 py-2">
@@ -197,13 +234,7 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
                 type="multiple"
                 variant="outline"
                 className="w-full grid grid-cols-3 gap-px"
-                value={
-                    [
-                     currentStyle.fontWeight === 'bold' ? 'bold' : undefined,
-                     currentStyle.fontStyle === 'italic' ? 'italic' : undefined,
-                     currentStyle.textDecoration === 'underline' ? 'underline' : undefined,
-                    ].filter(Boolean) as string[]
-                }
+                value={toggleGroupValue}
                 onValueChange={(styles) => {
                     handleBulkStyleChange({
                         fontWeight: styles.includes('bold') ? 'bold' : 'normal',
