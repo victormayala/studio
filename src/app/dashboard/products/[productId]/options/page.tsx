@@ -199,9 +199,7 @@ export default function ProductOptionsPage() {
       cstmzrSelectedVariationIds: localOptions?.cstmzrSelectedVariationIds || [], 
     });
     
-    // Determine activeViewId based on loaded viewsToSet and current activeViewId (if any)
-    // This logic was already here and should correctly pick the first view if current is invalid or not set.
-    const currentActiveViewIdInState = activeViewId; // Use the current state value for comparison
+    const currentActiveViewIdInState = activeViewId; 
     if (!currentActiveViewIdInState || !viewsToSet.find(v => v.id === currentActiveViewIdInState)) {
         setActiveViewId(viewsToSet[0]?.id || null);
     }
@@ -230,15 +228,14 @@ export default function ProductOptionsPage() {
     setIsRefreshing(false);
     if (isRefreshing) toast({ title: "Product Data Refreshed", description: "Base product details updated from store."});
 
-  }, [productId, user, toast, isRefreshing, activeViewId]); // activeViewId IS still needed here to read its current value for logic inside, but the effect below won't loop on it.
+  }, [productId, user, toast, isRefreshing]); 
 
   useEffect(() => {
     fetchAndSetProductData();
-  }, [fetchAndSetProductData]); // fetchAndSetProductData itself will now have a more stable dependency list
+  }, [fetchAndSetProductData]); 
 
   const handleRefreshData = () => {
     setIsRefreshing(true); 
-    // fetchAndSetProductData will be called by the useEffect dependency chain if isRefreshing changes (indirectly via its own deps now not including activeViewId)
   };
 
   const getPointerCoords = (e: MouseEvent | TouchEvent | React.MouseEvent | React.TouchEvent) => {
@@ -385,7 +382,7 @@ export default function ProductOptionsPage() {
   const handleSelectView = (viewId: string) => {
     setActiveViewId(viewId);
     setSelectedBoundaryBoxId(null);
-    setHasUnsavedChanges(true); 
+    // Removed setHasUnsavedChanges(true); to prevent re-fetch
   };
 
   const handleAddNewView = () => {
