@@ -5,7 +5,7 @@ import AiAssistant from './AiAssistant';
 import GridControls from './GridControls'; 
 import HistoryControls from './HistoryControls'; 
 import ViewSwitcher from './ViewSwitcher';
-import type { ProductForCustomizer, ProductView } from '@/app/customizer/page';
+import type { ProductForCustomizer } from '@/app/customizer/page'; // Removed ProductView as it's not directly used here
 
 interface RightPanelProps {
   showGrid: boolean;
@@ -57,17 +57,19 @@ export default function RightPanel({
         </div>
       </div>
       
-      {/* History Section */}
+      {/* Canvas Helpers Section (formerly History) */}
       <div>
         <div className="p-4 border-b">
-          <h2 className="font-headline text-lg font-semibold text-foreground">History</h2>
+          <h2 className="font-headline text-lg font-semibold text-foreground">Canvas Helpers</h2>
         </div>
-        <div className="p-4">
+        <div className="p-4 space-y-4"> {/* Added space-y-4 for spacing between controls */}
           <HistoryControls />
+          <GridControls showGrid={showGrid} toggleGrid={toggleGrid} />
         </div>
       </div>
       
-      {/* Canvas Helpers Section */}
+      {/* Original Canvas Helpers Section (now removed) */}
+      {/* 
       <div>
         <div className="p-4 border-b">
           <h2 className="font-headline text-lg font-semibold text-foreground">Canvas Helpers</h2>
@@ -76,6 +78,7 @@ export default function RightPanel({
           <GridControls showGrid={showGrid} toggleGrid={toggleGrid} />
         </div>
       </div>
+      */}
 
     </div>
   </div>
