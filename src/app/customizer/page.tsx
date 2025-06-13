@@ -305,7 +305,7 @@ function CustomizerLayoutAndLogic() {
   return (
       <div className="flex flex-col min-h-svh w-full bg-muted/20">
         <AppHeader />
-        <div className="flex flex-1 overflow-hidden"> 
+        <div className="flex flex-1 overflow-hidden pb-20"> {/* Added pb-20 for fixed footer */}
           <CustomizerIconNav 
             tools={toolItems} 
             activeTool={activeTool} 
@@ -319,7 +319,7 @@ function CustomizerLayoutAndLogic() {
                 {getToolPanelTitle(activeTool)}
               </h2>
             </div>
-            {/* This div below will be the scrollable area for the panel content */}
+            {/* This div below is the scrollable area for the panel content */}
             <div className="flex-1 h-full overflow-y-scroll overflow-x-hidden">
                {renderActiveToolPanelContent()} {/* Assumes panels themselves add their own 'p-4' for content padding */}
             </div>
@@ -333,7 +333,7 @@ function CustomizerLayoutAndLogic() {
                </div>
             )}
             
-            <div className="w-full flex flex-col items-center justify-center min-h-0"> 
+            <div className="w-full flex flex-col items-center justify-center"> 
               <DesignCanvas 
                 productImageUrl={currentProductImage}
                 productImageAlt={`${currentProductName} - ${currentProductAlt}`}
@@ -384,7 +384,7 @@ function CustomizerLayoutAndLogic() {
           <RightPanel showGrid={showGrid} toggleGrid={toggleGrid} /> 
         </div>
         
-        <footer className="h-20 border-t bg-card shadow-md p-4 flex items-center justify-end gap-4 flex-shrink-0">
+        <footer className="fixed bottom-0 left-0 right-0 h-20 border-t bg-card shadow-md p-4 flex items-center justify-end gap-4 z-40">
             <div className="text-lg font-semibold text-foreground">Total: $0.00</div>
             <Button size="lg" className="bg-primary text-primary-foreground hover:bg-primary/90" onClick={handleAddToCart}>
               <ShoppingCart className="mr-2 h-5 w-5" /> Add to Cart
