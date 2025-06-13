@@ -224,8 +224,6 @@ export function UploadProvider({ children }: { children: ReactNode }) {
 
   const endInteractiveOperation = useCallback(() => {
     isInteractiveOperationInProgressRef.current = false;
-    // The state *after* the interactive operation is now the current state.
-    // No need to push again here, as startInteractiveOperation saved the "before" state.
   }, []);
 
 
@@ -358,6 +356,7 @@ export function UploadProvider({ children }: { children: ReactNode }) {
     }
     const currentMaxZIndex = getMaxZIndexForView(viewId);
     const defaultFont = googleFonts.find(f => f.name === 'Arial');
+    
     const newText: CanvasText = {
       id: crypto.randomUUID(), viewId, content, x: 50, y: 50, rotation: 0, scale: 1, 
       zIndex: currentMaxZIndex + 1, isLocked: false, itemType: 'text',
@@ -366,10 +365,16 @@ export function UploadProvider({ children }: { children: ReactNode }) {
       fontWeight: initialStyle?.fontWeight || 'normal', fontStyle: initialStyle?.fontStyle || 'normal',
       textDecoration: initialStyle?.textDecoration || 'none', lineHeight: initialStyle?.lineHeight || 1.2, 
       letterSpacing: initialStyle?.letterSpacing || 0, isArchText: initialStyle?.isArchText || false,
-      color: initialStyle?.color || '#333333', outlineEnabled: initialStyle?.outlineEnabled || false,
-      outlineColor: initialStyle?.outlineColor || '#000000', outlineWidth: initialStyle?.outlineWidth || 1,
-      shadowEnabled: initialStyle?.shadowEnabled || false, shadowColor: initialStyle?.shadowColor || '#000000',
-      shadowOffsetX: initialStyle?.shadowOffsetX || 0, shadowOffsetY: initialStyle?.shadowOffsetY || 0,
+      color: initialStyle?.color || '#333333',
+      outlineEnabled: (initialStyle?.outlineWidth ?? 0) > 0,
+      outlineColor: initialStyle?.outlineColor || '#000000',
+      outlineWidth: initialStyle?.outlineWidth || 0,
+      shadowEnabled: (initialStyle?.shadowOffsetX ?? 0) !== 0 ||
+                     (initialStyle?.shadowOffsetY ?? 0) !== 0 ||
+                     (initialStyle?.shadowBlur ?? 0) !== 0,
+      shadowColor: initialStyle?.shadowColor || '#000000',
+      shadowOffsetX: initialStyle?.shadowOffsetX || 0,
+      shadowOffsetY: initialStyle?.shadowOffsetY || 0,
       shadowBlur: initialStyle?.shadowBlur || 0,
     };
     setCanvasTexts(prev => [...prev, newText]);
@@ -396,7 +401,24 @@ export function UploadProvider({ children }: { children: ReactNode }) {
     if (!isInteractiveOperationInProgressRef.current) {
       pushToUndoStack(createSnapshot());
     }
-    setCanvasTexts(prev => prev.map(txt => txt.id === canvasTextId ? { ...txt, ...updates } : txt));
+    setCanvasTexts(prev => prev.map(txt => {
+      if (txt.id === canvasTextId) {
+        const newValues = { ...txt, ...updates };
+        
+        if (updates.outlineWidth !== undefined) {
+          newValues.outlineEnabled = updates.outlineWidth > 0;
+        }
+        
+        if (updates.shadowOffsetX !== undefined || updates.shadowOffsetY !== undefined || updates.shadowBlur !== undefined) {
+          const offX = updates.shadowOffsetX !== undefined ? updates.shadowOffsetX : newValues.shadowOffsetX;
+          const offY = updates.shadowOffsetY !== undefined ? updates.shadowOffsetY : newValues.shadowOffsetY;
+          const blur = updates.shadowBlur !== undefined ? updates.shadowBlur : newValues.shadowBlur;
+          newValues.shadowEnabled = offX !== 0 || offY !== 0 || blur !== 0;
+        }
+        return newValues;
+      }
+      return txt;
+    }));
   }, [createSnapshot, pushToUndoStack]);
 
   const duplicateCanvasText = useCallback((canvasTextId: string) => {
@@ -534,7 +556,7 @@ export function UploadProvider({ children }: { children: ReactNode }) {
     if (currentIndexInView === -1) {
       console.warn("reorderLayers: Item not found in current view for z-index operations.");
       if (!isInteractiveOperationInProgressRef.current) {
-         setUndoStack(prev => prev.slice(1)); // Revert optimistic undo if something went wrong and it's not part of an interactive op
+         setUndoStack(prev => prev.slice(1)); 
       }
       return;
     }
@@ -547,7 +569,7 @@ export function UploadProvider({ children }: { children: ReactNode }) {
         }
         if (targetIndexInView === -1) { if (!isInteractiveOperationInProgressRef.current) setUndoStack(prev => prev.slice(1)); return; } 
       } else { if (!isInteractiveOperationInProgressRef.current) setUndoStack(prev => prev.slice(1)); return; } 
-    } else { // backward
+    } else { 
       if (currentIndexInView > 0) {
         for (let i = currentIndexInView - 1; i >= 0; i--) {
           if (!itemsInCurrentView[i].isLocked) { targetIndexInView = i; break; }
