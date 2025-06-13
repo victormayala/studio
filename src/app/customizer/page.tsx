@@ -9,12 +9,16 @@ import { UploadProvider, useUploads } from "@/contexts/UploadContext";
 import { useEffect, useState, useCallback } from 'react';
 import { fetchWooCommerceProductById } from '@/app/actions/woocommerceActions';
 import { useAuth } from '@/contexts/AuthContext';
-import { Loader2, AlertTriangle, ShoppingCart, UploadCloud, Layers, Type, Shapes as ShapesIconLucide, Smile, Palette, Gem as GemIcon, Settings2 as SettingsIcon } from 'lucide-react';
+import { 
+  Loader2, AlertTriangle, ShoppingCart, UploadCloud, Layers, Type, Shapes as ShapesIconLucide, Smile, Palette, Gem as GemIcon, Settings2 as SettingsIcon,
+  PanelLeftClose, PanelRightOpen, PanelRightClose, PanelLeftOpen // Added icons
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import type { WCCustomProduct } from '@/types/woocommerce';
 import { useToast } from '@/hooks/use-toast';
 import CustomizerIconNav, { type CustomizerTool } from '@/components/customizer/CustomizerIconNav';
+import { cn } from '@/lib/utils'; // Import cn
 
 // Panel Content Components
 import UploadArea from '@/components/customizer/UploadArea';
@@ -94,7 +98,12 @@ function CustomizerLayoutAndLogic() {
   const [activeTool, setActiveTool] = useState<string>(toolItems[0]?.id || "layers");
   const [showGrid, setShowGrid] = useState(false);
 
+  const [isToolPanelOpen, setIsToolPanelOpen] = useState(true);
+  const [isRightSidebarOpen, setIsRightSidebarOpen] = useState(true);
+
   const toggleGrid = () => setShowGrid(prev => !prev);
+  const toggleToolPanel = () => setIsToolPanelOpen(prev => !prev);
+  const toggleRightSidebar = () => setIsRightSidebarOpen(prev => !prev);
 
 
   const loadCustomizerData = useCallback(async () => {
@@ -303,27 +312,50 @@ function CustomizerLayoutAndLogic() {
   return (
       <div className="flex flex-col min-h-svh w-full bg-muted/20">
         <AppHeader />
-        <div className="flex flex-1 overflow-hidden pb-20"> {/* Added pb-20 for fixed footer */}
+        <div className="relative flex flex-1 overflow-hidden pb-20"> {/* Added relative for absolute positioned triggers */}
           <CustomizerIconNav 
             tools={toolItems} 
             activeTool={activeTool} 
             setActiveTool={setActiveTool} 
           />
 
-          
-          <div className="w-72 md:w-80 border-r bg-card shadow-sm flex flex-col flex-shrink-0">
+          {/* Tool Panel Content (Old Left Panel area) */}
+          <div
+            id="tool-panel-content"
+            className={cn(
+              "border-r bg-card shadow-sm flex flex-col flex-shrink-0 transition-all duration-300 ease-in-out",
+              isToolPanelOpen ? "w-72 md:w-80 opacity-100" : "w-0 opacity-0 pointer-events-none"
+            )}
+          >
             <div className="p-4 border-b flex-shrink-0">
               <h2 className="font-headline text-lg font-semibold text-foreground">
                 {getToolPanelTitle(activeTool)}
               </h2>
             </div>
-            {/* This div below is the scrollable area for the panel content */}
-            <div className="h-screen overflow-y-auto overflow-x-hidden [&::-webkit-scrollbar]:w-2
-              [&::-webkit-scrollbar-track]:rounded-full [&::-webkit-scrollbar-track]:bg-gray-100 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-gray-300 dark:[&::-webkit-scrollbar-track]:bg-neutral-700 dark:[&::-webkit-scrollbar-thumb]:bg-neutral-500">
-               {renderActiveToolPanelContent()} {/* Assumes panels themselves add their own 'p-4' for content padding */}
+            <div className={cn(
+              "flex-1 h-screen overflow-y-auto overflow-x-hidden [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:rounded-full [&::-webkit-scrollbar-track]:bg-gray-100 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-gray-300 dark:[&::-webkit-scrollbar-track]:bg-neutral-700 dark:[&::-webkit-scrollbar-thumb]:bg-neutral-500",
+              !isToolPanelOpen && "invisible opacity-0"
+            )}>
+               {renderActiveToolPanelContent()}
             </div>
           </div>
           
+          {/* Tool Panel Trigger Button */}
+          <Button
+            onClick={toggleToolPanel}
+            variant="outline"
+            size="icon"
+            className={cn(
+              "absolute top-1/2 -translate-y-1/2 z-30 h-12 w-8 rounded-l-none border-l-0 shadow-md bg-card hover:bg-accent/20",
+              "transition-all duration-300 ease-in-out",
+              isToolPanelOpen ? "left-[calc(theme(spacing.16)_+_theme(spacing.72))] md:left-[calc(theme(spacing.16)_+_theme(spacing.80))]" : "left-16"
+            )}
+            aria-label={isToolPanelOpen ? "Collapse tool panel" : "Expand tool panel"}
+            aria-expanded={isToolPanelOpen}
+            aria-controls="tool-panel-content"
+          >
+            {isToolPanelOpen ? <PanelLeftClose className="h-5 w-5"/> : <PanelRightOpen className="h-5 w-5"/>}
+          </Button>
           
           <main className="flex-1 p-4 md:p-6 flex flex-col items-center min-h-0"> 
             {error && productDetails?.id === defaultFallbackProduct.id && ( 
@@ -342,9 +374,24 @@ function CustomizerLayoutAndLogic() {
                 showGrid={showGrid}
               />
             </div>
-            
-            {/* Product Views were here, now moved to RightPanel */}
           </main>
+
+          {/* Right Sidebar Trigger Button */}
+           <Button
+            onClick={toggleRightSidebar}
+            variant="outline"
+            size="icon"
+            className={cn(
+              "absolute top-1/2 -translate-y-1/2 z-30 h-12 w-8 rounded-r-none border-r-0 shadow-md bg-card hover:bg-accent/20",
+              "transition-all duration-300 ease-in-out",
+              isRightSidebarOpen ? "right-[theme(spacing.72)] md:right-[theme(spacing.80)] lg:right-[theme(spacing.96)]" : "right-0"
+            )}
+            aria-label={isRightSidebarOpen ? "Collapse right sidebar" : "Expand right sidebar"}
+            aria-expanded={isRightSidebarOpen}
+            aria-controls="right-panel-content"
+          >
+            {isRightSidebarOpen ? <PanelRightClose className="h-5 w-5"/> : <PanelLeftOpen className="h-5 w-5"/>}
+          </Button>
           
           <RightPanel 
             showGrid={showGrid} 
@@ -352,6 +399,10 @@ function CustomizerLayoutAndLogic() {
             productDetails={productDetails}
             activeViewId={activeViewId}
             setActiveViewId={setActiveViewId}
+            className={cn(
+              "transition-all duration-300 ease-in-out flex-shrink-0",
+              isRightSidebarOpen ? "w-72 md:w-80 lg:w-96 opacity-100" : "w-0 opacity-0 pointer-events-none"
+            )}
           /> 
         </div>
         
@@ -373,3 +424,4 @@ export default function CustomizerPage() {
     </UploadProvider>
   );
 }
+
