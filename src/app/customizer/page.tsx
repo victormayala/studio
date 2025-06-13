@@ -17,7 +17,6 @@ import type { WCCustomProduct } from '@/types/woocommerce';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import CustomizerIconNav, { type CustomizerTool } from '@/components/customizer/CustomizerIconNav';
-// import { ScrollArea } from '@/components/ui/scroll-area'; // Replaced with div for scrolling
 
 // Panel Content Components
 import UploadArea from '@/components/customizer/UploadArea';
@@ -320,8 +319,9 @@ function CustomizerLayoutAndLogic() {
                 {getToolPanelTitle(activeTool)}
               </h2>
             </div>
-            <div className="flex-1 h-0 overflow-y-auto"> 
-               {renderActiveToolPanelContent()}
+            {/* This div below will be the scrollable area for the panel content */}
+            <div className="flex-1 h-full overflow-y-scroll overflow-x-hidden">
+               {renderActiveToolPanelContent()} {/* Assumes panels themselves add their own 'p-4' for content padding */}
             </div>
           </div>
           
@@ -333,7 +333,7 @@ function CustomizerLayoutAndLogic() {
                </div>
             )}
             
-            <div className="w-full flex flex-col items-center justify-center"> 
+            <div className="w-full flex flex-col items-center justify-center min-h-0"> 
               <DesignCanvas 
                 productImageUrl={currentProductImage}
                 productImageAlt={`${currentProductName} - ${currentProductAlt}`}
@@ -407,6 +407,8 @@ export default function CustomizerPage() {
     
 
 
+
+    
 
     
 
