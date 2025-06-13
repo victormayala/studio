@@ -45,7 +45,7 @@ export interface CanvasText {
   // Font Settings
   fontFamily: string;
   fontSize: number; // Base font size in px, will be multiplied by scale
-  textTransform: 'none' | 'uppercase' | 'lowercase';
+  textTransform: 'none' | 'uppercase' | 'lowercase'; // Added this property
   fontWeight: 'normal' | 'bold';
   fontStyle: 'normal' | 'italic';
   textDecoration: 'none' | 'underline';
@@ -361,7 +361,8 @@ export function UploadProvider({ children }: { children: ReactNode }) {
       id: crypto.randomUUID(), viewId, content, x: 50, y: 50, rotation: 0, scale: 1, 
       zIndex: currentMaxZIndex + 1, isLocked: false, itemType: 'text',
       fontFamily: initialStyle?.fontFamily || (defaultFont ? defaultFont.family : 'Arial, sans-serif'),
-      fontSize: initialStyle?.fontSize || 24, textTransform: initialStyle?.textTransform || 'none',
+      fontSize: initialStyle?.fontSize || 24, 
+      textTransform: initialStyle?.textTransform || 'none', // Ensure textTransform is initialized
       fontWeight: initialStyle?.fontWeight || 'normal', fontStyle: initialStyle?.fontStyle || 'normal',
       textDecoration: initialStyle?.textDecoration || 'none', lineHeight: initialStyle?.lineHeight || 1.2, 
       letterSpacing: initialStyle?.letterSpacing || 0, isArchText: initialStyle?.isArchText || false,

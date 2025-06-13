@@ -53,7 +53,7 @@ const initialTextToolPanelDefaultStyle: CanvasText = {
   scale: 1,
   zIndex: 0,
   isLocked: false,
-  itemType: 'text',
+  itemType: 'text', // Added for completeness
   fontFamily: DEFAULT_FONT_FAMILY,
   fontSize: 24,
   textTransform: 'none',
@@ -110,7 +110,7 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
       // Reset to full default when no text is selected or view changes
       const resetStyle = { ...initialTextToolPanelDefaultStyle, viewId: activeViewId || '' };
       setCurrentStyle(resetStyle);
-      setTextValue(''); // Or some default placeholder like "Enter Text"
+      setTextValue(initialTextToolPanelDefaultStyle.content); 
       setLocalTextColorHex(resetStyle.color);
       setLocalOutlineColorHex(resetStyle.outlineColor);
       setLocalShadowColorHex(resetStyle.shadowColor);
@@ -152,7 +152,7 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
     };
     addCanvasText(contentToAdd, activeViewId, styleForNewText);
     if (!selectedText) { // if we were editing defaults, clear input after adding
-        setTextValue('');
+        setTextValue(initialTextToolPanelDefaultStyle.content); // Reset to default content
     }
   };
 
@@ -174,7 +174,7 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
         <div>
           <Label htmlFor="fontFamilySelect" className="text-xs mb-1 block">Font Family</Label>
           <Select
-            value={currentStyle.fontFamily} // No || fallback needed
+            value={currentStyle.fontFamily} 
             onValueChange={(value) => handleStyleChange('fontFamily', value)}
           >
             <SelectTrigger id="fontFamilySelect" className="h-9">
@@ -220,7 +220,7 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
           <div>
             <Label htmlFor="textTransform" className="text-xs mb-1 block">Case</Label>
             <Select
-              value={currentStyle.textTransform} // No || fallback
+              value={currentStyle.textTransform} 
               onValueChange={(value: 'none' | 'uppercase' | 'lowercase') => handleStyleChange('textTransform', value)}
             >
               <SelectTrigger id="textTransform" className="h-9"><SelectValue/></SelectTrigger>
@@ -239,7 +239,7 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
                 id="fontSizeInput"
                 type="number"
                 min={8} max={128} step={1}
-                value={currentStyle.fontSize} // No || fallback
+                value={currentStyle.fontSize} 
                 onChange={(e) => {
                     const val = parseFloat(e.target.value);
                     if (!isNaN(val)) handleStyleChange('fontSize', Math.max(8, Math.min(val, 128)));
@@ -250,7 +250,7 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
             <Slider
                 id="fontSizeSlider"
                 min={8} max={128} step={1}
-                value={[currentStyle.fontSize]} // No || fallback
+                value={[currentStyle.fontSize]} 
                 onValueChange={([value]) => handleStyleChange('fontSize', value)}
                 onPointerDownCapture={startInteractiveOperation}
                 onPointerUpCapture={endInteractiveOperation}
@@ -270,7 +270,7 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
               id="lineHeightInput"
               type="number"
               min={0.5} max={3} step={0.1}
-              value={currentStyle.lineHeight} // No || fallback
+              value={currentStyle.lineHeight} 
               onChange={(e) => {
                 const val = parseFloat(e.target.value);
                 if (!isNaN(val)) handleStyleChange('lineHeight', Math.max(0.5, Math.min(val, 3)));
@@ -281,7 +281,7 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
           <Slider
             id="lineHeightSlider"
             min={0.5} max={3} step={0.1}
-            value={[currentStyle.lineHeight]} // No || fallback
+            value={[currentStyle.lineHeight]} 
             onValueChange={([value]) => handleStyleChange('lineHeight', value)}
             onPointerDownCapture={startInteractiveOperation}
             onPointerUpCapture={endInteractiveOperation}
@@ -295,7 +295,7 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
               id="letterSpacingInput"
               type="number"
               min={-5} max={20} step={0.5}
-              value={currentStyle.letterSpacing} // No || fallback
+              value={currentStyle.letterSpacing} 
               onChange={(e) => {
                 const val = parseFloat(e.target.value);
                 if (!isNaN(val)) handleStyleChange('letterSpacing', Math.max(-5, Math.min(val, 20)));
@@ -306,7 +306,7 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
           <Slider
             id="letterSpacingSlider"
             min={-5} max={20} step={0.5}
-            value={[currentStyle.letterSpacing]} // No || fallback
+            value={[currentStyle.letterSpacing]} 
             onValueChange={([value]) => handleStyleChange('letterSpacing', value)}
             onPointerDownCapture={startInteractiveOperation}
             onPointerUpCapture={endInteractiveOperation}
@@ -394,7 +394,7 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
                     id="outlineWidthInput"
                     type="number"
                     min={0} max={10} step={0.5}
-                    value={currentStyle.outlineWidth} // No || fallback
+                    value={currentStyle.outlineWidth} 
                     onChange={(e) => {
                       const val = parseFloat(e.target.value);
                       if (!isNaN(val)) handleStyleChange('outlineWidth', Math.max(0, Math.min(val, 10)));
@@ -405,7 +405,7 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
                 <Slider
                     id="outlineWidthSlider"
                     min={0} max={10} step={0.5}
-                    value={[currentStyle.outlineWidth]} // No || fallback
+                    value={[currentStyle.outlineWidth]} 
                     onValueChange={([value]) => handleStyleChange('outlineWidth', value)}
                     onPointerDownCapture={startInteractiveOperation}
                     onPointerUpCapture={endInteractiveOperation}
@@ -457,7 +457,7 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
                             id="shadowOffsetXInput"
                             type="number"
                             min={-20} max={20} step={1}
-                            value={currentStyle.shadowOffsetX} // No || fallback
+                            value={currentStyle.shadowOffsetX} 
                             onChange={(e) => {
                                 const val = parseFloat(e.target.value);
                                 if (!isNaN(val)) handleStyleChange('shadowOffsetX', Math.max(-20, Math.min(val, 20)));
@@ -468,7 +468,7 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
                     <Slider
                         id="shadowOffsetXSlider"
                         min={-20} max={20} step={1}
-                        value={[currentStyle.shadowOffsetX]} // No || fallback
+                        value={[currentStyle.shadowOffsetX]} 
                         onValueChange={([value]) => handleStyleChange('shadowOffsetX', value)}
                         onPointerDownCapture={startInteractiveOperation}
                         onPointerUpCapture={endInteractiveOperation}
@@ -482,7 +482,7 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
                             id="shadowOffsetYInput"
                             type="number"
                             min={-20} max={20} step={1}
-                            value={currentStyle.shadowOffsetY} // No || fallback
+                            value={currentStyle.shadowOffsetY} 
                             onChange={(e) => {
                                 const val = parseFloat(e.target.value);
                                 if (!isNaN(val)) handleStyleChange('shadowOffsetY', Math.max(-20, Math.min(val, 20)));
@@ -493,7 +493,7 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
                     <Slider
                         id="shadowOffsetYSlider"
                         min={-20} max={20} step={1}
-                        value={[currentStyle.shadowOffsetY]} // No || fallback
+                        value={[currentStyle.shadowOffsetY]} 
                         onValueChange={([value]) => handleStyleChange('shadowOffsetY', value)}
                         onPointerDownCapture={startInteractiveOperation}
                         onPointerUpCapture={endInteractiveOperation}
@@ -508,7 +508,7 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
                         id="shadowBlurInput"
                         type="number"
                         min={0} max={30} step={1}
-                        value={currentStyle.shadowBlur} // No || fallback
+                        value={currentStyle.shadowBlur} 
                         onChange={(e) => {
                             const val = parseFloat(e.target.value);
                             if (!isNaN(val)) handleStyleChange('shadowBlur', Math.max(0, Math.min(val, 30)));
@@ -519,7 +519,7 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
                 <Slider
                     id="shadowBlurSlider"
                     min={0} max={30} step={1}
-                    value={[currentStyle.shadowBlur]} // No || fallback
+                    value={[currentStyle.shadowBlur]} 
                     onValueChange={([value]) => handleStyleChange('shadowBlur', value)}
                     onPointerDownCapture={startInteractiveOperation}
                     onPointerUpCapture={endInteractiveOperation}
@@ -534,7 +534,7 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
           <Switch
             id="archTextSwitch"
             className="scale-[0.8] origin-left"
-            checked={currentStyle.isArchText} // No || fallback
+            checked={currentStyle.isArchText} 
             onCheckedChange={(checked) => handleStyleChange('isArchText', checked)}
           />
           <Label htmlFor="archTextSwitch" className="text-xs">Arch Text <span className="text-muted-foreground/80 text-[10px]">(Visual Only)</span></Label>
@@ -544,7 +544,7 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
   );
 
   return (
-    <div className="p-4 space-y-4"> {/* Removed flex flex-col */}
+    <div className="p-4 space-y-4"> 
       <div>
         <Label htmlFor="textInput" className="text-sm font-medium">Text Content</Label>
         <Textarea
