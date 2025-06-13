@@ -89,12 +89,12 @@ export default function DesignCanvas({
     if (!canvasRef.current || !productDefinedBoundaryBoxes || productDefinedBoundaryBoxes.length === 0 || !activeViewId || !lastAddedItemId) return;
 
     const autoMoveItem = (item: CanvasImage | CanvasText | CanvasShape, updateFunc: (id: string, updates: Partial<any>) => void) => {
-      if (item.x === 50 && item.y === 50 && item.id === lastAddedItemId && item.viewId === activeViewId) {
+      if (item.x === 50 && item.y === 50 && item.id === lastAddedItemId && item.viewId === activeViewId && !item.movedFromDefault) {
         const firstBox = productDefinedBoundaryBoxes[0];
         const newX = firstBox.x + firstBox.width / 2;
         const newY = firstBox.y + firstBox.height / 2;
         
-        updateFunc(item.id, { x: newX, y: newY }); // This will handle history in UploadContext
+        updateFunc(item.id, { x: newX, y: newY, movedFromDefault: true });
         setLastAddedItemId(null); // Clear after moving
       } else if (item.id === lastAddedItemId) {
         // Item was already moved, not at default, or from a different view. Just clear the flag.
@@ -134,8 +134,8 @@ export default function DesignCanvas({
   useEffect(() => {
     if (canvasImages.length > 0 && activeViewId) {
       const latestImage = canvasImages[canvasImages.length - 1];
-      // Only set if no item is currently pending a move AND the latest item is at default spawn
-      if (lastAddedItemId === null && latestImage && latestImage.x === 50 && latestImage.y === 50 && latestImage.viewId === activeViewId) {
+      // Only set if no item is currently pending a move AND the latest item is at default spawn and not yet flagged as moved
+      if (lastAddedItemId === null && latestImage && latestImage.x === 50 && latestImage.y === 50 && !latestImage.movedFromDefault && latestImage.viewId === activeViewId) {
         setLastAddedItemId(latestImage.id);
       }
     }
@@ -145,8 +145,8 @@ export default function DesignCanvas({
   useEffect(() => {
     if (canvasTexts.length > 0 && activeViewId) {
       const latestText = canvasTexts[canvasTexts.length - 1];
-      // Only set if no item is currently pending a move AND the latest item is at default spawn
-      if (lastAddedItemId === null && latestText && latestText.x === 50 && latestText.y === 50 && latestText.viewId === activeViewId) {
+      // Only set if no item is currently pending a move AND the latest item is at default spawn and not yet flagged as moved
+      if (lastAddedItemId === null && latestText && latestText.x === 50 && latestText.y === 50 && !latestText.movedFromDefault && latestText.viewId === activeViewId) {
         setLastAddedItemId(latestText.id);
       }
     }
@@ -156,8 +156,8 @@ export default function DesignCanvas({
   useEffect(() => {
     if (canvasShapes.length > 0 && activeViewId) {
       const latestShape = canvasShapes[canvasShapes.length - 1];
-      // Only set if no item is currently pending a move AND the latest item is at default spawn
-      if (lastAddedItemId === null && latestShape && latestShape.x === 50 && latestShape.y === 50 && latestShape.viewId === activeViewId) {
+       // Only set if no item is currently pending a move AND the latest item is at default spawn and not yet flagged as moved
+      if (lastAddedItemId === null && latestShape && latestShape.x === 50 && latestShape.y === 50 && !latestShape.movedFromDefault && latestShape.viewId === activeViewId) {
          setLastAddedItemId(latestShape.id);
       }
     }

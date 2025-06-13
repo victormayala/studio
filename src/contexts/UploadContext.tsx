@@ -27,6 +27,7 @@ export interface CanvasImage {
   zIndex: number;
   isLocked: boolean;
   itemType?: 'image';
+  movedFromDefault?: boolean;
 }
 
 // Represents an instance of a text element on the canvas
@@ -45,7 +46,7 @@ export interface CanvasText {
   // Font Settings
   fontFamily: string;
   fontSize: number; // Base font size in px, will be multiplied by scale
-  textTransform: 'none' | 'uppercase' | 'lowercase'; // Added this property
+  textTransform: 'none' | 'uppercase' | 'lowercase';
   fontWeight: 'normal' | 'bold';
   fontStyle: 'normal' | 'italic';
   textDecoration: 'none' | 'underline';
@@ -63,6 +64,7 @@ export interface CanvasText {
   shadowOffsetX: number; // In px
   shadowOffsetY: number; // In px
   shadowBlur: number; // In px
+  movedFromDefault?: boolean;
 }
 
 // Represents an instance of a shape on the canvas
@@ -84,6 +86,7 @@ export interface CanvasShape {
   zIndex: number;
   isLocked: boolean;
   itemType?: 'shape';
+  movedFromDefault?: boolean;
 }
 
 // Snapshot of the entire canvas state for history
@@ -268,6 +271,7 @@ export function UploadProvider({ children }: { children: ReactNode }) {
       id: crypto.randomUUID(), sourceImageId: sourceImage.id, viewId, name: sourceImage.name,
       dataUrl: sourceImage.dataUrl, type: sourceImage.type, scale: 1, rotation: 0, 
       x: 50, y: 50, zIndex: currentMaxZIndex + 1, isLocked: false, itemType: 'image',
+      movedFromDefault: false,
     };
     setCanvasImages(prev => [...prev, newCanvasImage]);
     setSelectedCanvasImageId(newCanvasImage.id);
@@ -285,6 +289,7 @@ export function UploadProvider({ children }: { children: ReactNode }) {
       id: crypto.randomUUID(), sourceImageId: sourceId || `url-${crypto.randomUUID()}`, viewId,
       name: name, dataUrl: dataUrl, type: type, scale: 1, rotation: 0, 
       x: 50, y: 50, zIndex: currentMaxZIndex + 1, isLocked: false, itemType: 'image',
+      movedFromDefault: false,
     };
     setCanvasImages(prev => [...prev, newCanvasImage]);
     setSelectedCanvasImageId(newCanvasImage.id);
@@ -324,7 +329,7 @@ export function UploadProvider({ children }: { children: ReactNode }) {
     const currentMaxZIndex = getMaxZIndexForView(originalImage.viewId);
     const newCanvasImage: CanvasImage = {
       ...originalImage, id: crypto.randomUUID(), x: originalImage.x + 2, y: originalImage.y + 2, 
-      zIndex: currentMaxZIndex + 1, isLocked: false,
+      zIndex: currentMaxZIndex + 1, isLocked: false, movedFromDefault: true, // Duplicates are not at default spawn
     };
     setCanvasImages(prev => [...prev, newCanvasImage]);
     setSelectedCanvasImageId(newCanvasImage.id); 
@@ -362,7 +367,7 @@ export function UploadProvider({ children }: { children: ReactNode }) {
       zIndex: currentMaxZIndex + 1, isLocked: false, itemType: 'text',
       fontFamily: initialStyle?.fontFamily || (defaultFont ? defaultFont.family : 'Arial, sans-serif'),
       fontSize: initialStyle?.fontSize || 24, 
-      textTransform: initialStyle?.textTransform || 'none', // Ensure textTransform is initialized
+      textTransform: initialStyle?.textTransform || 'none',
       fontWeight: initialStyle?.fontWeight || 'normal', fontStyle: initialStyle?.fontStyle || 'normal',
       textDecoration: initialStyle?.textDecoration || 'none', lineHeight: initialStyle?.lineHeight || 1.2, 
       letterSpacing: initialStyle?.letterSpacing || 0, isArchText: initialStyle?.isArchText || false,
@@ -377,6 +382,7 @@ export function UploadProvider({ children }: { children: ReactNode }) {
       shadowOffsetX: initialStyle?.shadowOffsetX || 0,
       shadowOffsetY: initialStyle?.shadowOffsetY || 0,
       shadowBlur: initialStyle?.shadowBlur || 0,
+      movedFromDefault: false,
     };
     setCanvasTexts(prev => [...prev, newText]);
     setSelectedCanvasTextId(newText.id);
@@ -432,7 +438,7 @@ export function UploadProvider({ children }: { children: ReactNode }) {
     const currentMaxZIndex = getMaxZIndexForView(originalText.viewId);
     const newText: CanvasText = {
       ...originalText, id: crypto.randomUUID(), x: originalText.x + 2, y: originalText.y + 2,
-      zIndex: currentMaxZIndex + 1, isLocked: false,
+      zIndex: currentMaxZIndex + 1, isLocked: false, movedFromDefault: true, // Duplicates are not at default spawn
     };
     setCanvasTexts(prev => [...prev, newText]);
     setSelectedCanvasTextId(newText.id);
@@ -468,7 +474,8 @@ export function UploadProvider({ children }: { children: ReactNode }) {
       width: 100, height: 100, rotation: 0, scale: 1,
       color: initialProps?.color || '#468189', strokeColor: initialProps?.strokeColor || '#000000',
       strokeWidth: initialProps?.strokeWidth || 0, zIndex: currentMaxZIndex + 1,
-      isLocked: false, itemType: 'shape', ...initialProps,
+      isLocked: false, itemType: 'shape',
+      movedFromDefault: false, ...initialProps,
     };
     if (shapeType === 'circle') { defaultProps.height = defaultProps.width; }
 
@@ -509,7 +516,7 @@ export function UploadProvider({ children }: { children: ReactNode }) {
     const currentMaxZIndex = getMaxZIndexForView(originalShape.viewId);
     const newShape: CanvasShape = {
       ...originalShape, id: crypto.randomUUID(), x: originalShape.x + 2, y: originalShape.y + 2,
-      zIndex: currentMaxZIndex + 1, isLocked: false,
+      zIndex: currentMaxZIndex + 1, isLocked: false, movedFromDefault: true, // Duplicates are not at default spawn
     };
     setCanvasShapes(prev => [...prev, newShape]);
     setSelectedCanvasShapeId(newShape.id);
