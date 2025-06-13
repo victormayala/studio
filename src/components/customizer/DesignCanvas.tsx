@@ -84,61 +84,82 @@ export default function DesignCanvas({
   const canvasRef = useRef<HTMLDivElement>(null); 
   const [lastAddedItemId, setLastAddedItemId] = useState<string | null>(null);
 
-
+  // Effect for moving the last added item from default to a boundary box
   useEffect(() => {
-    if (!canvasRef.current || !productDefinedBoundaryBoxes || productDefinedBoundaryBoxes.length === 0 || !activeViewId) return;
+    if (!canvasRef.current || !productDefinedBoundaryBoxes || productDefinedBoundaryBoxes.length === 0 || !activeViewId || !lastAddedItemId) return;
 
-    const checkAndMoveItem = (item: CanvasImage | CanvasText | CanvasShape, updateFunc: (id: string, updates: Partial<any>) => void) => {
+    const autoMoveItem = (item: CanvasImage | CanvasText | CanvasShape, updateFunc: (id: string, updates: Partial<any>) => void) => {
       if (item.x === 50 && item.y === 50 && item.id === lastAddedItemId && item.viewId === activeViewId) {
         const firstBox = productDefinedBoundaryBoxes[0];
         const newX = firstBox.x + firstBox.width / 2;
         const newY = firstBox.y + firstBox.height / 2;
         
-        startInteractiveOperation(); 
-        updateFunc(item.id, { x: newX, y: newY });
-        endInteractiveOperation(); 
-
-        setLastAddedItemId(null); 
+        updateFunc(item.id, { x: newX, y: newY }); // This will handle history in UploadContext
+        setLastAddedItemId(null); // Clear after moving
+      } else if (item.id === lastAddedItemId) {
+        // Item was already moved, not at default, or from a different view. Just clear the flag.
+        setLastAddedItemId(null);
       }
     };
     
-    if (lastAddedItemId) {
-        const newImage = canvasImages.find(img => img.id === lastAddedItemId);
-        if (newImage) checkAndMoveItem(newImage, updateCanvasImage);
+    let itemToMove: CanvasImage | CanvasText | CanvasShape | undefined;
+    let updateFunction: ((id: string, updates: Partial<any>) => void) | undefined;
 
-        const newText = canvasTexts.find(txt => txt.id === lastAddedItemId);
-        if (newText) checkAndMoveItem(newText, updateCanvasText);
-
-        const newShape = canvasShapes.find(shp => shp.id === lastAddedItemId);
-        if (newShape) checkAndMoveItem(newShape, updateCanvasShape);
+    itemToMove = canvasImages.find(img => img.id === lastAddedItemId);
+    if (itemToMove) {
+        updateFunction = updateCanvasImage;
+    } else {
+      itemToMove = canvasTexts.find(txt => txt.id === lastAddedItemId);
+      if (itemToMove) {
+        updateFunction = updateCanvasText;
+      } else {
+        itemToMove = canvasShapes.find(shp => shp.id === lastAddedItemId);
+        if (itemToMove) {
+          updateFunction = updateCanvasShape;
+        }
+      }
     }
 
-  }, [canvasImages, canvasTexts, canvasShapes, productDefinedBoundaryBoxes, updateCanvasImage, updateCanvasText, updateCanvasShape, lastAddedItemId, activeViewId, startInteractiveOperation, endInteractiveOperation]);
+    if (itemToMove && updateFunction) {
+      autoMoveItem(itemToMove, updateFunction);
+    } else if (lastAddedItemId) {
+      // Item might have been deleted before it could be moved, or was never found for the current viewId
+      setLastAddedItemId(null);
+    }
 
+  }, [lastAddedItemId, productDefinedBoundaryBoxes, activeViewId, canvasImages, canvasTexts, canvasShapes, updateCanvasImage, updateCanvasText, updateCanvasShape]);
+
+
+  // Effect for identifying newly added image items at default position
   useEffect(() => {
-    if (canvasImages.length > 0 && activeViewId && lastAddedItemId === null) {
-        const latestImage = canvasImages[canvasImages.length -1];
-        if (latestImage && latestImage.x === 50 && latestImage.y === 50 && latestImage.viewId === activeViewId) {
-          setLastAddedItemId(latestImage.id);
-        }
+    if (canvasImages.length > 0 && activeViewId) {
+      const latestImage = canvasImages[canvasImages.length - 1];
+      // Only set if no item is currently pending a move AND the latest item is at default spawn
+      if (lastAddedItemId === null && latestImage && latestImage.x === 50 && latestImage.y === 50 && latestImage.viewId === activeViewId) {
+        setLastAddedItemId(latestImage.id);
+      }
     }
   }, [canvasImages, activeViewId, lastAddedItemId]);
 
+  // Effect for identifying newly added text items at default position
   useEffect(() => {
-    if (canvasTexts.length > 0 && activeViewId && lastAddedItemId === null) {
-        const latestText = canvasTexts[canvasTexts.length -1];
-        if (latestText && latestText.x === 50 && latestText.y === 50 && latestText.viewId === activeViewId) {
-          setLastAddedItemId(latestText.id);
-        }
+    if (canvasTexts.length > 0 && activeViewId) {
+      const latestText = canvasTexts[canvasTexts.length - 1];
+      // Only set if no item is currently pending a move AND the latest item is at default spawn
+      if (lastAddedItemId === null && latestText && latestText.x === 50 && latestText.y === 50 && latestText.viewId === activeViewId) {
+        setLastAddedItemId(latestText.id);
+      }
     }
   }, [canvasTexts, activeViewId, lastAddedItemId]);
 
+  // Effect for identifying newly added shape items at default position
   useEffect(() => {
-    if (canvasShapes.length > 0 && activeViewId && lastAddedItemId === null) {
-        const latestShape = canvasShapes[canvasShapes.length -1];
-        if (latestShape && latestShape.x === 50 && latestShape.y === 50 && latestShape.viewId === activeViewId) {
-           setLastAddedItemId(latestShape.id);
-        }
+    if (canvasShapes.length > 0 && activeViewId) {
+      const latestShape = canvasShapes[canvasShapes.length - 1];
+      // Only set if no item is currently pending a move AND the latest item is at default spawn
+      if (lastAddedItemId === null && latestShape && latestShape.x === 50 && latestShape.y === 50 && latestShape.viewId === activeViewId) {
+         setLastAddedItemId(latestShape.id);
+      }
     }
   }, [canvasShapes, activeViewId, lastAddedItemId]);
 
@@ -514,5 +535,7 @@ export default function DesignCanvas({
   
 
 
+
+    
 
     
