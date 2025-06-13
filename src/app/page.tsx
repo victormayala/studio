@@ -16,32 +16,39 @@ export default function MarketingHomePage() {
       
       <main className="flex-1">
         {/* Hero Section */}
-        <section className="py-20 md:py-32 bg-card"> {/* Changed background to bg-card */}
-          <div className="container mx-auto px-4 text-center">
-            <h1 className="text-4xl md:text-6xl font-bold font-headline text-foreground mb-6">
-              Unleash Product Customization Power
-            </h1>
-            <p className="text-lg md:text-xl text-muted-foreground mb-10 max-w-2xl mx-auto">
-              Empower your customers with seamless product personalization. CSTMZR integrates with your store to offer an intuitive design experience, boosting engagement and sales.
-            </p>
-            <div className="space-x-4">
-              <Button asChild size="lg" className="bg-primary text-primary-foreground hover:bg-primary/90">
-                <Link href="/signup">Get Started Free <ArrowRight className="ml-2 h-5 w-5" /></Link>
-              </Button>
-              <Button asChild size="lg" variant="outline">
-                <Link href="/how-it-works">Learn More</Link>
-              </Button>
-            </div>
-             <div className="mt-16">
-                <Image 
-                    src="/hero-banner-image.png" 
-                    alt="Hero banner for CSTMZR"
-                    width={1200}
-                    height={600}
-                    className="rounded-lg shadow-2xl mx-auto border"
-                    data-ai-hint="hero banner"
-                    priority
-                />
+        <section className="py-20 md:py-32 bg-card">
+          <div className="container mx-auto px-4">
+            <div className="flex flex-col md:flex-row items-center gap-8 md:gap-12">
+              {/* Left Column: Text Content */}
+              <div className="md:w-1/2 text-center md:text-left">
+                <h1 className="text-4xl md:text-6xl font-bold font-headline text-foreground mb-6">
+                  Unleash Product Customization Power
+                </h1>
+                <p className="text-lg md:text-xl text-muted-foreground mb-10 max-w-2xl mx-auto md:mx-0">
+                  Empower your customers with seamless product personalization. CSTMZR integrates with your store to offer an intuitive design experience, boosting engagement and sales.
+                </p>
+                <div className="space-y-4 sm:space-y-0 sm:space-x-4 flex flex-col sm:flex-row justify-center md:justify-start">
+                  <Button asChild size="lg" className="bg-primary text-primary-foreground hover:bg-primary/90 w-full sm:w-auto">
+                    <Link href="/signup">Get Started Free <ArrowRight className="ml-2 h-5 w-5" /></Link>
+                  </Button>
+                  <Button asChild size="lg" variant="outline" className="w-full sm:w-auto">
+                    <Link href="/how-it-works">Learn More</Link>
+                  </Button>
+                </div>
+              </div>
+              {/* Right Column: Image */}
+              <div className="md:w-1/2 w-full mt-10 md:mt-0">
+                <div className="relative w-full aspect-[2/1] rounded-lg shadow-2xl overflow-hidden border">
+                    <Image 
+                        src="/hero-banner-image.png" 
+                        alt="Hero banner for CSTMZR"
+                        fill
+                        className="object-cover"
+                        data-ai-hint="hero banner"
+                        priority
+                    />
+                </div>
+              </div>
             </div>
           </div>
         </section>
@@ -135,4 +142,3 @@ export default function MarketingHomePage() {
     </div>
   );
 }
-
