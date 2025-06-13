@@ -102,7 +102,7 @@ export default function ShapesPanel({ activeViewId }: ShapesPanelProps) {
   };
 
   return (
-    <div className="space-y-4 h-full flex flex-col"> 
+    <div className="p-4 space-y-4 h-full flex flex-col"> 
       <div>
         <p className="text-xs text-muted-foreground mb-3">Click a shape to add it to the canvas.</p>
         {shapeOptions.length > 0 ? (
@@ -143,7 +143,7 @@ export default function ShapesPanel({ activeViewId }: ShapesPanelProps) {
                   <Input
                     type="color"
                     id="shapeFillColorSwatch"
-                    className="h-8 w-10 p-0.5 border-none rounded"
+                    className="h-8 w-10 p-0.5 border-none rounded-md"
                     value={fillColorHex} 
                     onPointerDownCapture={startInteractiveOperation}
                     onPointerUpCapture={endInteractiveOperation}
@@ -171,7 +171,7 @@ export default function ShapesPanel({ activeViewId }: ShapesPanelProps) {
                   <Input
                     type="color"
                     id="shapeStrokeColorSwatch"
-                    className="h-8 w-10 p-0.5 border-none rounded"
+                    className="h-8 w-10 p-0.5 border-none rounded-md"
                     value={strokeColorHex} 
                     onPointerDownCapture={startInteractiveOperation}
                     onPointerUpCapture={endInteractiveOperation}
@@ -235,3 +235,5 @@ export default function ShapesPanel({ activeViewId }: ShapesPanelProps) {
   );
 }
 
+
+    

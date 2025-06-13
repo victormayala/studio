@@ -194,7 +194,7 @@ function CustomizerLayoutAndLogic() {
   const renderActiveToolPanelContent = () => {
      if (!activeViewId && (activeTool !== "layers")) {
        return (
-         <div className="text-center text-muted-foreground h-full flex flex-col items-center justify-center flex-1">
+         <div className="p-4 text-center text-muted-foreground h-full flex flex-col items-center justify-center flex-1">
            <SettingsIcon className="w-12 h-12 mb-4 text-muted-foreground/50" />
            <h3 className="text-lg font-semibold mb-1">Select a View</h3>
            <p className="text-sm">Please select a product view before adding elements.</p>
@@ -211,7 +211,7 @@ function CustomizerLayoutAndLogic() {
       case "premium-designs": return <PremiumDesignsPanel activeViewId={activeViewId} />;
       default:
         return (
-          <div className="text-center text-muted-foreground h-full flex flex-col items-center justify-center flex-1">
+          <div className="p-4 text-center text-muted-foreground h-full flex flex-col items-center justify-center flex-1">
             <SettingsIcon className="w-12 h-12 mb-4 text-muted-foreground/50" />
             <h3 className="text-lg font-semibold mb-1">{getToolPanelTitle(activeTool)}</h3>
             <p className="text-sm">Tool panel not yet implemented.</p>
@@ -321,9 +321,7 @@ function CustomizerLayoutAndLogic() {
               </h2>
             </div>
             <ScrollArea className="flex-grow"> 
-              <div className="p-4"> 
                {renderActiveToolPanelContent()}
-              </div>
             </ScrollArea>
           </div>
           
@@ -404,3 +402,6 @@ export default function CustomizerPage() {
     </UploadProvider>
   );
 }
+
+
+    

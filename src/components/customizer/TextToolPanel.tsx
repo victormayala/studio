@@ -7,7 +7,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
 import { Input } from '@/components/ui/input';
-import { Switch } from '@/components/ui/switch'; // Added missing import
+import { Switch } from '@/components/ui/switch';
 import {
   Select,
   SelectContent,
@@ -308,7 +308,7 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
           <Input
             type="color"
             id="textColorSwatch"
-            className="h-8 w-10 p-0.5 border-none rounded"
+            className="h-8 w-10 p-0.5 border-none rounded-md"
             value={localTextColorHex}
             onPointerDownCapture={startInteractiveOperation}
             onPointerUpCapture={endInteractiveOperation}
@@ -348,40 +348,32 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
         </h3>
 
         <div className="space-y-3 pt-2">
-          <Label className="text-xs flex items-center">
-             Text Outline
-          </Label>
-          <div className="space-y-3 pt-2">
+            <Label className="text-xs">Text Outline</Label>
+            <div className="pt-2 space-y-3">
               <div className="flex items-center space-x-2">
                 <Label htmlFor="outlineColorSwatch" className="text-xs shrink-0">Color</Label>
                 <Input
                     type="color"
                     id="outlineColorSwatch"
-                    className="h-8 w-10 p-0.5 border-none rounded"
+                    className="h-8 w-10 p-0.5 border-none rounded-md"
                     value={localOutlineColorHex}
+                    disabled={!(currentStyle.outlineWidth && currentStyle.outlineWidth > 0)}
                     onPointerDownCapture={startInteractiveOperation}
                     onPointerUpCapture={endInteractiveOperation}
                     onChange={(e) => {
                         setLocalOutlineColorHex(e.target.value);
-                        if (selectedCanvasTextId && selectedText) {
-                            updateCanvasText(selectedCanvasTextId, { outlineColor: e.target.value });
-                        } else {
-                            setCurrentStyle(prev => ({ ...prev, outlineColor: e.target.value }));
-                        }
+                        handleStyleChange('outlineColor', e.target.value);
                     }}/>
                 <Input
                     id="outlineColorHex"
                     className="h-8 text-xs flex-grow max-w-[100px]"
                     value={localOutlineColorHex}
+                    disabled={!(currentStyle.outlineWidth && currentStyle.outlineWidth > 0)}
                     onChange={(e) => setLocalOutlineColorHex(e.target.value)}
                     onBlur={(e) => {
                         const finalColor = sanitizeHex(e.target.value);
                         setLocalOutlineColorHex(finalColor);
-                        if (selectedCanvasTextId && selectedText) {
-                            updateCanvasText(selectedCanvasTextId, { outlineColor: finalColor });
-                        } else {
-                             setCurrentStyle(prev => ({ ...prev, outlineColor: finalColor }));
-                        }
+                        handleStyleChange('outlineColor', finalColor);
                     }}
                     maxLength={7}/>
               </div>
@@ -416,40 +408,32 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
         <Separator className="my-3" />
 
         <div className="space-y-3 pt-2">
-            <Label className="text-xs flex items-center">
-                Text Shadow
-            </Label>
-            <div className="space-y-3 pt-2">
+            <Label className="text-xs">Text Shadow</Label>
+            <div className="pt-2 space-y-3">
               <div className="flex items-center space-x-2">
                 <Label htmlFor="shadowColorSwatch" className="text-xs shrink-0">Color</Label>
                 <Input
                     type="color"
                     id="shadowColorSwatch"
-                    className="h-8 w-10 p-0.5 border-none rounded"
+                    className="h-8 w-10 p-0.5 border-none rounded-md"
                     value={localShadowColorHex}
+                    disabled={!(currentStyle.shadowOffsetX || currentStyle.shadowOffsetY || currentStyle.shadowBlur)}
                     onPointerDownCapture={startInteractiveOperation}
                     onPointerUpCapture={endInteractiveOperation}
                     onChange={(e) => {
                         setLocalShadowColorHex(e.target.value);
-                        if (selectedCanvasTextId && selectedText) {
-                            updateCanvasText(selectedCanvasTextId, { shadowColor: e.target.value });
-                        } else {
-                             setCurrentStyle(prev => ({ ...prev, shadowColor: e.target.value }));
-                        }
+                        handleStyleChange('shadowColor', e.target.value);
                     }}/>
                 <Input
                     id="shadowColorHex"
                     className="h-8 text-xs flex-grow max-w-[100px]"
                     value={localShadowColorHex}
+                    disabled={!(currentStyle.shadowOffsetX || currentStyle.shadowOffsetY || currentStyle.shadowBlur)}
                     onChange={(e) => setLocalShadowColorHex(e.target.value)}
                     onBlur={(e) => {
                         const finalColor = sanitizeHex(e.target.value);
                         setLocalShadowColorHex(finalColor);
-                        if (selectedCanvasTextId && selectedText) {
-                            updateCanvasText(selectedCanvasTextId, { shadowColor: finalColor });
-                        } else {
-                             setCurrentStyle(prev => ({ ...prev, shadowColor: finalColor }));
-                        }
+                        handleStyleChange('shadowColor', finalColor);
                     }}
                     maxLength={7}/>
               </div>
@@ -550,7 +534,7 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
   );
 
   return (
-    <div className="space-y-4 h-full flex flex-col">
+    <div className="p-4 space-y-4 h-full flex flex-col">
       <div>
         <Label htmlFor="textInput" className="text-sm font-medium">Text Content</Label>
         <Textarea
@@ -584,3 +568,5 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
   );
 }
 
+
+    
