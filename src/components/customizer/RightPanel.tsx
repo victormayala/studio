@@ -3,7 +3,7 @@
 
 import AiAssistant from './AiAssistant';
 import GridControls from './GridControls'; 
-import HistoryControls from './HistoryControls'; // New import
+import HistoryControls from './HistoryControls'; 
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 
@@ -18,8 +18,8 @@ export default function RightPanel({ showGrid, toggleGrid }: RightPanelProps) {
       <div className="p-4 border-b">
         <h2 className="font-headline text-lg font-semibold text-foreground">AI Design Assistant</h2>
       </div>
-      <ScrollArea className="flex-grow">
-        <div className="p-4 h-full flex flex-col">
+      <ScrollArea className="flex-grow min-h-0"> {/* ADDED min-h-0 */}
+        <div className="p-4"> {/* REMOVED h-full and flex flex-col, AiAssistant handles its own flex growth */}
           <AiAssistant />
         </div>
       </ScrollArea>
