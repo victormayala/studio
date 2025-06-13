@@ -320,7 +320,8 @@ function CustomizerLayoutAndLogic() {
               </h2>
             </div>
             {/* This div below is the scrollable area for the panel content */}
-            <div className="h-screen overflow-scroll">
+            <div className="h-screen overflow-y-auto overflow-x-hidden [&::-webkit-scrollbar]:w-2
+              [&::-webkit-scrollbar-track]:rounded-full [&::-webkit-scrollbar-track]:bg-gray-100 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-gray-300 dark:[&::-webkit-scrollbar-track]:bg-neutral-700 dark:[&::-webkit-scrollbar-thumb]:bg-neutral-500">
                {renderActiveToolPanelContent()} {/* Assumes panels themselves add their own 'p-4' for content padding */}
             </div>
           </div>

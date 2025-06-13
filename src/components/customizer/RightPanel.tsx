@@ -4,8 +4,7 @@
 import AiAssistant from './AiAssistant';
 import GridControls from './GridControls'; 
 import HistoryControls from './HistoryControls'; 
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Separator } from '@/components/ui/separator';
+// Removed ScrollArea and Separator as we'll manage layout and scrolling directly
 
 interface RightPanelProps {
   showGrid: boolean;
@@ -14,26 +13,40 @@ interface RightPanelProps {
 
 export default function RightPanel({ showGrid, toggleGrid }: RightPanelProps) {
   return (
-    <div className="w-72 md:w-80 lg:w-96 h-full flex-shrink-0 shadow-sm border-l bg-card flex flex-col overflow-hidden">
-      <div className="p-4 border-b">
-        <h2 className="font-headline text-lg font-semibold text-foreground">AI Design Assistant</h2>
-      </div>
-      <ScrollArea className="flex-grow min-h-0"> {/* ADDED min-h-0 */}
-        <div className="p-4"> {/* REMOVED h-full and flex flex-col, AiAssistant handles its own flex growth */}
-          <AiAssistant />
+    <div className="w-72 md:w-80 lg:w-96 h-full flex-shrink-0 shadow-sm border-l bg-card flex flex-col">
+      {/* Scrollable Container for all sections */}
+      <div className="flex-1 h-full overflow-y-scroll overflow-x-hidden">
+        
+        {/* AI Assistant Section */}
+        <div>
+          <div className="p-4 border-b"> {/* Section Header */}
+            <h2 className="font-headline text-lg font-semibold text-foreground">AI Design Assistant</h2>
+          </div>
+          <div className="p-4"> {/* Section Content */}
+            <AiAssistant />
+          </div>
         </div>
-      </ScrollArea>
-      
-      <Separator />
-      <div className="p-4 border-t">
-        <h2 className="font-headline text-md font-semibold text-foreground mb-3">History</h2>
-        <HistoryControls />
-      </div>
 
-      <Separator />
-      <div className="p-4 border-t">
-        <h2 className="font-headline text-md font-semibold text-foreground mb-3">Canvas Helpers</h2>
-        <GridControls showGrid={showGrid} toggleGrid={toggleGrid} />
+        {/* History Section */}
+        <div>
+          <div className="p-4 border-t border-b"> {/* Section Header with top and bottom borders */}
+            <h2 className="font-headline text-md font-semibold text-foreground">History</h2>
+          </div>
+          <div className="p-4"> {/* Section Content for HistoryControls */}
+            <HistoryControls />
+          </div>
+        </div>
+
+        {/* Canvas Helpers Section */}
+        <div>
+          <div className="p-4 border-t"> {/* Section Header with top border */}
+            <h2 className="font-headline text-md font-semibold text-foreground">Canvas Helpers</h2>
+          </div>
+          <div className="p-4"> {/* Section Content for GridControls */}
+            <GridControls showGrid={showGrid} toggleGrid={toggleGrid} />
+          </div>
+        </div>
+        
       </div>
     </div>
   );
