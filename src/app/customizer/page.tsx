@@ -313,7 +313,7 @@ function CustomizerLayoutAndLogic() {
       <div className="flex flex-col min-h-svh w-full bg-muted/20">
         <AppHeader />
         <div className="relative flex flex-1 overflow-hidden"> 
-          <CustomizerIconNav 
+          <CustomizerIconNav
             tools={toolItems} 
             activeTool={activeTool} 
             setActiveTool={setActiveTool} 
@@ -357,7 +357,7 @@ function CustomizerLayoutAndLogic() {
             {isToolPanelOpen ? <PanelLeftClose className="h-5 w-5"/> : <PanelRightOpen className="h-5 w-5"/>}
           </Button>
           
-          <main className="flex-1 p-4 md:p-6 flex flex-col items-center min-h-0"> 
+          <main className="flex-1 p-4 md:p-6 flex flex-col min-h-0"> 
             {error && productDetails?.id === defaultFallbackProduct.id && ( 
                <div className="w-full max-w-4xl p-3 mb-4 border border-destructive bg-destructive/10 rounded-md text-destructive text-sm flex-shrink-0">
                  <AlertTriangle className="inline h-4 w-4 mr-1" /> {error} Using default product view.
