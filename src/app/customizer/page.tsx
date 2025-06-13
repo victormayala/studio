@@ -280,7 +280,7 @@ function CustomizerLayoutAndLogic() {
 
   if (isLoading || authLoading) {
     return (
-      <div className="flex min-h-svh w-full items-center justify-center bg-background">
+      <div className="flex min-h-svh h-screen w-full items-center justify-center bg-background">
         <Loader2 className="h-10 w-10 animate-spin text-primary" />
         <p className="ml-3 text-muted-foreground">Loading customizer...</p>
       </div>
@@ -298,7 +298,7 @@ function CustomizerLayoutAndLogic() {
 
   if (error && !productDetails) { 
     return (
-      <div className="flex flex-col h-screen w-full items-center justify-center bg-background p-4">
+      <div className="flex flex-col min-h-svh h-w-full items-center justify-center bg-background p-4">
         <AlertTriangle className="h-12 w-12 text-destructive mb-4" />
         <h2 className="text-xl font-semibold text-destructive mb-2">Customizer Error</h2>
         <p className="text-muted-foreground text-center mb-6">{error}</p>
@@ -364,7 +364,7 @@ function CustomizerLayoutAndLogic() {
                </div>
             )}
             
-            <div className="w-full flex-1 flex flex-col min-h-0 pb-20"> 
+             <div className="w-full flex flex-col flex-1 min-h-0 pb-20">
               <DesignCanvas 
                 productImageUrl={currentProductImage}
                 productImageAlt={`${currentProductName} - ${currentProductAlt}`}
