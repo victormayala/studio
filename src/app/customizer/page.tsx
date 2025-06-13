@@ -11,11 +11,9 @@ import { fetchWooCommerceProductById } from '@/app/actions/woocommerceActions';
 import { useAuth } from '@/contexts/AuthContext';
 import { Loader2, AlertTriangle, ShoppingCart, UploadCloud, Layers, Type, Shapes as ShapesIconLucide, Smile, Palette, Gem as GemIcon, Settings2 as SettingsIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import NextImage from 'next/image';
 import Link from 'next/link';
 import type { WCCustomProduct } from '@/types/woocommerce';
 import { useToast } from '@/hooks/use-toast';
-import { cn } from '@/lib/utils';
 import CustomizerIconNav, { type CustomizerTool } from '@/components/customizer/CustomizerIconNav';
 
 // Panel Content Components
@@ -49,7 +47,7 @@ interface LocalStorageCustomizerOptions {
   cstmzrSelectedVariationIds: string[];
 }
 
-interface ProductForCustomizer {
+export interface ProductForCustomizer {
   id: string;
   name: string;
   views: ProductView[];
@@ -345,44 +343,16 @@ function CustomizerLayoutAndLogic() {
               />
             </div>
             
-            {productDetails && productDetails.views && productDetails.views.length > 0 && (
-              <div className="mt-6 pt-4 w-full max-w-4xl border-t border-border flex-shrink-0">
-                <h4 className="text-base font-semibold mb-3 text-center text-foreground">
-                  {productDetails.views.length > 1 ? "Product Views" : "Current View"}
-                </h4>
-                <div className="flex justify-center gap-3 flex-wrap">
-                  {productDetails.views.map(view => (
-                    <button
-                      key={view.id}
-                      onClick={() => setActiveViewId(view.id)}
-                      className={cn(
-                        "rounded-lg border-2 p-1.5 transition-all hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2",
-                        activeViewId === view.id 
-                          ? "border-primary opacity-100 ring-2 ring-primary ring-offset-background shadow-md" 
-                          : "border-transparent opacity-70 hover:border-muted-foreground/30 bg-muted/30 hover:bg-muted/50"
-                      )}
-                      title={`Select ${view.name} view`}
-                      aria-pressed={activeViewId === view.id}
-                    >
-                      <div className="relative h-16 w-16 sm:h-20 sm:w-20 bg-background rounded overflow-hidden shadow-sm">
-                        <NextImage
-                          src={view.imageUrl || 'https://placehold.co/80x80.png'}
-                          alt={`Thumbnail for ${view.name}`}
-                          fill
-                          sizes="(max-width: 640px) 5rem, 4rem"
-                          className="object-contain"
-                          data-ai-hint={view.aiHint || "product view thumbnail"}
-                        />
-                      </div>
-                      <p className="text-xs mt-1.5 text-center truncate w-16 sm:w-20 text-foreground">{view.name}</p>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
+            {/* Product Views were here, now moved to RightPanel */}
           </main>
           
-          <RightPanel showGrid={showGrid} toggleGrid={toggleGrid} /> 
+          <RightPanel 
+            showGrid={showGrid} 
+            toggleGrid={toggleGrid} 
+            productDetails={productDetails}
+            activeViewId={activeViewId}
+            setActiveViewId={setActiveViewId}
+          /> 
         </div>
         
         <footer className="fixed bottom-0 left-0 right-0 h-20 border-t bg-card shadow-md p-4 flex items-center justify-end gap-4 z-40">
@@ -403,14 +373,3 @@ export default function CustomizerPage() {
     </UploadProvider>
   );
 }
-
-
-    
-
-
-
-    
-
-    
-
-    
