@@ -129,10 +129,7 @@ export default function ProductOptionsPage() {
     setError(null);
     setVariationsError(null);
     setVariations([]);
-    setSelectedVariationIdsForCstmzr([]);
-    // Do not reset activeViewId here if it's already set from a previous load and productOptions exists
-    // setActiveViewId(null); 
-
+    
     let localOptions: LocalStorageOptions | null = null;
     let localOptionsLoadedSuccessfully = false;
     const localStorageKey = `cstmzr_product_options_${user.id}_${productId}`;
@@ -202,7 +199,10 @@ export default function ProductOptionsPage() {
       cstmzrSelectedVariationIds: localOptions?.cstmzrSelectedVariationIds || [], 
     });
     
-    if (!activeViewId || !viewsToSet.find(v => v.id === activeViewId)) {
+    // Determine activeViewId based on loaded viewsToSet and current activeViewId (if any)
+    // This logic was already here and should correctly pick the first view if current is invalid or not set.
+    const currentActiveViewIdInState = activeViewId; // Use the current state value for comparison
+    if (!currentActiveViewIdInState || !viewsToSet.find(v => v.id === currentActiveViewIdInState)) {
         setActiveViewId(viewsToSet[0]?.id || null);
     }
     setSelectedBoundaryBoxId(null); 
@@ -230,15 +230,15 @@ export default function ProductOptionsPage() {
     setIsRefreshing(false);
     if (isRefreshing) toast({ title: "Product Data Refreshed", description: "Base product details updated from store."});
 
-  }, [productId, user, toast, isRefreshing, activeViewId]); 
+  }, [productId, user, toast, isRefreshing, activeViewId]); // activeViewId IS still needed here to read its current value for logic inside, but the effect below won't loop on it.
 
   useEffect(() => {
     fetchAndSetProductData();
-  }, [fetchAndSetProductData]); 
+  }, [fetchAndSetProductData]); // fetchAndSetProductData itself will now have a more stable dependency list
 
   const handleRefreshData = () => {
     setIsRefreshing(true); 
-    // fetchAndSetProductData will be called by the useEffect dependency chain if isRefreshing changes
+    // fetchAndSetProductData will be called by the useEffect dependency chain if isRefreshing changes (indirectly via its own deps now not including activeViewId)
   };
 
   const getPointerCoords = (e: MouseEvent | TouchEvent | React.MouseEvent | React.TouchEvent) => {
@@ -385,7 +385,7 @@ export default function ProductOptionsPage() {
   const handleSelectView = (viewId: string) => {
     setActiveViewId(viewId);
     setSelectedBoundaryBoxId(null);
-    setHasUnsavedChanges(true); // Selecting a new view might change context, better to mark as unsaved
+    setHasUnsavedChanges(true); 
   };
 
   const handleAddNewView = () => {
@@ -400,8 +400,7 @@ export default function ProductOptionsPage() {
       aiHint: 'product view',
       boundaryBoxes: [],
     };
-    const updatedViews = [...productOptions.views, newView];
-    setProductOptions({ ...productOptions, views: updatedViews });
+    setProductOptions(prev => prev ? {...prev, views: [...prev.views, newView]} : null);
     setActiveViewId(newView.id);
     setSelectedBoundaryBoxId(null);
     setHasUnsavedChanges(true);
@@ -419,7 +418,7 @@ export default function ProductOptionsPage() {
   const confirmDeleteView = () => {
     if (!productOptions || !viewIdToDelete) return;
     const updatedViews = productOptions.views.filter(v => v.id !== viewIdToDelete);
-    setProductOptions({ ...productOptions, views: updatedViews });
+    setProductOptions(prev => prev ? { ...prev, views: updatedViews } : null);
     if (activeViewId === viewIdToDelete) {
       setActiveViewId(updatedViews[0]?.id || null);
       setSelectedBoundaryBoxId(null);
@@ -432,10 +431,12 @@ export default function ProductOptionsPage() {
 
   const handleViewDetailChange = (viewId: string, field: keyof Pick<ProductView, 'name' | 'imageUrl' | 'aiHint'>, value: string) => {
     if (!productOptions) return;
-    const updatedViews = productOptions.views.map(v => 
-      v.id === viewId ? { ...v, [field]: value } : v
-    );
-    setProductOptions({ ...productOptions, views: updatedViews });
+    setProductOptions(prev => prev ? {
+        ...prev,
+        views: prev.views.map(v => 
+        v.id === viewId ? { ...v, [field]: value } : v
+        )
+    } : null);
     setHasUnsavedChanges(true);
   };
 
@@ -452,33 +453,39 @@ export default function ProductOptionsPage() {
       x: 10 + currentView.boundaryBoxes.length * 5, y: 10 + currentView.boundaryBoxes.length * 5,
       width: 30, height: 20,
     };
-    const updatedViews = productOptions.views.map(v => 
-      v.id === activeViewId ? { ...v, boundaryBoxes: [...v.boundaryBoxes, newBox] } : v
-    );
-    setProductOptions({ ...productOptions, views: updatedViews });
+    setProductOptions(prev => prev ? {
+        ...prev,
+        views: prev.views.map(v => 
+        v.id === activeViewId ? { ...v, boundaryBoxes: [...v.boundaryBoxes, newBox] } : v
+        )
+    } : null);
     setSelectedBoundaryBoxId(newBox.id);
     setHasUnsavedChanges(true);
   };
 
   const handleRemoveBoundaryBox = (boxId: string) => {
     if (!productOptions || !activeViewId) return;
-    const updatedViews = productOptions.views.map(v => 
-      v.id === activeViewId ? { ...v, boundaryBoxes: v.boundaryBoxes.filter(b => b.id !== boxId) } : v
-    );
-    setProductOptions({ ...productOptions, views: updatedViews });
+    setProductOptions(prev => prev ? {
+        ...prev,
+        views: prev.views.map(v => 
+        v.id === activeViewId ? { ...v, boundaryBoxes: v.boundaryBoxes.filter(b => b.id !== boxId) } : v
+        )
+    } : null);
     if (selectedBoundaryBoxId === boxId) setSelectedBoundaryBoxId(null);
     setHasUnsavedChanges(true);
   };
   
   const handleBoundaryBoxNameChange = (boxId: string, newName: string) => {
     if (!productOptions || !activeViewId) return;
-    const updatedViews = productOptions.views.map(v => 
-      v.id === activeViewId ? { 
-        ...v, 
-        boundaryBoxes: v.boundaryBoxes.map(box => box.id === boxId ? { ...box, name: newName } : box) 
-      } : v
-    );
-    setProductOptions({ ...productOptions, views: updatedViews });
+    setProductOptions(prev => prev ? {
+        ...prev,
+        views: prev.views.map(v => 
+        v.id === activeViewId ? { 
+            ...v, 
+            boundaryBoxes: v.boundaryBoxes.map(box => box.id === boxId ? { ...box, name: newName } : box) 
+        } : v
+        )
+    } : null);
     setHasUnsavedChanges(true);
   };
 
@@ -559,7 +566,48 @@ export default function ProductOptionsPage() {
       {error && productOptions && <ShadCnAlert variant="destructive" className="mb-6"><AlertTriangle className="h-4 w-4" /><ShadCnAlertTitle>Product Data Error</ShadCnAlertTitle><ShadCnAlertDescription>{error}</ShadCnAlertDescription></ShadCnAlert>}
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-        <div className="md:col-span-1 space-y-6"> {/* This is now the left column (was right) */}
+        <div className="md:col-span-2 space-y-6"> 
+          <Card className="shadow-md">
+            <CardHeader><CardTitle className="font-headline text-lg">Base Product Information</CardTitle><CardDescription>From WooCommerce (Read-only).</CardDescription></CardHeader>
+            <CardContent className="space-y-4">
+              <div><Label htmlFor="productName">Product Name</Label><Input id="productName" value={productOptions.name} className="mt-1 bg-muted/50" readOnly /></div>
+              <div><Label htmlFor="productDescription">Description</Label><Textarea id="productDescription" value={productOptions.description} className="mt-1 bg-muted/50" rows={4} readOnly /></div>
+              <div className="grid grid-cols-2 gap-4">
+                <div><Label htmlFor="productPrice">Price ($)</Label><Input id="productPrice" type="number" value={productOptions.price} className="mt-1 bg-muted/50" readOnly /></div>
+                <div><Label htmlFor="productType">Type</Label><Input id="productType" value={productOptions.type.charAt(0).toUpperCase() + productOptions.type.slice(1)} className="mt-1 bg-muted/50" readOnly /></div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {productOptions.type === 'variable' && (
+            <Card className="shadow-md">
+              <CardHeader><div className="flex justify-between items-center"><div><CardTitle className="font-headline text-lg">Product Variations</CardTitle><CardDescription>{variations.length > 0 ? `Select variations for customization. (Total: ${variations.length})` : 'Variations from WooCommerce.'}</CardDescription></div></div></CardHeader>
+              <CardContent>
+                 {isLoadingVariations || (isRefreshing && isLoading) ? <div className="flex items-center justify-center py-6"><Loader2 className="h-6 w-6 animate-spin text-primary" /><p className="ml-2 text-muted-foreground">Loading variations...</p></div>
+                : variationsError ? <div className="text-center py-6"><AlertTriangle className="mx-auto h-10 w-10 text-destructive" /><p className="mt-3 text-destructive font-semibold">Error loading variations</p><p className="text-sm text-muted-foreground mt-1">{variationsError}</p></div>
+                : variations.length > 0 ? (<>
+                    <div className="mb-4 flex items-center space-x-2 p-2 border-b">
+                      <Checkbox id="selectAllVariations" checked={allVariationsSelected} onCheckedChange={(cs) => handleSelectAllVariations(cs === 'indeterminate' ? true : cs as boolean)} data-state={someVariationsSelected && !allVariationsSelected ? 'indeterminate' : (allVariationsSelected ? 'checked' : 'unchecked')} />
+                      <Label htmlFor="selectAllVariations" className="text-sm font-medium">{allVariationsSelected ? "Deselect All" : "Select All Variations"}</Label>
+                    </div>
+                    <div className="space-y-3 max-h-96 overflow-y-auto pr-2">
+                      {variations.map((variation) => (
+                        <div key={variation.id} className={cn("p-3 border rounded-md flex items-start gap-3 transition-colors", selectedVariationIdsForCstmzr.includes(variation.id.toString()) ? "bg-primary/10 border-primary" : "bg-muted/30 hover:bg-muted/50")}>
+                          <Checkbox id={`variation-${variation.id}`} checked={selectedVariationIdsForCstmzr.includes(variation.id.toString())} onCheckedChange={(c) => handleVariationSelectionChange(variation.id.toString(), c as boolean)} className="mt-1 flex-shrink-0" />
+                          <div className="relative h-16 w-16 rounded-md overflow-hidden border bg-card flex-shrink-0"><NextImage src={variation.image?.src || (productOptions.views[0]?.imageUrl) || 'https://placehold.co/100x100.png'} alt={variation.image?.alt || productOptions.name} fill className="object-contain" data-ai-hint={variation.image?.alt ? variation.image.alt.split(" ").slice(0,2).join(" ") : "variation image"}/></div>
+                          <div className="flex-grow"><p className="text-sm font-medium text-foreground">{variation.attributes.map(attr => `${attr.name}: ${attr.option}`).join(' / ')}</p><p className="text-xs text-muted-foreground">SKU: {variation.sku || 'N/A'}</p><p className="text-xs text-muted-foreground">Price: ${parseFloat(variation.price).toFixed(2)}</p></div>
+                          <Badge variant={variation.stock_status === 'instock' ? 'default' : (variation.stock_status === 'onbackorder' ? 'secondary' : 'destructive')} className={cn("self-start", variation.stock_status === 'instock' && 'bg-green-500/10 text-green-700 border-green-500/30', variation.stock_status === 'onbackorder' && 'bg-yellow-500/10 text-yellow-700 border-yellow-500/30', variation.stock_status === 'outofstock' && 'bg-red-500/10 text-red-700 border-red-500/30')}>{variation.stock_status === 'instock' ? 'In Stock' : variation.stock_status === 'onbackorder' ? 'On Backorder' : 'Out of Stock'}{variation.stock_quantity !== null && ` (${variation.stock_quantity})`}</Badge>
+                        </div>))}
+                    </div></>
+                ) : <div className="text-center py-6"><LayersIcon className="mx-auto h-10 w-10 text-muted-foreground" /><p className="mt-3 text-muted-foreground">No variations found for this product.</p></div>}
+              </CardContent>
+            </Card>
+          )}
+          {productOptions.type !== 'variable' && (
+            <Card className="shadow-md"><CardHeader><CardTitle className="font-headline text-lg">Product Variations</CardTitle></CardHeader><CardContent className="text-center py-8 text-muted-foreground"><Shirt className="mx-auto h-10 w-10 mb-2" />This is a simple product and does not have variations.</CardContent></Card>
+          )}
+        </div>
+        <div className="md:col-span-1 space-y-6"> 
            <Card className="shadow-md">
             <CardHeader>
               <CardTitle className="font-headline text-lg">Product View & Customization Setup</CardTitle>
@@ -752,48 +800,6 @@ export default function ProductOptionsPage() {
               </Tabs>
             </CardContent>
           </Card>
-        </div>
-
-        <div className="md:col-span-2 space-y-6"> {/* This is now the right column (was left) */}
-          <Card className="shadow-md">
-            <CardHeader><CardTitle className="font-headline text-lg">Base Product Information</CardTitle><CardDescription>From WooCommerce (Read-only).</CardDescription></CardHeader>
-            <CardContent className="space-y-4">
-              <div><Label htmlFor="productName">Product Name</Label><Input id="productName" value={productOptions.name} className="mt-1 bg-muted/50" readOnly /></div>
-              <div><Label htmlFor="productDescription">Description</Label><Textarea id="productDescription" value={productOptions.description} className="mt-1 bg-muted/50" rows={4} readOnly /></div>
-              <div className="grid grid-cols-2 gap-4">
-                <div><Label htmlFor="productPrice">Price ($)</Label><Input id="productPrice" type="number" value={productOptions.price} className="mt-1 bg-muted/50" readOnly /></div>
-                <div><Label htmlFor="productType">Type</Label><Input id="productType" value={productOptions.type.charAt(0).toUpperCase() + productOptions.type.slice(1)} className="mt-1 bg-muted/50" readOnly /></div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {productOptions.type === 'variable' && (
-            <Card className="shadow-md">
-              <CardHeader><div className="flex justify-between items-center"><div><CardTitle className="font-headline text-lg">Product Variations</CardTitle><CardDescription>{variations.length > 0 ? `Select variations for customization. (Total: ${variations.length})` : 'Variations from WooCommerce.'}</CardDescription></div></div></CardHeader>
-              <CardContent>
-                 {isLoadingVariations || (isRefreshing && isLoading) ? <div className="flex items-center justify-center py-6"><Loader2 className="h-6 w-6 animate-spin text-primary" /><p className="ml-2 text-muted-foreground">Loading variations...</p></div>
-                : variationsError ? <div className="text-center py-6"><AlertTriangle className="mx-auto h-10 w-10 text-destructive" /><p className="mt-3 text-destructive font-semibold">Error loading variations</p><p className="text-sm text-muted-foreground mt-1">{variationsError}</p></div>
-                : variations.length > 0 ? (<>
-                    <div className="mb-4 flex items-center space-x-2 p-2 border-b">
-                      <Checkbox id="selectAllVariations" checked={allVariationsSelected} onCheckedChange={(cs) => handleSelectAllVariations(cs === 'indeterminate' ? true : cs as boolean)} data-state={someVariationsSelected && !allVariationsSelected ? 'indeterminate' : (allVariationsSelected ? 'checked' : 'unchecked')} />
-                      <Label htmlFor="selectAllVariations" className="text-sm font-medium">{allVariationsSelected ? "Deselect All" : "Select All Variations"}</Label>
-                    </div>
-                    <div className="space-y-3 max-h-96 overflow-y-auto pr-2">
-                      {variations.map((variation) => (
-                        <div key={variation.id} className={cn("p-3 border rounded-md flex items-start gap-3 transition-colors", selectedVariationIdsForCstmzr.includes(variation.id.toString()) ? "bg-primary/10 border-primary" : "bg-muted/30 hover:bg-muted/50")}>
-                          <Checkbox id={`variation-${variation.id}`} checked={selectedVariationIdsForCstmzr.includes(variation.id.toString())} onCheckedChange={(c) => handleVariationSelectionChange(variation.id.toString(), c as boolean)} className="mt-1 flex-shrink-0" />
-                          <div className="relative h-16 w-16 rounded-md overflow-hidden border bg-card flex-shrink-0"><NextImage src={variation.image?.src || (productOptions.views[0]?.imageUrl) || 'https://placehold.co/100x100.png'} alt={variation.image?.alt || productOptions.name} fill className="object-contain" data-ai-hint={variation.image?.alt ? variation.image.alt.split(" ").slice(0,2).join(" ") : "variation image"}/></div>
-                          <div className="flex-grow"><p className="text-sm font-medium text-foreground">{variation.attributes.map(attr => `${attr.name}: ${attr.option}`).join(' / ')}</p><p className="text-xs text-muted-foreground">SKU: {variation.sku || 'N/A'}</p><p className="text-xs text-muted-foreground">Price: ${parseFloat(variation.price).toFixed(2)}</p></div>
-                          <Badge variant={variation.stock_status === 'instock' ? 'default' : (variation.stock_status === 'onbackorder' ? 'secondary' : 'destructive')} className={cn("self-start", variation.stock_status === 'instock' && 'bg-green-500/10 text-green-700 border-green-500/30', variation.stock_status === 'onbackorder' && 'bg-yellow-500/10 text-yellow-700 border-yellow-500/30', variation.stock_status === 'outofstock' && 'bg-red-500/10 text-red-700 border-red-500/30')}>{variation.stock_status === 'instock' ? 'In Stock' : variation.stock_status === 'onbackorder' ? 'On Backorder' : 'Out of Stock'}{variation.stock_quantity !== null && ` (${variation.stock_quantity})`}</Badge>
-                        </div>))}
-                    </div></>
-                ) : <div className="text-center py-6"><LayersIcon className="mx-auto h-10 w-10 text-muted-foreground" /><p className="mt-3 text-muted-foreground">No variations found for this product.</p></div>}
-              </CardContent>
-            </Card>
-          )}
-          {productOptions.type !== 'variable' && (
-            <Card className="shadow-md"><CardHeader><CardTitle className="font-headline text-lg">Product Variations</CardTitle></CardHeader><CardContent className="text-center py-8 text-muted-foreground"><Shirt className="mx-auto h-10 w-10 mb-2" />This is a simple product and does not have variations.</CardContent></Card>
-          )}
         </div>
       </div>
       <div className="mt-10 flex justify-end gap-3"> 
