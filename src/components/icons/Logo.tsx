@@ -1,3 +1,4 @@
+
 "use client";
 
 import Image from 'next/image';
@@ -9,7 +10,7 @@ export function Logo() {
   return (
     <div className="relative h-8 w-32" aria-label="CSTMZR Logo">
       <Image
-        src="/logo.png" // Assumes the image is saved in public/logo.png
+        src={`/logo.png?t=${new Date().getTime()}`} // Appended timestamp
         alt="CSTMZR Logo"
         fill
         style={{ objectFit: 'contain' }} // Ensures the entire logo is visible and maintains aspect ratio
