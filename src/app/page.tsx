@@ -34,12 +34,12 @@ export default function MarketingHomePage() {
             </div>
              <div className="mt-16">
                 <Image 
-                    src="https://placehold.co/1200x600.png" // Replace with actual hero image/video
-                    alt="CSTMZR Platform Showcase"
+                    src="/hero-banner-image.png" 
+                    alt="Hero banner for CSTMZR"
                     width={1200}
                     height={600}
                     className="rounded-lg shadow-2xl mx-auto border"
-                    data-ai-hint="customizer interface"
+                    data-ai-hint="hero banner"
                     priority
                 />
             </div>
