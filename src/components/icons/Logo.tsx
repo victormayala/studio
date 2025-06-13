@@ -10,7 +10,7 @@ export function Logo() {
   return (
     <div className="relative h-8 w-32" aria-label="CSTMZR Logo">
       <Image
-        src={`/logo.png?t=${new Date().getTime()}`} // Appended timestamp
+        src="/logo.png" // Removed timestamp
         alt="CSTMZR Logo"
         fill
         style={{ objectFit: 'contain' }} // Ensures the entire logo is visible and maintains aspect ratio
