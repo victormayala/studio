@@ -195,7 +195,7 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
             onValueChange={([value]) => handleStyleChange('fontSize', value)}
             onPointerDownCapture={startInteractiveOperation}
             onPointerUpCapture={endInteractiveOperation}
-            className="mt-2"
+            className="mt-6"
           />
         </div>
         
@@ -269,7 +269,7 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
             onValueChange={([value]) => handleStyleChange('lineHeight', value)}
             onPointerDownCapture={startInteractiveOperation}
             onPointerUpCapture={endInteractiveOperation}
-            className="mt-2"
+            className="mt-6"
           />
         </div>
         <div className="mt-6 mb-6">
@@ -294,7 +294,7 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
             onValueChange={([value]) => handleStyleChange('letterSpacing', value)}
             onPointerDownCapture={startInteractiveOperation}
             onPointerUpCapture={endInteractiveOperation}
-            className="mt-2"
+            className="mt-6"
           />
         </div>
       </section>
@@ -414,7 +414,7 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
                     onValueChange={([value]) => handleStyleChange('outlineWidth', value)}
                     onPointerDownCapture={startInteractiveOperation}
                     onPointerUpCapture={endInteractiveOperation}
-                    className="mt-2"
+                    className="mt-6"
                 />
               </div>
             </div>
@@ -493,7 +493,7 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
                         onValueChange={([value]) => handleStyleChange('shadowOffsetX', value)}
                         onPointerDownCapture={startInteractiveOperation}
                         onPointerUpCapture={endInteractiveOperation}
-                        className="mt-2"
+                        className="mt-6"
                     />
                 </div>
                 <div className="mt-6 mb-6">
@@ -518,7 +518,7 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
                         onValueChange={([value]) => handleStyleChange('shadowOffsetY', value)}
                         onPointerDownCapture={startInteractiveOperation}
                         onPointerUpCapture={endInteractiveOperation}
-                        className="mt-2"
+                        className="mt-6"
                     />
                 </div>
               </div>
@@ -544,7 +544,7 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
                     onValueChange={([value]) => handleStyleChange('shadowBlur', value)}
                     onPointerDownCapture={startInteractiveOperation}
                     onPointerUpCapture={endInteractiveOperation}
-                    className="mt-2"
+                    className="mt-6"
                 />
               </div>
             </div>
