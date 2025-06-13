@@ -7,7 +7,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
 import { Input } from '@/components/ui/input';
-// Switch component is no longer needed for effects
+import { Switch } from '@/components/ui/switch'; // Added missing import
 import {
   Select,
   SelectContent,
@@ -16,7 +16,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
-import { Bold, Italic, Underline, CaseUpper, CaseLower, Type, Palette, Settings2, Pilcrow, TextCursorInput, Pipette, AlignJustify } from 'lucide-react'; // Removed Blend, PenLine
+import { Bold, Italic, Underline, CaseUpper, CaseLower, Type, Palette, Settings2, Pilcrow, TextCursorInput, Pipette, AlignJustify } from 'lucide-react';
 import { useUploads, type CanvasText } from '@/contexts/UploadContext';
 import { googleFonts } from '@/lib/google-fonts';
 import { useToast } from '@/hooks/use-toast';
@@ -101,10 +101,10 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
         letterSpacing: 0,
         isArchText: false,
         color: '#333333',
-        outlineEnabled: false, // Will be derived in context
+        outlineEnabled: false, 
         outlineColor: '#000000',
         outlineWidth: 0,
-        shadowEnabled: false, // Will be derived in context
+        shadowEnabled: false, 
         shadowColor: '#000000',
         shadowOffsetX: 0,
         shadowOffsetY: 0,
@@ -238,7 +238,7 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
             onValueChange={([value]) => handleStyleChange('fontSize', value)}
             onPointerDownCapture={startInteractiveOperation}
             onPointerUpCapture={endInteractiveOperation}
-            className="mt-6 mb-6"
+            className="mt-6"
           />
         </div>
       </section>
@@ -269,7 +269,7 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
             onValueChange={([value]) => handleStyleChange('lineHeight', value)}
             onPointerDownCapture={startInteractiveOperation}
             onPointerUpCapture={endInteractiveOperation}
-            className="mt-6 mb-6"
+            className="mt-6"
           />
         </div>
         <div className="mt-6 mb-6">
@@ -294,7 +294,7 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
             onValueChange={([value]) => handleStyleChange('letterSpacing', value)}
             onPointerDownCapture={startInteractiveOperation}
             onPointerUpCapture={endInteractiveOperation}
-            className="mt-6 mb-6"
+            className="mt-6"
           />
         </div>
       </section>
@@ -347,7 +347,7 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
           <Settings2 className="mr-2 h-4 w-4 text-secondary" />Effects
         </h3>
 
-        <div className="space-y-3">
+        <div className="space-y-3 pt-2">
           <Label className="text-xs flex items-center">
              Text Outline
           </Label>
@@ -407,7 +407,7 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
                     onValueChange={([value]) => handleStyleChange('outlineWidth', value)}
                     onPointerDownCapture={startInteractiveOperation}
                     onPointerUpCapture={endInteractiveOperation}
-                    className="mt-6 mb-6"
+                    className="mt-6"
                 />
               </div>
             </div>
@@ -415,7 +415,7 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
 
         <Separator className="my-3" />
 
-        <div className="space-y-3">
+        <div className="space-y-3 pt-2">
             <Label className="text-xs flex items-center">
                 Text Shadow
             </Label>
@@ -476,7 +476,7 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
                         onValueChange={([value]) => handleStyleChange('shadowOffsetX', value)}
                         onPointerDownCapture={startInteractiveOperation}
                         onPointerUpCapture={endInteractiveOperation}
-                        className="mt-6 mb-6"
+                        className="mt-6"
                     />
                 </div>
                 <div className="mt-6 mb-6">
@@ -501,7 +501,7 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
                         onValueChange={([value]) => handleStyleChange('shadowOffsetY', value)}
                         onPointerDownCapture={startInteractiveOperation}
                         onPointerUpCapture={endInteractiveOperation}
-                        className="mt-6 mb-6"
+                        className="mt-6"
                     />
                 </div>
               </div>
@@ -527,7 +527,7 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
                     onValueChange={([value]) => handleStyleChange('shadowBlur', value)}
                     onPointerDownCapture={startInteractiveOperation}
                     onPointerUpCapture={endInteractiveOperation}
-                    className="mt-6 mb-6"
+                    className="mt-6"
                 />
               </div>
             </div>
@@ -583,3 +583,4 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
     </div>
   );
 }
+
