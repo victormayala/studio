@@ -22,8 +22,7 @@ const defaultProductBase = {
   name: 'Plain White T-shirt (Default)',
   imageUrl: 'https://placehold.co/700x700.png',
   imageAlt: 'Plain white T-shirt ready for customization',
-  width: 700,
-  height: 700,
+  // width and height are removed as they are now derived from the container
   aiHint: 't-shirt mockup',
 };
 
@@ -84,7 +83,6 @@ export default function DesignCanvas({
   const canvasRef = useRef<HTMLDivElement>(null); 
   const [lastAddedItemId, setLastAddedItemId] = useState<string | null>(null);
 
-  // Effect for moving the last added item from default to a boundary box
   useEffect(() => {
     if (!canvasRef.current || !productDefinedBoundaryBoxes || productDefinedBoundaryBoxes.length === 0 || !activeViewId || !lastAddedItemId) return;
 
@@ -95,9 +93,8 @@ export default function DesignCanvas({
         const newY = firstBox.y + firstBox.height / 2;
         
         updateFunc(item.id, { x: newX, y: newY, movedFromDefault: true });
-        setLastAddedItemId(null); // Clear after moving
+        setLastAddedItemId(null); 
       } else if (item.id === lastAddedItemId) {
-        // Item was already moved, not at default, or from a different view. Just clear the flag.
         setLastAddedItemId(null);
       }
     };
@@ -123,40 +120,33 @@ export default function DesignCanvas({
     if (itemToMove && updateFunction) {
       autoMoveItem(itemToMove, updateFunction);
     } else if (lastAddedItemId) {
-      // Item might have been deleted before it could be moved, or was never found for the current viewId
       setLastAddedItemId(null);
     }
 
   }, [lastAddedItemId, productDefinedBoundaryBoxes, activeViewId, canvasImages, canvasTexts, canvasShapes, updateCanvasImage, updateCanvasText, updateCanvasShape]);
 
 
-  // Effect for identifying newly added image items at default position
   useEffect(() => {
     if (canvasImages.length > 0 && activeViewId) {
       const latestImage = canvasImages[canvasImages.length - 1];
-      // Only set if no item is currently pending a move AND the latest item is at default spawn and not yet flagged as moved
       if (lastAddedItemId === null && latestImage && latestImage.x === 50 && latestImage.y === 50 && !latestImage.movedFromDefault && latestImage.viewId === activeViewId) {
         setLastAddedItemId(latestImage.id);
       }
     }
   }, [canvasImages, activeViewId, lastAddedItemId]);
 
-  // Effect for identifying newly added text items at default position
   useEffect(() => {
     if (canvasTexts.length > 0 && activeViewId) {
       const latestText = canvasTexts[canvasTexts.length - 1];
-      // Only set if no item is currently pending a move AND the latest item is at default spawn and not yet flagged as moved
       if (lastAddedItemId === null && latestText && latestText.x === 50 && latestText.y === 50 && !latestText.movedFromDefault && latestText.viewId === activeViewId) {
         setLastAddedItemId(latestText.id);
       }
     }
   }, [canvasTexts, activeViewId, lastAddedItemId]);
 
-  // Effect for identifying newly added shape items at default position
   useEffect(() => {
     if (canvasShapes.length > 0 && activeViewId) {
       const latestShape = canvasShapes[canvasShapes.length - 1];
-       // Only set if no item is currently pending a move AND the latest item is at default spawn and not yet flagged as moved
       if (lastAddedItemId === null && latestShape && latestShape.x === 50 && latestShape.y === 50 && !latestShape.movedFromDefault && latestShape.viewId === activeViewId) {
          setLastAddedItemId(latestShape.id);
       }
@@ -421,22 +411,22 @@ export default function DesignCanvas({
 
   return (
     <div
-      className="w-full max-w-3xl h-full flex flex-col mx-auto bg-card border border-dashed border-border rounded-lg shadow-inner p-4 relative overflow-hidden select-none product-image-outer-container"
+      className="w-full h-full flex flex-col bg-card border border-dashed border-border rounded-lg shadow-inner relative overflow-hidden select-none product-image-outer-container"
       onClick={handleCanvasClick} 
       onTouchStart={handleCanvasClick as any} 
     >
       <div className="relative w-full flex-1 flex items-center justify-center product-canvas-wrapper min-h-0">
         <div
           ref={canvasRef} 
-          className="relative product-image-canvas-area bg-muted/10" 
-          style={{ width: productToDisplay.width, height: productToDisplay.height }}
+          className="relative product-image-canvas-area bg-muted/10 w-full h-full" 
+          // Removed fixed width/height style from here
         >
           <Image
             src={productToDisplay.imageUrl}
             alt={productToDisplay.imageAlt}
-            width={productToDisplay.width}
-            height={productToDisplay.height}
-            className="rounded-md object-contain pointer-events-none select-none" 
+            fill // Use fill to make it responsive
+            style={{ objectFit: 'contain' }} // Ensures the image is contained within its bounds
+            className="rounded-md pointer-events-none select-none" 
             data-ai-hint={productToDisplay.aiHint}
             priority
           />
@@ -539,4 +529,5 @@ export default function DesignCanvas({
     
 
     
+
 
