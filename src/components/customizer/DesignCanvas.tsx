@@ -421,11 +421,11 @@ export default function DesignCanvas({
 
   return (
     <div
-      className="w-full max-w-3xl mx-auto bg-card border border-dashed border-border rounded-lg shadow-inner p-4 relative overflow-hidden select-none product-image-outer-container min-h-[500px] lg:min-h-[700px]"
+      className="w-full max-w-3xl h-full flex flex-col mx-auto bg-card border border-dashed border-border rounded-lg shadow-inner p-4 relative overflow-hidden select-none product-image-outer-container"
       onClick={handleCanvasClick} 
       onTouchStart={handleCanvasClick as any} 
     >
-      <div className="relative w-full h-full flex items-center justify-center product-canvas-wrapper">
+      <div className="relative w-full flex-1 flex items-center justify-center product-canvas-wrapper min-h-0">
         <div
           ref={canvasRef} 
           className="relative product-image-canvas-area bg-muted/10" 
@@ -518,7 +518,7 @@ export default function DesignCanvas({
           ))}
         </div>
       </div>
-      <div className="text-center pt-2">
+      <div className="text-center pt-2 flex-shrink-0">
         <p className="mt-2 text-muted-foreground font-medium">{productToDisplay.name}</p>
         <p className="text-sm text-muted-foreground">
           {productDefinedBoundaryBoxes.length > 0 ? "Items will be kept within the dashed areas. " : ""}
@@ -539,3 +539,4 @@ export default function DesignCanvas({
     
 
     
+

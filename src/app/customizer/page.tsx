@@ -11,14 +11,14 @@ import { fetchWooCommerceProductById } from '@/app/actions/woocommerceActions';
 import { useAuth } from '@/contexts/AuthContext';
 import { 
   Loader2, AlertTriangle, ShoppingCart, UploadCloud, Layers, Type, Shapes as ShapesIconLucide, Smile, Palette, Gem as GemIcon, Settings2 as SettingsIcon,
-  PanelLeftClose, PanelRightOpen, PanelRightClose, PanelLeftOpen // Added icons
+  PanelLeftClose, PanelRightOpen, PanelRightClose, PanelLeftOpen 
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import type { WCCustomProduct } from '@/types/woocommerce';
 import { useToast } from '@/hooks/use-toast';
 import CustomizerIconNav, { type CustomizerTool } from '@/components/customizer/CustomizerIconNav';
-import { cn } from '@/lib/utils'; // Import cn
+import { cn } from '@/lib/utils'; 
 
 // Panel Content Components
 import UploadArea from '@/components/customizer/UploadArea';
@@ -312,7 +312,7 @@ function CustomizerLayoutAndLogic() {
   return (
       <div className="flex flex-col min-h-svh w-full bg-muted/20">
         <AppHeader />
-        <div className="relative flex flex-1 overflow-hidden"> {/* Removed pb-20 */}
+        <div className="relative flex flex-1 overflow-hidden"> 
           <CustomizerIconNav 
             tools={toolItems} 
             activeTool={activeTool} 
@@ -357,14 +357,14 @@ function CustomizerLayoutAndLogic() {
             {isToolPanelOpen ? <PanelLeftClose className="h-5 w-5"/> : <PanelRightOpen className="h-5 w-5"/>}
           </Button>
           
-          <main className="flex-1 p-4 md:p-6 pb-20 flex flex-col items-center min-h-0 overflow-y-auto"> 
+          <main className="flex-1 p-4 md:p-6 pb-20 flex flex-col items-center min-h-0"> 
             {error && productDetails?.id === defaultFallbackProduct.id && ( 
                <div className="w-full max-w-4xl p-3 mb-4 border border-destructive bg-destructive/10 rounded-md text-destructive text-sm flex-shrink-0">
                  <AlertTriangle className="inline h-4 w-4 mr-1" /> {error} Using default product view.
                </div>
             )}
             
-            <div className="w-full flex flex-col items-center justify-center"> 
+            <div className="w-full flex-1 flex flex-col items-center justify-center min-h-0"> 
               <DesignCanvas 
                 productImageUrl={currentProductImage}
                 productImageAlt={`${currentProductName} - ${currentProductAlt}`}
