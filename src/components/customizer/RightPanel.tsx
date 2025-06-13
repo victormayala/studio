@@ -13,35 +13,35 @@ interface RightPanelProps {
 export default function RightPanel({ showGrid, toggleGrid }: RightPanelProps) {
   return (
     <div className="w-72 md:w-80 lg:w-96 h-full flex-shrink-0 shadow-sm border-l bg-card flex flex-col">
-      {/* Scrollable Container for all sections */}
+      {/* Scrollable Container for all sections - NO PADDING HERE */}
       <div className="flex-1 h-full overflow-y-scroll overflow-x-hidden">
         
         {/* AI Assistant Section */}
         <div>
-          <div className="p-4 border-b flex-shrink-0"> {/* Section Header */}
+          <div className="p-4 border-b flex-shrink-0"> {/* Section Header with padding */}
             <h2 className="font-headline text-lg font-semibold text-foreground">AI Design Assistant</h2>
           </div>
-          <div className="p-4"> {/* Section Content */}
+          <div className="p-4"> {/* Section Content wrapper with padding */}
             <AiAssistant />
           </div>
         </div>
 
         {/* History Section */}
         <div>
-          <div className="p-4 border-b flex-shrink-0"> {/* Section Header */}
+          <div className="p-4 border-b flex-shrink-0"> {/* Section Header with padding */}
             <h2 className="font-headline text-lg font-semibold text-foreground">History</h2>
           </div>
-          <div className="p-4"> {/* Section Content for HistoryControls */}
+          <div className="p-4"> {/* Section Content wrapper with padding */}
             <HistoryControls />
           </div>
         </div>
 
         {/* Canvas Helpers Section */}
         <div>
-          <div className="p-4 border-b flex-shrink-0"> {/* Section Header */}
+          <div className="p-4 border-b flex-shrink-0"> {/* Section Header with padding */}
             <h2 className="font-headline text-lg font-semibold text-foreground">Canvas Helpers</h2>
           </div>
-          <div className="p-4"> {/* Section Content for GridControls */}
+          <div className="p-4"> {/* Section Content wrapper with padding */}
             <GridControls showGrid={showGrid} toggleGrid={toggleGrid} />
           </div>
         </div>
