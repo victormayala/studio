@@ -193,7 +193,7 @@ export default function ShapesPanel({ activeViewId }: ShapesPanelProps) {
                 </div>
               </div>
 
-              <div className="space-y-1.5 mt-6 mb-6">
+              <div className="mt-6 mb-6">
                 <div className="flex justify-between items-center">
                   <Label htmlFor="shapeStrokeWidthInput" className="text-xs">Outline Width (px)</Label>
                   <Input
@@ -217,7 +217,7 @@ export default function ShapesPanel({ activeViewId }: ShapesPanelProps) {
                   onValueChange={([value]) => handleStrokeWidthChange(value)}
                   onPointerDownCapture={startInteractiveOperation}
                   onPointerUpCapture={endInteractiveOperation}
-                  
+                  className="mt-2"
                 />
               </div>
             </AccordionContent>

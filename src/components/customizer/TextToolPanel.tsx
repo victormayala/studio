@@ -173,7 +173,7 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
           </Select>
         </div>
 
-        <div className="space-y-1.5 mt-6 mb-6">
+        <div className="mt-6 mb-6">
           <div className="flex justify-between items-center">
             <Label htmlFor="fontSizeInput" className="text-xs">Font Size (px)</Label>
             <Input
@@ -195,7 +195,7 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
             onValueChange={([value]) => handleStyleChange('fontSize', value)}
             onPointerDownCapture={startInteractiveOperation}
             onPointerUpCapture={endInteractiveOperation}
-            
+            className="mt-2"
           />
         </div>
         
@@ -247,7 +247,7 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
 
       <section className="space-y-4">
         <h3 className="text-sm font-medium text-muted-foreground flex items-center"><TextCursorInput className="mr-2 h-4 w-4 text-secondary" />Spacing</h3>
-        <div className="space-y-1.5 mt-6 mb-6">
+        <div className="mt-6 mb-6">
           <div className="flex justify-between items-center">
             <Label htmlFor="lineHeightInput" className="text-xs">Line Height</Label>
             <Input
@@ -269,10 +269,10 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
             onValueChange={([value]) => handleStyleChange('lineHeight', value)}
             onPointerDownCapture={startInteractiveOperation}
             onPointerUpCapture={endInteractiveOperation}
-            
+            className="mt-2"
           />
         </div>
-        <div className="space-y-1.5 mt-6 mb-6">
+        <div className="mt-6 mb-6">
           <div className="flex justify-between items-center">
             <Label htmlFor="letterSpacingInput" className="text-xs">Letter Spacing (px)</Label>
             <Input
@@ -294,7 +294,7 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
             onValueChange={([value]) => handleStyleChange('letterSpacing', value)}
             onPointerDownCapture={startInteractiveOperation}
             onPointerUpCapture={endInteractiveOperation}
-            
+            className="mt-2"
           />
         </div>
       </section>
@@ -392,7 +392,7 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
                     }}
                     maxLength={7}/>
               </div>
-              <div className="space-y-1.5 mt-6 mb-6">
+              <div className="mt-6 mb-6">
                 <div className="flex justify-between items-center">
                   <Label htmlFor="outlineWidthInput" className="text-xs">Width (px)</Label>
                   <Input
@@ -414,7 +414,7 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
                     onValueChange={([value]) => handleStyleChange('outlineWidth', value)}
                     onPointerDownCapture={startInteractiveOperation}
                     onPointerUpCapture={endInteractiveOperation}
-                    
+                    className="mt-2"
                 />
               </div>
             </div>
@@ -471,7 +471,7 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
                     maxLength={7}/>
               </div>
               <div className="grid grid-cols-2 gap-x-4 gap-y-3">
-                <div className="space-y-1.5 mt-6 mb-6">
+                <div className="mt-6 mb-6">
                     <div className="flex justify-between items-center">
                         <Label htmlFor="shadowOffsetXInput" className="text-xs">Offset X (px)</Label>
                         <Input
@@ -493,10 +493,10 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
                         onValueChange={([value]) => handleStyleChange('shadowOffsetX', value)}
                         onPointerDownCapture={startInteractiveOperation}
                         onPointerUpCapture={endInteractiveOperation}
-                        
+                        className="mt-2"
                     />
                 </div>
-                <div className="space-y-1.5 mt-6 mb-6">
+                <div className="mt-6 mb-6">
                     <div className="flex justify-between items-center">
                         <Label htmlFor="shadowOffsetYInput" className="text-xs">Offset Y (px)</Label>
                         <Input
@@ -518,11 +518,11 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
                         onValueChange={([value]) => handleStyleChange('shadowOffsetY', value)}
                         onPointerDownCapture={startInteractiveOperation}
                         onPointerUpCapture={endInteractiveOperation}
-                        
+                        className="mt-2"
                     />
                 </div>
               </div>
-              <div className="space-y-1.5 mt-6 mb-6">
+              <div className="mt-6 mb-6">
                 <div className="flex justify-between items-center">
                     <Label htmlFor="shadowBlurInput" className="text-xs">Blur (px)</Label>
                     <Input
@@ -544,7 +544,7 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
                     onValueChange={([value]) => handleStyleChange('shadowBlur', value)}
                     onPointerDownCapture={startInteractiveOperation}
                     onPointerUpCapture={endInteractiveOperation}
-                    
+                    className="mt-2"
                 />
               </div>
             </div>
