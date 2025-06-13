@@ -34,7 +34,7 @@ export default function AiAssistant() {
   };
 
   return (
-    <div className="space-y-6 flex flex-col flex-grow"> {/* Removed h-full, flex-grow is enough if parent controls height */}
+    <div className="space-y-6"> {/* Removed flex flex-col flex-grow */}
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
           <Label htmlFor="designComposition" className="block text-sm font-medium text-foreground mb-1">
@@ -77,13 +77,13 @@ export default function AiAssistant() {
         </div>
       )}
        {!isLoading && !error && designComposition && suggestions.length === 0 && (
-         <div className="flex-grow flex flex-col items-center justify-center">
-            <p className="text-sm text-muted-foreground text-center italic">No suggestions found for your description.</p>
+         <div className="flex flex-col items-center justify-center text-center py-4"> {/* Removed flex-grow, added py-4 */}
+            <p className="text-sm text-muted-foreground italic">No suggestions found for your description.</p>
          </div>
       )}
       {!isLoading && !error && !designComposition && suggestions.length === 0 && (
-         <div className="flex-grow flex flex-col items-center justify-center">
-            <p className="text-sm text-muted-foreground text-center italic">Describe your design to get AI suggestions.</p>
+         <div className="flex flex-col items-center justify-center text-center py-4">  {/* Removed flex-grow, added py-4 */}
+            <p className="text-sm text-muted-foreground italic">Describe your design to get AI suggestions.</p>
          </div>
       )}
     </div>

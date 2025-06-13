@@ -7,8 +7,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
 import { Input } from '@/components/ui/input';
-// Switch was removed in a previous step, re-adding if Arch Text still uses it.
-// import { Switch } from '@/components/ui/switch';
+import { Switch } from '@/components/ui/switch';
 import {
   Select,
   SelectContent,
@@ -216,7 +215,8 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
               </SelectContent>
             </Select>
           </div>
-           <div>
+        </div>
+        <div>
             <div className="flex justify-between items-center">
                 <Label htmlFor="fontSizeInput" className="text-xs">Font Size (px)</Label>
                 <Input
@@ -240,7 +240,6 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
                 onPointerUpCapture={endInteractiveOperation}
                 className="mt-6" 
             />
-            </div>
         </div>
       </section>
 
@@ -349,6 +348,7 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
         </h3>
 
         <div className="space-y-3 pt-2">
+            <h4 className="text-xs font-medium text-foreground">Text Outline</h4>
             <div className="pt-2 space-y-3">
               <div className="flex items-center space-x-2">
                 <Label htmlFor="outlineColorSwatch" className="text-xs shrink-0">Outline Color</Label>
@@ -362,7 +362,9 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
                     onChange={(e) => {
                         setLocalOutlineColorHex(e.target.value);
                         handleStyleChange('outlineColor', e.target.value);
-                    }}/>
+                    }}
+                    disabled={(currentStyle.outlineWidth ?? 0) === 0 && !selectedText} 
+                />
                 <Input
                     id="outlineColorHex"
                     className="h-8 text-xs flex-grow max-w-[100px]"
@@ -373,7 +375,9 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
                         setLocalOutlineColorHex(finalColor);
                         handleStyleChange('outlineColor', finalColor);
                     }}
-                    maxLength={7}/>
+                    maxLength={7}
+                    disabled={(currentStyle.outlineWidth ?? 0) === 0 && !selectedText} 
+                />
               </div>
               <div className="mt-6 mb-6">
                 <div className="flex justify-between items-center">
@@ -406,6 +410,7 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
         <Separator className="my-3" />
 
         <div className="space-y-3 pt-2">
+           <h4 className="text-xs font-medium text-foreground">Text Shadow</h4>
             <div className={cn("pt-2 space-y-3")}>
               <div className="flex items-center space-x-2">
                 <Label htmlFor="shadowColorSwatch" className="text-xs shrink-0">Shadow Color</Label>
@@ -419,7 +424,9 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
                     onChange={(e) => {
                         setLocalShadowColorHex(e.target.value);
                         handleStyleChange('shadowColor', e.target.value);
-                    }}/>
+                    }}
+                    disabled={(currentStyle.shadowOffsetX ?? 0) === 0 && (currentStyle.shadowOffsetY ?? 0) === 0 && (currentStyle.shadowBlur ?? 0) === 0 && !selectedText}
+                />
                 <Input
                     id="shadowColorHex"
                     className="h-8 text-xs flex-grow max-w-[100px]"
@@ -430,7 +437,9 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
                         setLocalShadowColorHex(finalColor);
                         handleStyleChange('shadowColor', finalColor);
                     }}
-                    maxLength={7}/>
+                    maxLength={7}
+                    disabled={(currentStyle.shadowOffsetX ?? 0) === 0 && (currentStyle.shadowOffsetY ?? 0) === 0 && (currentStyle.shadowBlur ?? 0) === 0 && !selectedText}
+                />
               </div>
               <div className="grid grid-cols-2 gap-x-4 gap-y-3">
                 <div className="mt-6 mb-6">
@@ -513,8 +522,6 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
         </div>
 
         <Separator className="my-3" />
-        {/* Arch text switch is currently not using the imported Switch component, if needed, uncomment import and use here */}
-        {/* 
         <div className="flex items-center space-x-2 pt-1">
           <Switch
             id="archTextSwitch"
@@ -524,13 +531,12 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
           />
           <Label htmlFor="archTextSwitch" className="text-xs">Arch Text <span className="text-muted-foreground/80 text-[10px]">(Visual Only)</span></Label>
         </div>
-        */}
       </section>
     </div>
   );
 
   return (
-    <div className="p-4 space-y-4 flex flex-col">
+    <div className="p-4 space-y-4">
       <div>
         <Label htmlFor="textInput" className="text-sm font-medium">Text Content</Label>
         <Textarea
@@ -551,7 +557,6 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
             <Type className="mr-2 h-4 w-4" />
             Add Text to Canvas
           </Button>
-          {/* Removed the div with flex-grow here, renderControls takes its natural height */}
           {renderControls()}
         </>
       )}
@@ -564,4 +569,3 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
     </div>
   );
 }
-
