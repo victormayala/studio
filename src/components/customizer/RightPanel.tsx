@@ -5,7 +5,7 @@ import AiAssistant from './AiAssistant';
 import GridControls from './GridControls'; 
 import HistoryControls from './HistoryControls'; 
 import ViewSwitcher from './ViewSwitcher';
-import type { ProductForCustomizer } from '@/app/customizer/page'; // Removed ProductView as it's not directly used here
+import type { ProductForCustomizer } from '@/app/customizer/page';
 
 interface RightPanelProps {
   showGrid: boolean;
@@ -28,23 +28,23 @@ export default function RightPanel({
   
       {/* AI Assistant Section */}
       <div>
-        <div className="p-4">
+        <div className="p-4"> {/* Header title for AI */}
           <h2 className="font-headline text-lg font-semibold text-foreground">AI Design Assistant</h2>
         </div>
-        <div className="border-b mx-0"></div> {/* Full width separator for AI */}
-        <div className="p-4">
+        <div className="border-b mx-0"></div> {/* Full-width separator for AI */}
+        <div className="p-4"> {/* Content area for AI */}
           <AiAssistant />
         </div>
       </div>
 
       {/* Product Views Section */}
       <div>
-        <div className="p-4 border-b">
+        <div className="p-4 border-b"> {/* Header title for Product Views */}
           <h2 className="font-headline text-lg font-semibold text-foreground">
             Product Views
           </h2>
         </div>
-        <div className="p-4">
+        <div className="p-4"> {/* Content area for Product Views */}
           {productDetails && productDetails.views && productDetails.views.length > 0 ? (
             <ViewSwitcher
               productViews={productDetails.views}
@@ -57,29 +57,16 @@ export default function RightPanel({
         </div>
       </div>
       
-      {/* Canvas Helpers Section (formerly History) */}
+      {/* Canvas Helpers Section */}
       <div>
-        <div className="p-4 border-b">
+        <div className="p-4 border-b"> {/* Header title for Canvas Helpers */}
           <h2 className="font-headline text-lg font-semibold text-foreground">Canvas Helpers</h2>
         </div>
-        <div className="p-4 space-y-4"> {/* Added space-y-4 for spacing between controls */}
+        <div className="px-4 py-4 space-y-4"> {/* Changed p-4 to px-4 py-4 for explicit confirmation of right padding */}
           <HistoryControls />
           <GridControls showGrid={showGrid} toggleGrid={toggleGrid} />
         </div>
       </div>
-      
-      {/* Original Canvas Helpers Section (now removed) */}
-      {/* 
-      <div>
-        <div className="p-4 border-b">
-          <h2 className="font-headline text-lg font-semibold text-foreground">Canvas Helpers</h2>
-        </div>
-        <div className="p-4">
-          <GridControls showGrid={showGrid} toggleGrid={toggleGrid} />
-        </div>
-      </div>
-      */}
-
     </div>
   </div>
   );
