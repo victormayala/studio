@@ -298,7 +298,7 @@ function CustomizerLayoutAndLogic() {
 
   if (error && !productDetails) { 
     return (
-      <div className="flex flex-col min-h-svh w-full items-center justify-center bg-background p-4">
+      <div className="flex flex-col h-screen w-full items-center justify-center bg-background p-4">
         <AlertTriangle className="h-12 w-12 text-destructive mb-4" />
         <h2 className="text-xl font-semibold text-destructive mb-2">Customizer Error</h2>
         <p className="text-muted-foreground text-center mb-6">{error}</p>
@@ -310,7 +310,7 @@ function CustomizerLayoutAndLogic() {
   }
 
   return (
-      <div className="flex flex-col min-h-svh w-full bg-muted/20">
+      <div className="flex flex-col min-h-svh w-full bg-muted/20 border-8 border-red-500">
         <AppHeader />
         <div className="relative flex flex-1 overflow-hidden"> 
           <CustomizerIconNav
@@ -364,7 +364,7 @@ function CustomizerLayoutAndLogic() {
                </div>
             )}
             
-            <div className="w-full flex-1 flex flex-col min-h-0 pb-20"> 
+            <div className="w-full flex-1 flex flex-col min-h-0 items-center justify-center pb-20"> 
               <DesignCanvas 
                 productImageUrl={currentProductImage}
                 productImageAlt={`${currentProductName} - ${currentProductAlt}`}
