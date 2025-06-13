@@ -172,32 +172,6 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
             </SelectContent>
           </Select>
         </div>
-
-        <div className="mt-6 mb-6">
-          <div className="flex justify-between items-center">
-            <Label htmlFor="fontSizeInput" className="text-xs">Font Size (px)</Label>
-            <Input
-              id="fontSizeInput"
-              type="number"
-              min={8} max={128} step={1}
-              value={currentStyle.fontSize || 24}
-              onChange={(e) => {
-                const val = parseFloat(e.target.value);
-                if (!isNaN(val)) handleStyleChange('fontSize', Math.max(8, Math.min(val, 128)));
-              }}
-              className="h-8 w-20 text-xs"
-            />
-          </div>
-          <Slider
-            id="fontSizeSlider"
-            min={8} max={128} step={1}
-            value={[currentStyle.fontSize || 24]}
-            onValueChange={([value]) => handleStyleChange('fontSize', value)}
-            onPointerDownCapture={startInteractiveOperation}
-            onPointerUpCapture={endInteractiveOperation}
-            className="mt-6"
-          />
-        </div>
         
         <div className="grid grid-cols-2 gap-x-4 gap-y-3">
           <div>
@@ -240,6 +214,32 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
               </SelectContent>
             </Select>
           </div>
+        </div>
+
+        <div className="mt-6 mb-6">
+          <div className="flex justify-between items-center">
+            <Label htmlFor="fontSizeInput" className="text-xs">Font Size (px)</Label>
+            <Input
+              id="fontSizeInput"
+              type="number"
+              min={8} max={128} step={1}
+              value={currentStyle.fontSize || 24}
+              onChange={(e) => {
+                const val = parseFloat(e.target.value);
+                if (!isNaN(val)) handleStyleChange('fontSize', Math.max(8, Math.min(val, 128)));
+              }}
+              className="h-8 w-20 text-xs"
+            />
+          </div>
+          <Slider
+            id="fontSizeSlider"
+            min={8} max={128} step={1}
+            value={[currentStyle.fontSize || 24]}
+            onValueChange={([value]) => handleStyleChange('fontSize', value)}
+            onPointerDownCapture={startInteractiveOperation}
+            onPointerUpCapture={endInteractiveOperation}
+            className="mt-6"
+          />
         </div>
       </section>
 
