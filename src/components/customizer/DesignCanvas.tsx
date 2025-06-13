@@ -22,7 +22,6 @@ const defaultProductBase = {
   name: 'Plain White T-shirt (Default)',
   imageUrl: 'https://placehold.co/700x700.png',
   imageAlt: 'Plain white T-shirt ready for customization',
-  // width and height are removed as they are now derived from the container
   aiHint: 't-shirt mockup',
 };
 
@@ -89,10 +88,26 @@ export default function DesignCanvas({
     const autoMoveItem = (item: CanvasImage | CanvasText | CanvasShape, updateFunc: (id: string, updates: Partial<any>) => void) => {
       if (item.x === 50 && item.y === 50 && item.id === lastAddedItemId && item.viewId === activeViewId && !item.movedFromDefault) {
         const firstBox = productDefinedBoundaryBoxes[0];
-        const newX = firstBox.x + firstBox.width / 2;
-        const newY = firstBox.y + firstBox.height / 2;
         
-        updateFunc(item.id, { x: newX, y: newY, movedFromDefault: true });
+        // Calculate position relative to the centered square container
+        const canvasRect = canvasRef.current?.getBoundingClientRect();
+        if (!canvasRect || canvasRect.width === 0 || canvasRect.height === 0) return;
+
+        const parentW = canvasRect.width;
+        const parentH = canvasRect.height;
+        const squareSide = Math.min(parentW, parentH);
+        const squareOffsetX = (parentW - squareSide) / 2;
+        const squareOffsetY = (parentH - squareSide) / 2;
+
+        // Position of the first boundary box's center, in pixels, relative to the square container
+        const boxCenterXpx_sq = (firstBox.x + firstBox.width / 2) / 100 * squareSide;
+        const boxCenterYpx_sq = (firstBox.y + firstBox.height / 2) / 100 * squareSide;
+        
+        // Convert this to percentage relative to the main canvasRef container
+        const newXpercent_canvas = ((squareOffsetX + boxCenterXpx_sq) / parentW) * 100;
+        const newYpercent_canvas = ((squareOffsetY + boxCenterYpx_sq) / parentH) * 100;
+        
+        updateFunc(item.id, { x: newXpercent_canvas, y: newYpercent_canvas, movedFromDefault: true });
         setLastAddedItemId(null); 
       } else if (item.id === lastAddedItemId) {
         setLastAddedItemId(null);
@@ -163,7 +178,8 @@ export default function DesignCanvas({
 
   const handleCanvasClick = (e: ReactMouseEvent<HTMLDivElement>) => {
     const target = e.target as HTMLElement;
-    if (target === canvasRef.current || 
+    // Check if click is on canvasRef or its direct children like the centered-square-container
+    if (target === canvasRef.current || target.classList.contains('centered-square-container') ||
         target === canvasRef.current?.parentElement ||
         target.classList.contains('product-image-outer-container') ||
         target.classList.contains('product-canvas-wrapper')) {
@@ -295,27 +311,44 @@ export default function DesignCanvas({
       if (productDefinedBoundaryBoxes && productDefinedBoundaryBoxes.length > 0 && itemInitialWidth > 0 && itemInitialHeight > 0 && canvasRect.width > 0 && canvasRect.height > 0) {
         const targetBox = productDefinedBoundaryBoxes[0]; 
 
-        const itemCurrentXPercent = activeItemData?.x || initialX;
-        const itemCurrentYPercent = activeItemData?.y || initialY;
+        const parentW = canvasRect.width;
+        const parentH = canvasRect.height;
+        const squareSide = Math.min(parentW, parentH);
+        
+        const boxMinXPercent_sq = targetBox.x;
+        const boxMaxXPercent_sq = targetBox.x + targetBox.width;
+        const boxMinYPercent_sq = targetBox.y;
+        const boxMaxYPercent_sq = targetBox.y + targetBox.height;
 
-        const distToBoxLeftEdge = itemCurrentXPercent - targetBox.x;
-        const distToBoxRightEdge = (targetBox.x + targetBox.width) - itemCurrentXPercent;
-        const distToBoxTopEdge = itemCurrentYPercent - targetBox.y;
-        const distToBoxBottomEdge = (targetBox.y + targetBox.height) - itemCurrentYPercent;
+        // Item current center relative to the square container (0-100%)
+        // This needs the item's center in pixels relative to the square, then converted to % of squareSide
+        const squareOffsetX = (parentW - squareSide) / 2;
+        const squareOffsetY = (parentH - squareSide) / 2;
+        const itemCenterXpx_canvas = (activeItemData?.x || initialX) / 100 * parentW;
+        const itemCenterYpx_canvas = (activeItemData?.y || initialY) / 100 * parentH;
+        
+        const itemCenterXpercent_sq = ((itemCenterXpx_canvas - squareOffsetX) / squareSide) * 100;
+        const itemCenterYpercent_sq = ((itemCenterYpx_canvas - squareOffsetY) / squareSide) * 100;
 
-        const maxAllowedHalfWidthPercent = Math.min(distToBoxLeftEdge, distToBoxRightEdge);
-        const maxAllowedHalfHeightPercent = Math.min(distToBoxTopEdge, distToBoxBottomEdge);
 
-        if (maxAllowedHalfWidthPercent < 0 || maxAllowedHalfHeightPercent < 0) {
+        const distToBoxLeftEdge_sq = itemCenterXpercent_sq - boxMinXPercent_sq;
+        const distToBoxRightEdge_sq = boxMaxXPercent_sq - itemCenterXpercent_sq;
+        const distToBoxTopEdge_sq = itemCenterYpercent_sq - boxMinYPercent_sq;
+        const distToBoxBottomEdge_sq = boxMaxYPercent_sq - itemCenterYpercent_sq;
+
+        const maxAllowedHalfWidthPercent_sq = Math.min(distToBoxLeftEdge_sq, distToBoxRightEdge_sq);
+        const maxAllowedHalfHeightPercent_sq = Math.min(distToBoxTopEdge_sq, distToBoxBottomEdge_sq);
+
+        if (maxAllowedHalfWidthPercent_sq < 0 || maxAllowedHalfHeightPercent_sq < 0) {
             if (newScale > initialScale) { 
                  newScale = initialScale;
             }
         } else {
-            const maxAllowedWidthPx = (maxAllowedHalfWidthPercent * 2 / 100) * canvasRect.width;
-            const maxAllowedHeightPx = (maxAllowedHalfHeightPercent * 2 / 100) * canvasRect.height;
+            const maxAllowedWidthPx_sq = (maxAllowedHalfWidthPercent_sq * 2 / 100) * squareSide;
+            const maxAllowedHeightPx_sq = (maxAllowedHalfHeightPercent_sq * 2 / 100) * squareSide;
 
-            const maxScaleBasedOnWidth = maxAllowedWidthPx / itemInitialWidth;
-            const maxScaleBasedOnHeight = maxAllowedHeightPx / itemInitialHeight;
+            const maxScaleBasedOnWidth = maxAllowedWidthPx_sq / itemInitialWidth;
+            const maxScaleBasedOnHeight = maxAllowedHeightPx_sq / itemInitialHeight;
             
             newScale = Math.min(newScale, maxScaleBasedOnWidth, maxScaleBasedOnHeight);
         }
@@ -328,53 +361,67 @@ export default function DesignCanvas({
     } else if (type === 'move') {
         const dx = coords.x - startX;
         const dy = coords.y - startY;
-        const dxPercent = (dx / canvasRect.width) * 100;
-        const dyPercent = (dy / canvasRect.height) * 100;
-        let newX = initialX + dxPercent;
-        let newY = initialY + dyPercent;
+        const dxPercent_canvas = (dx / canvasRect.width) * 100;
+        const dyPercent_canvas = (dy / canvasRect.height) * 100;
+        let newX_canvas = initialX + dxPercent_canvas;
+        let newY_canvas = initialY + dyPercent_canvas;
         
         const currentItemScaleFactor = activeItemData?.scale || initialScale;
         const scaledItemWidthPx = itemInitialWidth > 0 ? itemInitialWidth * currentItemScaleFactor : 0;
         const scaledItemHeightPx = itemInitialHeight > 0 ? itemInitialHeight * currentItemScaleFactor : 0;
 
-        const itemHalfWidthPercent = canvasRect.width > 0 ? (scaledItemWidthPx / 2 / canvasRect.width) * 100 : 0;
-        const itemHalfHeightPercent = canvasRect.height > 0 ? (scaledItemHeightPx / 2 / canvasRect.height) * 100 : 0;
+        const itemHalfWidthPercent_canvas = canvasRect.width > 0 ? (scaledItemWidthPx / 2 / canvasRect.width) * 100 : 0;
+        const itemHalfHeightPercent_canvas = canvasRect.height > 0 ? (scaledItemHeightPx / 2 / canvasRect.height) * 100 : 0;
 
 
         if (productDefinedBoundaryBoxes && productDefinedBoundaryBoxes.length > 0) {
             const targetBox = productDefinedBoundaryBoxes[0]; 
+            
+            const parentW = canvasRect.width;
+            const parentH = canvasRect.height;
+            const squareSide = Math.min(parentW, parentH);
+            const squareOffsetX = (parentW - squareSide) / 2;
+            const squareOffsetY = (parentH - squareSide) / 2;
 
-            const boxMinXCanvasPercent = targetBox.x;
-            const boxMaxXCanvasPercent = targetBox.x + targetBox.width;
-            const boxMinYCanvasPercent = targetBox.y;
-            const boxMaxYCanvasPercent = targetBox.y + targetBox.height;
+            // Boundary box edges in pixels, relative to the main canvas
+            const boxMinXpx_canvas = squareOffsetX + (targetBox.x / 100 * squareSide);
+            const boxMaxXpx_canvas = squareOffsetX + ((targetBox.x + targetBox.width) / 100 * squareSide);
+            const boxMinYpx_canvas = squareOffsetY + (targetBox.y / 100 * squareSide);
+            const boxMaxYpx_canvas = squareOffsetY + ((targetBox.y + targetBox.height) / 100 * squareSide);
 
-            let clampedX = Math.max(
-                boxMinXCanvasPercent + itemHalfWidthPercent,
-                Math.min(newX, boxMaxXCanvasPercent - itemHalfWidthPercent)
+            // Convert pixel limits to main canvas percentages
+            const boxMinXpercent_canvas = (boxMinXpx_canvas / parentW) * 100;
+            const boxMaxXpercent_canvas = (boxMaxXpx_canvas / parentW) * 100;
+            const boxMinYpercent_canvas = (boxMinYpx_canvas / parentH) * 100;
+            const boxMaxYpercent_canvas = (boxMaxYpx_canvas / parentH) * 100;
+
+
+            let clampedX_canvas = Math.max(
+                boxMinXpercent_canvas + itemHalfWidthPercent_canvas,
+                Math.min(newX_canvas, boxMaxXpercent_canvas - itemHalfWidthPercent_canvas)
             );
-            let clampedY = Math.max(
-                boxMinYCanvasPercent + itemHalfHeightPercent,
-                Math.min(newY, boxMaxYCanvasPercent - itemHalfHeightPercent)
+            let clampedY_canvas = Math.max(
+                boxMinYpercent_canvas + itemHalfHeightPercent_canvas,
+                Math.min(newY_canvas, boxMaxYpercent_canvas - itemHalfHeightPercent_canvas)
             );
 
-            if (itemHalfWidthPercent * 2 > targetBox.width) { 
-                clampedX = targetBox.x + targetBox.width / 2; 
+            if (itemHalfWidthPercent_canvas * 2 > (boxMaxXpercent_canvas - boxMinXpercent_canvas)) { 
+                clampedX_canvas = boxMinXpercent_canvas + (boxMaxXpercent_canvas - boxMinXpercent_canvas) / 2; 
             }
-             if (itemHalfHeightPercent * 2 > targetBox.height) { 
-                clampedY = targetBox.y + targetBox.height / 2; 
+             if (itemHalfHeightPercent_canvas * 2 > (boxMaxYpercent_canvas - boxMinYpercent_canvas)) { 
+                clampedY_canvas = boxMinYpercent_canvas + (boxMaxYpercent_canvas - boxMinYpercent_canvas) / 2; 
             }
-            newX = clampedX;
-            newY = clampedY;
+            newX_canvas = clampedX_canvas;
+            newY_canvas = clampedY_canvas;
         } else {
-            newX = Math.max(itemHalfWidthPercent, Math.min(newX, 100 - itemHalfWidthPercent));
-            newY = Math.max(itemHalfHeightPercent, Math.min(newY, 100 - itemHalfHeightPercent));
+            newX_canvas = Math.max(itemHalfWidthPercent_canvas, Math.min(newX_canvas, 100 - itemHalfWidthPercent_canvas));
+            newY_canvas = Math.max(itemHalfHeightPercent_canvas, Math.min(newY_canvas, 100 - itemHalfHeightPercent_canvas));
         }
         
-        if (isNaN(newX) || isNaN(newY)) return;
-        if (itemType === 'image') updateCanvasImage(itemId, { x: newX, y: newY });
-        else if (itemType === 'text') updateCanvasText(itemId, { x: newX, y: newY });
-        else if (itemType === 'shape') updateCanvasShape(itemId, { x: newX, y: newY });
+        if (isNaN(newX_canvas) || isNaN(newY_canvas)) return;
+        if (itemType === 'image') updateCanvasImage(itemId, { x: newX_canvas, y: newY_canvas });
+        else if (itemType === 'text') updateCanvasText(itemId, { x: newX_canvas, y: newY_canvas });
+        else if (itemType === 'shape') updateCanvasShape(itemId, { x: newX_canvas, y: newY_canvas });
     }
   }, [activeDrag, updateCanvasImage, canvasImages, updateCanvasText, canvasTexts, updateCanvasShape, canvasShapes, productDefinedBoundaryBoxes]);
 
@@ -412,63 +459,71 @@ export default function DesignCanvas({
   return (
     <div
       className="w-full h-full flex flex-col bg-card border border-dashed border-border rounded-lg shadow-inner relative overflow-hidden select-none product-image-outer-container"
-      onClick={handleCanvasClick} 
-      onTouchStart={handleCanvasClick as any} 
     >
       <div className="relative w-full flex-1 flex items-center justify-center product-canvas-wrapper min-h-0">
         <div
           ref={canvasRef} 
-          className="relative product-image-canvas-area bg-muted/10 w-full h-full" 
-          // Removed fixed width/height style from here
+          className="relative product-image-canvas-area bg-muted/10 w-full h-full flex items-center justify-center"
+          onClick={handleCanvasClick} 
+          onTouchStart={handleCanvasClick as any} 
         >
-          <Image
-            src={productToDisplay.imageUrl}
-            alt={productToDisplay.imageAlt}
-            fill // Use fill to make it responsive
-            style={{ objectFit: 'contain' }} // Ensures the image is contained within its bounds
-            className="rounded-md pointer-events-none select-none" 
-            data-ai-hint={productToDisplay.aiHint}
-            priority
-          />
-
-          {productDefinedBoundaryBoxes && productDefinedBoundaryBoxes.length > 0 && showGrid && (
-            <div
-              style={{
-                position: 'absolute',
-                left: `${productDefinedBoundaryBoxes[0].x}%`,
-                top: `${productDefinedBoundaryBoxes[0].y}%`,
-                width: `${productDefinedBoundaryBoxes[0].width}%`,
-                height: `${productDefinedBoundaryBoxes[0].height}%`,
-                pointerEvents: 'none',
-                zIndex: 0, 
-                overflow: 'hidden',
-                backgroundImage: `
-                  repeating-linear-gradient(to right, hsla(var(--primary) / 0.8) 0, hsla(var(--primary) / 0.8) 1px, transparent 1px, transparent 100%),
-                  repeating-linear-gradient(to bottom, hsla(var(--primary) / 0.8) 0, hsla(var(--primary) / 0.8) 1px, transparent 1px, transparent 100%)
-                `,
-                backgroundSize: '10% 10%', 
-              }}
-              className="grid-overlay"
+          <div
+            className="relative centered-square-container"
+            style={{
+              width: 'min(100%, calc(100svh - 10rem))', // Example: 10rem for header/footer/padding
+              height: 'min(100%, calc(100svh - 10rem))',
+              aspectRatio: '1 / 1',
+            }}
+          >
+            <Image
+              src={productToDisplay.imageUrl}
+              alt={productToDisplay.imageAlt}
+              fill 
+              style={{ objectFit: 'contain' }} 
+              className="rounded-md pointer-events-none select-none" 
+              data-ai-hint={productToDisplay.aiHint}
+              priority
             />
-          )}
 
-          {productDefinedBoundaryBoxes && productDefinedBoundaryBoxes.map(box => (
-            <div
-              key={`defined-${box.id}`}
-              className="absolute border-2 border-dashed border-primary/30 pointer-events-none"
-              style={{
-                left: `${box.x}%`, top: `${box.y}%`,
-                width: `${box.width}%`, height: `${box.height}%`,
-                zIndex: 1, 
-              }}
-              title={box.name}
-            >
-              <span className="absolute -top-5 left-0 text-xs text-primary/50 bg-background/30 px-1 rounded-t-sm">
-                {box.name}
-              </span>
-            </div>
-          ))}
+            {productDefinedBoundaryBoxes && productDefinedBoundaryBoxes.length > 0 && showGrid && (
+              <div
+                style={{
+                  position: 'absolute',
+                  left: `${productDefinedBoundaryBoxes[0].x}%`,
+                  top: `${productDefinedBoundaryBoxes[0].y}%`,
+                  width: `${productDefinedBoundaryBoxes[0].width}%`,
+                  height: `${productDefinedBoundaryBoxes[0].height}%`,
+                  pointerEvents: 'none',
+                  zIndex: 0, 
+                  overflow: 'hidden',
+                  backgroundImage: `
+                    repeating-linear-gradient(to right, hsla(var(--primary) / 0.8) 0, hsla(var(--primary) / 0.8) 1px, transparent 1px, transparent 100%),
+                    repeating-linear-gradient(to bottom, hsla(var(--primary) / 0.8) 0, hsla(var(--primary) / 0.8) 1px, transparent 1px, transparent 100%)
+                  `,
+                  backgroundSize: '10% 10%', 
+                }}
+                className="grid-overlay"
+              />
+            )}
 
+            {productDefinedBoundaryBoxes && productDefinedBoundaryBoxes.map(box => (
+              <div
+                key={`defined-${box.id}`}
+                className="absolute border-2 border-dashed border-primary/30 pointer-events-none"
+                style={{
+                  left: `${box.x}%`, top: `${box.y}%`,
+                  width: `${box.width}%`, height: `${box.height}%`,
+                  zIndex: 1, 
+                }}
+                title={box.name}
+              >
+                <span className="absolute -top-5 left-0 text-xs text-primary/50 bg-background/30 px-1 rounded-t-sm">
+                  {box.name}
+                </span>
+              </div>
+            ))}
+          </div>
+          {/* Interactive items remain children of canvasRef, positioned relative to it */}
           {visibleImages.map((img) => (
             <InteractiveCanvasImage
               key={`${img.id}-${img.zIndex}`} image={img}
@@ -521,13 +576,3 @@ export default function DesignCanvas({
   );
 }
     
-
-  
-
-
-
-    
-
-    
-
-

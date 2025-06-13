@@ -310,7 +310,7 @@ function CustomizerLayoutAndLogic() {
   }
 
   return (
-      <div className="flex flex-col min-h-svh w-full bg-muted/20">
+      <div className="flex flex-col min-h-svh h-screen w-full bg-muted/20">
         <AppHeader />
         <div className="relative flex flex-1 overflow-hidden"> 
           <CustomizerIconNav
