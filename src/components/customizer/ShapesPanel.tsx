@@ -115,7 +115,7 @@ export default function ShapesPanel({ activeViewId }: ShapesPanelProps) {
                   onClick={() => handleAddShape(shape.type)}
                   title={`Add ${shape.label}`}
                 >
-                  <shape.icon className="w-8 h-8 text-primary" />
+                  <shape.icon className="w-8 h-8 text-secondary" />
                   <span className="text-xs text-foreground">{shape.label}</span>
                 </Button>
               ))}
@@ -193,7 +193,7 @@ export default function ShapesPanel({ activeViewId }: ShapesPanelProps) {
                 </div>
               </div>
 
-              <div className="space-y-1.5">
+              <div className="space-y-1.5 mt-6 mb-6">
                 <div className="flex justify-between items-center">
                   <Label htmlFor="shapeStrokeWidthInput" className="text-xs">Outline Width (px)</Label>
                   <Input
@@ -217,7 +217,7 @@ export default function ShapesPanel({ activeViewId }: ShapesPanelProps) {
                   onValueChange={([value]) => handleStrokeWidthChange(value)}
                   onPointerDownCapture={startInteractiveOperation}
                   onPointerUpCapture={endInteractiveOperation}
-                  className="mt-6 mb-6"
+                  
                 />
               </div>
             </AccordionContent>
@@ -234,3 +234,4 @@ export default function ShapesPanel({ activeViewId }: ShapesPanelProps) {
     </div>
   );
 }
+
