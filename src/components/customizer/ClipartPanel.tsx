@@ -26,11 +26,11 @@ export default function ClipartPanel({ activeViewId }: ClipartPanelProps) {
   };
 
   return (
-    <div className="p-4 space-y-4 h-full flex flex-col">
+    <div className="p-4 space-y-4 flex flex-col">
       <p className="text-xs text-muted-foreground px-1">Click an item to add it to the canvas.</p>
 
       {clipartData.length > 0 ? (
-        <ScrollArea className="flex-grow border rounded-md bg-background">
+        <div className="flex-grow border rounded-md bg-background overflow-y-auto">
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-2 lg:grid-cols-3 gap-3 p-3">
             {clipartData.map((clipart) => (
               <div
@@ -54,7 +54,7 @@ export default function ClipartPanel({ activeViewId }: ClipartPanelProps) {
               </div>
             ))}
           </div>
-        </ScrollArea>
+        </div>
       ) : (
         <div className="flex-grow flex flex-col items-center justify-center text-center p-4 border border-dashed rounded-md bg-muted/20">
           <Smile className="h-12 w-12 text-muted-foreground mb-2" />

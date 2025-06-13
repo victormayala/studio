@@ -26,11 +26,11 @@ export default function FreeDesignsPanel({ activeViewId }: FreeDesignsPanelProps
   };
 
   return (
-    <div className="p-4 space-y-4 h-full flex flex-col">
+    <div className="p-4 space-y-4 flex flex-col">
       <p className="text-xs text-muted-foreground px-1">Click a design to add it to the canvas.</p>
 
       {freeDesignsData.length > 0 ? (
-        <ScrollArea className="flex-grow border rounded-md bg-background">
+        <div className="flex-grow border rounded-md bg-background overflow-y-auto">
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-2 lg:grid-cols-2 gap-3 p-3">
             {freeDesignsData.map((design) => (
               <div
@@ -54,7 +54,7 @@ export default function FreeDesignsPanel({ activeViewId }: FreeDesignsPanelProps
               </div>
             ))}
           </div>
-        </ScrollArea>
+        </div>
       ) : (
         <div className="flex-grow flex flex-col items-center justify-center text-center p-4 border border-dashed rounded-md bg-muted/20">
           <Palette className="h-12 w-12 text-muted-foreground mb-2" />

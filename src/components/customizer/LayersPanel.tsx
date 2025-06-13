@@ -38,7 +38,7 @@ export default function LayersPanel({ activeViewId }: LayersPanelProps) {
 
   if (!activeViewId) {
     return (
-      <div className="p-4 text-center text-muted-foreground h-full flex flex-col items-center justify-center flex-1">
+      <div className="p-4 text-center text-muted-foreground flex flex-col items-center justify-center flex-1">
         <Layers className="w-12 h-12 mb-4 text-muted-foreground/50" />
         <h3 className="text-lg font-semibold mb-1">Canvas Layers</h3>
         <p className="text-sm">Select a product view to see its layers.</p>
@@ -48,7 +48,7 @@ export default function LayersPanel({ activeViewId }: LayersPanelProps) {
   
   if (combinedItems.length === 0) {
     return (
-      <div className="p-4 text-center text-muted-foreground h-full flex flex-col items-center justify-center flex-1">
+      <div className="p-4 text-center text-muted-foreground flex flex-col items-center justify-center flex-1">
         <Layers className="w-12 h-12 mb-4 text-muted-foreground/50" />
         <h3 className="text-lg font-semibold mb-1">Canvas Layers</h3>
         <p className="text-sm">No items on this view yet.</p>
@@ -60,7 +60,7 @@ export default function LayersPanel({ activeViewId }: LayersPanelProps) {
 
   return (
     
-    <div className="p-4 h-full flex flex-col">
+    <div className="p-4 flex flex-col">
       <ScrollArea className="flex-grow border-none rounded-none bg-transparent">
         <div className="space-y-1">
           {combinedItems.map((item, index) => {
