@@ -217,6 +217,7 @@ export default function ShapesPanel({ activeViewId }: ShapesPanelProps) {
                   onValueChange={([value]) => handleStrokeWidthChange(value)}
                   onPointerDownCapture={startInteractiveOperation}
                   onPointerUpCapture={endInteractiveOperation}
+                  className="mt-6 mb-6"
                 />
               </div>
             </AccordionContent>
@@ -233,5 +234,3 @@ export default function ShapesPanel({ activeViewId }: ShapesPanelProps) {
     </div>
   );
 }
-
-    
