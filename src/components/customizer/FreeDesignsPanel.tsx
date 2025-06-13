@@ -26,26 +26,26 @@ export default function FreeDesignsPanel({ activeViewId }: FreeDesignsPanelProps
   };
 
   return (
-    <div className="p-4 space-y-4 h-full flex flex-col"> 
+    <div className="p-4 space-y-4 h-full flex flex-col">
       <p className="text-xs text-muted-foreground px-1">Click a design to add it to the canvas.</p>
 
       {freeDesignsData.length > 0 ? (
         <ScrollArea className="flex-grow border rounded-md bg-background">
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-2 lg:grid-cols-2 gap-3 p-3"> 
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-2 lg:grid-cols-2 gap-3 p-3">
             {freeDesignsData.map((design) => (
               <div
                 key={design.id}
                 onClick={() => handleDesignClick(design)}
-                className="p-2 border rounded-md cursor-pointer bg-card hover:bg-accent/5 flex flex-col items-center justify-center gap-2 transition-all border-border group aspect-video" 
+                className="p-2 border rounded-md cursor-pointer bg-card hover:bg-accent/5 flex flex-col items-center justify-center gap-2 transition-all border-border group aspect-video"
                 title={`Add "${design.name}" to canvas`}
               >
-                <div className="relative w-full h-24"> 
+                <div className="relative w-full h-24">
                   <Image
                     src={design.imageUrl}
                     alt={design.name}
                     fill
                     sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 25vw"
-                    className="object-contain" 
+                    className="object-contain"
                     data-ai-hint={design.aiHint}
                   />
                 </div>
@@ -64,6 +64,3 @@ export default function FreeDesignsPanel({ activeViewId }: FreeDesignsPanelProps
     </div>
   );
 }
-
-
-    

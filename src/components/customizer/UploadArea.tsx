@@ -55,7 +55,7 @@ export default function UploadArea({ activeViewId }: UploadAreaProps) {
   };
 
   return (
-    <div className="p-4 space-y-4 h-full flex flex-col"> 
+    <div className="p-4 space-y-4 h-full flex flex-col">
       <div>
         <Input
           type="file"
@@ -106,6 +106,3 @@ export default function UploadArea({ activeViewId }: UploadAreaProps) {
     </div>
   );
 }
-
-
-    

@@ -344,7 +344,7 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
 
       <section className="space-y-4">
         <h3 className="text-sm font-medium text-muted-foreground flex items-center mb-2">
-          <Settings2 className="mr-2 h-4 w-4 text-secondary" />Effects
+          Effects
         </h3>
 
         <div className="space-y-3 pt-2">
@@ -357,7 +357,7 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
                     id="outlineColorSwatch"
                     className="h-8 w-10 p-0.5 border-none rounded-md"
                     value={localOutlineColorHex}
-                    disabled={!(currentStyle.outlineWidth && currentStyle.outlineWidth > 0)}
+                    disabled={!((currentStyle.outlineWidth ?? 0) > 0)}
                     onPointerDownCapture={startInteractiveOperation}
                     onPointerUpCapture={endInteractiveOperation}
                     onChange={(e) => {
@@ -368,7 +368,7 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
                     id="outlineColorHex"
                     className="h-8 text-xs flex-grow max-w-[100px]"
                     value={localOutlineColorHex}
-                    disabled={!(currentStyle.outlineWidth && currentStyle.outlineWidth > 0)}
+                    disabled={!((currentStyle.outlineWidth ?? 0) > 0)}
                     onChange={(e) => setLocalOutlineColorHex(e.target.value)}
                     onBlur={(e) => {
                         const finalColor = sanitizeHex(e.target.value);
@@ -417,7 +417,7 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
                     id="shadowColorSwatch"
                     className="h-8 w-10 p-0.5 border-none rounded-md"
                     value={localShadowColorHex}
-                    disabled={!(currentStyle.shadowOffsetX || currentStyle.shadowOffsetY || currentStyle.shadowBlur)}
+                    disabled={!((currentStyle.shadowOffsetX ?? 0) !== 0 || (currentStyle.shadowOffsetY ?? 0) !== 0 || (currentStyle.shadowBlur ?? 0) !== 0)}
                     onPointerDownCapture={startInteractiveOperation}
                     onPointerUpCapture={endInteractiveOperation}
                     onChange={(e) => {
@@ -428,7 +428,7 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
                     id="shadowColorHex"
                     className="h-8 text-xs flex-grow max-w-[100px]"
                     value={localShadowColorHex}
-                    disabled={!(currentStyle.shadowOffsetX || currentStyle.shadowOffsetY || currentStyle.shadowBlur)}
+                    disabled={!((currentStyle.shadowOffsetX ?? 0) !== 0 || (currentStyle.shadowOffsetY ?? 0) !== 0 || (currentStyle.shadowBlur ?? 0) !== 0)}
                     onChange={(e) => setLocalShadowColorHex(e.target.value)}
                     onBlur={(e) => {
                         const finalColor = sanitizeHex(e.target.value);
@@ -567,6 +567,3 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
     </div>
   );
 }
-
-
-    

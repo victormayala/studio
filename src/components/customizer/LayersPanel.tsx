@@ -60,8 +60,8 @@ export default function LayersPanel({ activeViewId }: LayersPanelProps) {
 
   return (
     
-    <div className="p-4 h-full flex flex-col"> 
-      <ScrollArea className="flex-grow border-none rounded-none bg-transparent"> 
+    <div className="p-4 h-full flex flex-col">
+      <ScrollArea className="flex-grow border-none rounded-none bg-transparent">
         <div className="space-y-1">
           {combinedItems.map((item, index) => {
             const isSelected = 
@@ -180,6 +180,3 @@ export default function LayersPanel({ activeViewId }: LayersPanelProps) {
     </div>
   );
 }
-
-
-    

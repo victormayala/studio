@@ -28,7 +28,7 @@ export default function PremiumDesignsPanel({ activeViewId }: PremiumDesignsPane
   };
 
   return (
-    <div className="p-4 space-y-4 h-full flex flex-col"> 
+    <div className="p-4 space-y-4 h-full flex flex-col">
       <p className="text-xs text-muted-foreground px-1">Click a design to add it to the canvas. Costs vary.</p>
 
       {premiumDesignsData.length > 0 ? (
@@ -75,6 +75,3 @@ export default function PremiumDesignsPanel({ activeViewId }: PremiumDesignsPane
     </div>
   );
 }
-
-
-    

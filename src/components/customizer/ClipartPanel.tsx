@@ -26,7 +26,7 @@ export default function ClipartPanel({ activeViewId }: ClipartPanelProps) {
   };
 
   return (
-    <div className="p-4 space-y-4 h-full flex flex-col"> 
+    <div className="p-4 space-y-4 h-full flex flex-col">
       <p className="text-xs text-muted-foreground px-1">Click an item to add it to the canvas.</p>
 
       {clipartData.length > 0 ? (
@@ -64,6 +64,3 @@ export default function ClipartPanel({ activeViewId }: ClipartPanelProps) {
     </div>
   );
 }
-
-
-    
