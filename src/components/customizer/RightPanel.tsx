@@ -33,7 +33,12 @@ export default function RightPanel({
       className // Apply passed className for width, transition, opacity etc.
     )}
   >
-    <div className="flex-1 h-full overflow-y-auto overflow-x-hidden">
+    <div 
+      className={cn(
+        "flex-1 h-full overflow-y-auto overflow-x-hidden pb-20",
+        "[&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:rounded-full [&::-webkit-scrollbar-track]:bg-gray-100 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-gray-300 dark:[&::-webkit-scrollbar-track]:bg-neutral-700 dark:[&::-webkit-scrollbar-thumb]:bg-neutral-500"
+      )}
+    > {/* Added pb-20 for footer */}
   
       {/* AI Assistant Section */}
       <div>
@@ -48,7 +53,7 @@ export default function RightPanel({
 
       {/* Product Views Section */}
       <div>
-        <div className="p-4 border-b"> 
+        <div className="p-4 border-t border-b"> 
           <h2 className="font-headline text-lg font-semibold text-foreground">
             Product Views
           </h2>
@@ -68,7 +73,7 @@ export default function RightPanel({
       
       {/* Canvas Helpers Section */}
       <div>
-        <div className="p-4 border-b"> 
+        <div className="p-4 border-t border-b"> 
           <h2 className="font-headline text-lg font-semibold text-foreground">Canvas Helpers</h2>
         </div>
         <div className="px-4 py-4 space-y-4"> 

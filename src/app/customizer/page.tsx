@@ -312,7 +312,7 @@ function CustomizerLayoutAndLogic() {
   return (
       <div className="flex flex-col min-h-svh w-full bg-muted/20">
         <AppHeader />
-        <div className="relative flex flex-1 overflow-hidden pb-20"> {/* Added relative for absolute positioned triggers */}
+        <div className="relative flex flex-1 overflow-hidden"> {/* Removed pb-20 */}
           <CustomizerIconNav 
             tools={toolItems} 
             activeTool={activeTool} 
@@ -333,7 +333,7 @@ function CustomizerLayoutAndLogic() {
               </h2>
             </div>
             <div className={cn(
-              "flex-1 h-screen overflow-y-auto overflow-x-hidden [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:rounded-full [&::-webkit-scrollbar-track]:bg-gray-100 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-gray-300 dark:[&::-webkit-scrollbar-track]:bg-neutral-700 dark:[&::-webkit-scrollbar-thumb]:bg-neutral-500",
+              "flex-1 h-full overflow-y-auto overflow-x-hidden pb-20 [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:rounded-full [&::-webkit-scrollbar-track]:bg-gray-100 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-gray-300 dark:[&::-webkit-scrollbar-track]:bg-neutral-700 dark:[&::-webkit-scrollbar-thumb]:bg-neutral-500",
               !isToolPanelOpen && "invisible opacity-0"
             )}>
                {renderActiveToolPanelContent()}
@@ -357,7 +357,7 @@ function CustomizerLayoutAndLogic() {
             {isToolPanelOpen ? <PanelLeftClose className="h-5 w-5"/> : <PanelRightOpen className="h-5 w-5"/>}
           </Button>
           
-          <main className="flex-1 p-4 md:p-6 flex flex-col items-center min-h-0"> 
+          <main className="flex-1 p-4 md:p-6 pb-20 flex flex-col items-center min-h-0 overflow-y-auto"> 
             {error && productDetails?.id === defaultFallbackProduct.id && ( 
                <div className="w-full max-w-4xl p-3 mb-4 border border-destructive bg-destructive/10 rounded-md text-destructive text-sm flex-shrink-0">
                  <AlertTriangle className="inline h-4 w-4 mr-1" /> {error} Using default product view.
