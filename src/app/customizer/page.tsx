@@ -310,7 +310,7 @@ function CustomizerLayoutAndLogic() {
   }
 
   return (
-      <div className="flex flex-col min-h-svh w-full bg-muted/20 border-8 border-red-500">
+      <div className="flex flex-col min-h-svh w-full bg-muted/20">
         <AppHeader />
         <div className="relative flex flex-1 overflow-hidden"> 
           <CustomizerIconNav
@@ -364,7 +364,7 @@ function CustomizerLayoutAndLogic() {
                </div>
             )}
             
-            <div className="w-full flex-1 flex flex-col min-h-0 items-center justify-center pb-20"> 
+            <div className="w-full flex-1 flex flex-col min-h-0 pb-20"> 
               <DesignCanvas 
                 productImageUrl={currentProductImage}
                 productImageAlt={`${currentProductName} - ${currentProductAlt}`}
