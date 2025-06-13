@@ -172,9 +172,9 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
             </SelectContent>
           </Select>
         </div>
-
+        
         <div className="grid grid-cols-2 gap-x-4 gap-y-3">
-          <div>
+            <div>
              <Label className="text-xs mb-1 block">Style</Label>
              <ToggleGroup
                 type="multiple"
@@ -358,8 +358,7 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
                 onCheckedChange={(checked) => handleStyleChange('outlineEnabled', checked)}
             />
           </div>
-          {currentStyle.outlineEnabled && (
-            <div className="space-y-3 pt-2"> {/* Removed pl-5 border-l-2 border-muted ml-1.5 */}
+          <div className={cn("space-y-3 pt-2", !currentStyle.outlineEnabled && "opacity-50 pointer-events-none")}>
               <div className="flex items-center space-x-2">
                 <Label htmlFor="outlineColorSwatch" className="text-xs shrink-0">Color</Label>
                 <Input
@@ -369,6 +368,7 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
                     value={localOutlineColorHex}
                     onPointerDownCapture={startInteractiveOperation}
                     onPointerUpCapture={endInteractiveOperation}
+                    disabled={!currentStyle.outlineEnabled}
                     onChange={(e) => {
                         setLocalOutlineColorHex(e.target.value);
                         if (selectedCanvasTextId && selectedText) {
@@ -381,6 +381,7 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
                     id="outlineColorHex"
                     className="h-8 text-xs flex-grow max-w-[100px]"
                     value={localOutlineColorHex}
+                    disabled={!currentStyle.outlineEnabled}
                     onChange={(e) => setLocalOutlineColorHex(e.target.value)}
                     onBlur={(e) => {
                         const finalColor = sanitizeHex(e.target.value);
@@ -401,6 +402,7 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
                     type="number"
                     min={0} max={10} step={0.5}
                     value={currentStyle.outlineWidth || 0}
+                    disabled={!currentStyle.outlineEnabled}
                     onChange={(e) => {
                       const val = parseFloat(e.target.value);
                       if (!isNaN(val)) handleStyleChange('outlineWidth', Math.max(0, Math.min(val, 10)));
@@ -412,6 +414,7 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
                     id="outlineWidthSlider"
                     min={0} max={10} step={0.5}
                     value={[currentStyle.outlineWidth || 0]}
+                    disabled={!currentStyle.outlineEnabled}
                     onValueChange={([value]) => handleStyleChange('outlineWidth', value)}
                     onPointerDownCapture={startInteractiveOperation}
                     onPointerUpCapture={endInteractiveOperation}
@@ -419,7 +422,6 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
                 />
               </div>
             </div>
-          )}
         </div>
 
         <Separator className="my-3" />
@@ -436,8 +438,7 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
                     onCheckedChange={(checked) => handleStyleChange('shadowEnabled', checked)}
                 />
             </div>
-            {currentStyle.shadowEnabled && (
-            <div className="space-y-3 pt-2"> {/* Removed pl-5 border-l-2 border-muted ml-1.5 */}
+            <div className={cn("space-y-3 pt-2", !currentStyle.shadowEnabled && "opacity-50 pointer-events-none")}>
               <div className="flex items-center space-x-2">
                 <Label htmlFor="shadowColorSwatch" className="text-xs shrink-0">Color</Label>
                 <Input
@@ -445,6 +446,7 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
                     id="shadowColorSwatch"
                     className="h-8 w-10 p-0.5 border-none rounded"
                     value={localShadowColorHex}
+                    disabled={!currentStyle.shadowEnabled}
                     onPointerDownCapture={startInteractiveOperation}
                     onPointerUpCapture={endInteractiveOperation}
                     onChange={(e) => {
@@ -459,6 +461,7 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
                     id="shadowColorHex"
                     className="h-8 text-xs flex-grow max-w-[100px]"
                     value={localShadowColorHex}
+                    disabled={!currentStyle.shadowEnabled}
                     onChange={(e) => setLocalShadowColorHex(e.target.value)}
                     onBlur={(e) => {
                         const finalColor = sanitizeHex(e.target.value);
@@ -480,6 +483,7 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
                             type="number"
                             min={-20} max={20} step={1}
                             value={currentStyle.shadowOffsetX || 0}
+                            disabled={!currentStyle.shadowEnabled}
                             onChange={(e) => {
                                 const val = parseFloat(e.target.value);
                                 if (!isNaN(val)) handleStyleChange('shadowOffsetX', Math.max(-20, Math.min(val, 20)));
@@ -491,6 +495,7 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
                         id="shadowOffsetXSlider"
                         min={-20} max={20} step={1}
                         value={[currentStyle.shadowOffsetX || 0]}
+                        disabled={!currentStyle.shadowEnabled}
                         onValueChange={([value]) => handleStyleChange('shadowOffsetX', value)}
                         onPointerDownCapture={startInteractiveOperation}
                         onPointerUpCapture={endInteractiveOperation}
@@ -505,6 +510,7 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
                             type="number"
                             min={-20} max={20} step={1}
                             value={currentStyle.shadowOffsetY || 0}
+                            disabled={!currentStyle.shadowEnabled}
                             onChange={(e) => {
                                 const val = parseFloat(e.target.value);
                                 if (!isNaN(val)) handleStyleChange('shadowOffsetY', Math.max(-20, Math.min(val, 20)));
@@ -516,6 +522,7 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
                         id="shadowOffsetYSlider"
                         min={-20} max={20} step={1}
                         value={[currentStyle.shadowOffsetY || 0]}
+                        disabled={!currentStyle.shadowEnabled}
                         onValueChange={([value]) => handleStyleChange('shadowOffsetY', value)}
                         onPointerDownCapture={startInteractiveOperation}
                         onPointerUpCapture={endInteractiveOperation}
@@ -531,6 +538,7 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
                         type="number"
                         min={0} max={30} step={1}
                         value={currentStyle.shadowBlur || 0}
+                        disabled={!currentStyle.shadowEnabled}
                         onChange={(e) => {
                             const val = parseFloat(e.target.value);
                             if (!isNaN(val)) handleStyleChange('shadowBlur', Math.max(0, Math.min(val, 30)));
@@ -542,6 +550,7 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
                     id="shadowBlurSlider"
                     min={0} max={30} step={1}
                     value={[currentStyle.shadowBlur || 0]}
+                    disabled={!currentStyle.shadowEnabled}
                     onValueChange={([value]) => handleStyleChange('shadowBlur', value)}
                     onPointerDownCapture={startInteractiveOperation}
                     onPointerUpCapture={endInteractiveOperation}
@@ -549,7 +558,6 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
                 />
               </div>
             </div>
-          )}
         </div>
 
         <Separator className="my-3" />
