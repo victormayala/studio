@@ -4,7 +4,6 @@
 import AiAssistant from './AiAssistant';
 import GridControls from './GridControls'; 
 import HistoryControls from './HistoryControls'; 
-// Removed ScrollArea and Separator as we'll manage layout and scrolling directly
 
 interface RightPanelProps {
   showGrid: boolean;
@@ -19,7 +18,7 @@ export default function RightPanel({ showGrid, toggleGrid }: RightPanelProps) {
         
         {/* AI Assistant Section */}
         <div>
-          <div className="p-4 border-b"> {/* Section Header */}
+          <div className="p-4 border-b flex-shrink-0"> {/* Section Header */}
             <h2 className="font-headline text-lg font-semibold text-foreground">AI Design Assistant</h2>
           </div>
           <div className="p-4"> {/* Section Content */}
@@ -29,8 +28,8 @@ export default function RightPanel({ showGrid, toggleGrid }: RightPanelProps) {
 
         {/* History Section */}
         <div>
-          <div className="p-4 border-t border-b"> {/* Section Header with top and bottom borders */}
-            <h2 className="font-headline text-md font-semibold text-foreground">History</h2>
+          <div className="p-4 border-b flex-shrink-0"> {/* Section Header */}
+            <h2 className="font-headline text-lg font-semibold text-foreground">History</h2>
           </div>
           <div className="p-4"> {/* Section Content for HistoryControls */}
             <HistoryControls />
@@ -39,8 +38,8 @@ export default function RightPanel({ showGrid, toggleGrid }: RightPanelProps) {
 
         {/* Canvas Helpers Section */}
         <div>
-          <div className="p-4 border-t"> {/* Section Header with top border */}
-            <h2 className="font-headline text-md font-semibold text-foreground">Canvas Helpers</h2>
+          <div className="p-4 border-b flex-shrink-0"> {/* Section Header */}
+            <h2 className="font-headline text-lg font-semibold text-foreground">Canvas Helpers</h2>
           </div>
           <div className="p-4"> {/* Section Content for GridControls */}
             <GridControls showGrid={showGrid} toggleGrid={toggleGrid} />
