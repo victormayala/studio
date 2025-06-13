@@ -13,32 +13,45 @@ interface RightPanelProps {
 export default function RightPanel({ showGrid, toggleGrid }: RightPanelProps) {
   return (
     <div className="w-72 md:w-80 lg:w-96 h-full flex-shrink-0 shadow-sm border-l bg-card flex flex-col">
-      {/* Scrollable Container for all sections with overall padding and vertical spacing for sections */}
-      <div className="flex-1 h-full overflow-y-scroll overflow-x-hidden p-4 space-y-6">
+      {/* Scrollable Container for all sections. No overall padding here. */}
+      <div className="flex-1 h-full overflow-y-scroll overflow-x-hidden">
         
-        {/* AI Assistant Section */}
-        <div> {/* Wrapper for AI Assistant section */}
-          <div className="border-b pb-3 mb-3"> {/* Section Header: border, space below text, space after header block */}
+        {/* AI Assistant Section - Full-width separator */}
+        <div className="mb-6"> {/* Vertical spacing for the section */}
+          {/* Header text with padding */}
+          <div className="p-4">
             <h2 className="font-headline text-lg font-semibold text-foreground">AI Design Assistant</h2>
           </div>
-          {/* Content for AI Assistant - component directly */}
-          <AiAssistant />
+          {/* Full-width border, placed after the padded header */}
+          <div className="border-b mx-0"></div> {/* Ensures full width as its parent (scrollable div) has no horizontal padding */}
+          {/* Content with padding */}
+          <div className="p-4">
+            <AiAssistant />
+          </div>
         </div>
 
-        {/* History Section */}
-        <div> {/* Wrapper for History section */}
-          <div className="border-b pb-3 mb-3"> {/* Section Header */}
+        {/* History Section - Inset separator (mimicking left panel title) */}
+        <div className="mb-6"> {/* Vertical spacing for the section */}
+          {/* Header with padding and bottom border (inset) */}
+          <div className="p-4 border-b">
             <h2 className="font-headline text-lg font-semibold text-foreground">History</h2>
           </div>
-          <HistoryControls />
+          {/* Content with padding */}
+          <div className="p-4">
+            <HistoryControls />
+          </div>
         </div>
 
-        {/* Canvas Helpers Section */}
-        <div> {/* Wrapper for Canvas Helpers section */}
-          <div className="border-b pb-3 mb-3"> {/* Section Header */}
+        {/* Canvas Helpers Section - Inset separator (mimicking left panel title) */}
+        <div> {/* No bottom margin for the last section */}
+          {/* Header with padding and bottom border (inset) */}
+          <div className="p-4 border-b">
             <h2 className="font-headline text-lg font-semibold text-foreground">Canvas Helpers</h2>
           </div>
-          <GridControls showGrid={showGrid} toggleGrid={toggleGrid} />
+          {/* Content with padding */}
+          <div className="p-4">
+            <GridControls showGrid={showGrid} toggleGrid={toggleGrid} />
+          </div>
         </div>
         
       </div>
