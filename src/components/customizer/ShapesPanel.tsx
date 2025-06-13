@@ -77,15 +77,6 @@ export default function ShapesPanel({ activeViewId }: ShapesPanelProps) {
     });
   };
   
-  const handleStyleChange = <K extends keyof CanvasShape>(property: K, value: CanvasShape[K]) => {
-    if (selectedCanvasShapeId && selectedShape) { 
-      updateCanvasShape(selectedCanvasShapeId, { [property]: value });
-    }
-    if (property === 'strokeWidth') setCurrentStrokeWidth(value as number);
-    if (property === 'color') setFillColorHex(value as string);
-    if (property === 'strokeColor') setStrokeColorHex(value as string);
-  };
-
   const handleFillColorBlur = (e: React.FocusEvent<HTMLInputElement>) => {
     const finalColor = sanitizeHex(e.target.value);
     setFillColorHex(finalColor); 
@@ -103,9 +94,10 @@ export default function ShapesPanel({ activeViewId }: ShapesPanelProps) {
   };
 
   const handleStrokeWidthChange = (value: number) => {
-    setCurrentStrokeWidth(value); 
+    const newWidth = Math.max(0, Math.min(value, 20));
+    setCurrentStrokeWidth(newWidth); 
     if (selectedCanvasShapeId && selectedShape) {
-      updateCanvasShape(selectedCanvasShapeId, { strokeWidth: value });
+      updateCanvasShape(selectedCanvasShapeId, { strokeWidth: newWidth });
     }
   };
 
@@ -142,7 +134,7 @@ export default function ShapesPanel({ activeViewId }: ShapesPanelProps) {
         <Accordion type="multiple" defaultValue={['shape-colors']} className="w-full">
           <AccordionItem value="shape-colors">
             <AccordionTrigger className="font-medium text-sm py-3 px-1">
-              <Palette className="mr-2 h-4 w-4" /> Color Settings
+              <Palette className="mr-2 h-4 w-4 text-primary" /> Color Settings
             </AccordionTrigger>
             <AccordionContent className="space-y-4 pt-3 pb-1 px-1">
               <div className="space-y-1.5">
@@ -202,9 +194,20 @@ export default function ShapesPanel({ activeViewId }: ShapesPanelProps) {
               </div>
 
               <div className="space-y-1.5">
-                <Label htmlFor="shapeStrokeWidthSlider" className="text-xs mb-5 block">
-                  Outline Width: {currentStrokeWidth.toFixed(1)}px
-                </Label>
+                <div className="flex justify-between items-center">
+                  <Label htmlFor="shapeStrokeWidthInput" className="text-xs">Outline Width (px)</Label>
+                  <Input
+                    id="shapeStrokeWidthInput"
+                    type="number"
+                    min={0} max={20} step={0.5}
+                    value={currentStrokeWidth}
+                    onChange={(e) => {
+                      const val = parseFloat(e.target.value);
+                      if (!isNaN(val)) handleStrokeWidthChange(val);
+                    }}
+                    className="h-8 w-20 text-xs"
+                  />
+                </div>
                 <Slider
                   id="shapeStrokeWidthSlider"
                   min={0}
@@ -230,3 +233,5 @@ export default function ShapesPanel({ activeViewId }: ShapesPanelProps) {
     </div>
   );
 }
+
+    

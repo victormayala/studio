@@ -173,12 +173,24 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
           </Select>
         </div>
 
-        <div>
-          <Label htmlFor="fontSizeSlider" className="text-xs mb-5 block">Size: {currentStyle.fontSize?.toFixed(0) || 24}px</Label>
+        <div className="space-y-1.5">
+          <div className="flex justify-between items-center">
+            <Label htmlFor="fontSizeInput" className="text-xs">Font Size (px)</Label>
+            <Input
+              id="fontSizeInput"
+              type="number"
+              min={8} max={128} step={1}
+              value={currentStyle.fontSize || 24}
+              onChange={(e) => {
+                const val = parseFloat(e.target.value);
+                if (!isNaN(val)) handleStyleChange('fontSize', Math.max(8, Math.min(val, 128)));
+              }}
+              className="h-8 w-20 text-xs"
+            />
+          </div>
           <Slider
             id="fontSizeSlider"
             min={8} max={128} step={1}
-            defaultValue={[24]}
             value={[currentStyle.fontSize || 24]}
             onValueChange={([value]) => handleStyleChange('fontSize', value)}
             onPointerDownCapture={startInteractiveOperation}
@@ -234,24 +246,48 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
 
       <section className="space-y-4">
         <h3 className="text-sm font-medium text-muted-foreground flex items-center"><TextCursorInput className="mr-2 h-4 w-4 text-primary" />Spacing</h3>
-        <div>
-          <Label htmlFor="lineHeightSlider" className="text-xs mb-5 block">Line Height: {(currentStyle.lineHeight || 1.2).toFixed(1)}</Label>
+        <div className="space-y-1.5">
+          <div className="flex justify-between items-center">
+            <Label htmlFor="lineHeightInput" className="text-xs">Line Height</Label>
+            <Input
+              id="lineHeightInput"
+              type="number"
+              min={0.5} max={3} step={0.1}
+              value={currentStyle.lineHeight || 1.2}
+              onChange={(e) => {
+                const val = parseFloat(e.target.value);
+                if (!isNaN(val)) handleStyleChange('lineHeight', Math.max(0.5, Math.min(val, 3)));
+              }}
+              className="h-8 w-20 text-xs"
+            />
+          </div>
           <Slider
             id="lineHeightSlider"
             min={0.5} max={3} step={0.1}
-            defaultValue={[1.2]}
             value={[currentStyle.lineHeight || 1.2]}
             onValueChange={([value]) => handleStyleChange('lineHeight', value)}
             onPointerDownCapture={startInteractiveOperation}
             onPointerUpCapture={endInteractiveOperation}
           />
         </div>
-        <div>
-          <Label htmlFor="letterSpacingSlider" className="text-xs mb-5 block">Letter Spacing: {currentStyle.letterSpacing?.toFixed(1) || 0}px</Label>
+        <div className="space-y-1.5">
+          <div className="flex justify-between items-center">
+            <Label htmlFor="letterSpacingInput" className="text-xs">Letter Spacing (px)</Label>
+            <Input
+              id="letterSpacingInput"
+              type="number"
+              min={-5} max={20} step={0.5}
+              value={currentStyle.letterSpacing || 0}
+              onChange={(e) => {
+                const val = parseFloat(e.target.value);
+                if (!isNaN(val)) handleStyleChange('letterSpacing', Math.max(-5, Math.min(val, 20)));
+              }}
+              className="h-8 w-20 text-xs"
+            />
+          </div>
           <Slider
             id="letterSpacingSlider"
             min={-5} max={20} step={0.5}
-            defaultValue={[0]}
             value={[currentStyle.letterSpacing || 0]}
             onValueChange={([value]) => handleStyleChange('letterSpacing', value)}
             onPointerDownCapture={startInteractiveOperation}
@@ -353,12 +389,24 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
                     }}
                     maxLength={7}/>
               </div>
-              <div>
-                <Label htmlFor="outlineWidthSlider" className="text-xs mb-5 block">Width: {currentStyle.outlineWidth?.toFixed(1) || 0}px</Label>
+              <div className="space-y-1.5">
+                <div className="flex justify-between items-center">
+                  <Label htmlFor="outlineWidthInput" className="text-xs">Width (px)</Label>
+                  <Input
+                    id="outlineWidthInput"
+                    type="number"
+                    min={0} max={10} step={0.5}
+                    value={currentStyle.outlineWidth || 0}
+                    onChange={(e) => {
+                      const val = parseFloat(e.target.value);
+                      if (!isNaN(val)) handleStyleChange('outlineWidth', Math.max(0, Math.min(val, 10)));
+                    }}
+                    className="h-8 w-20 text-xs"
+                  />
+                </div>
                 <Slider 
                     id="outlineWidthSlider" 
                     min={0} max={10} step={0.5} 
-                    defaultValue={[1]} 
                     value={[currentStyle.outlineWidth || 0]} 
                     onValueChange={([value]) => handleStyleChange('outlineWidth', value)}
                     onPointerDownCapture={startInteractiveOperation}
@@ -418,25 +466,49 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
                     }}
                     maxLength={7}/>
               </div>
-              <div className="grid grid-cols-2 gap-x-4 gap-y-2">
-                <div>
-                    <Label htmlFor="shadowOffsetXSlider" className="text-xs mb-5 block">Offset X: {currentStyle.shadowOffsetX?.toFixed(0) || 0}px</Label>
+              <div className="grid grid-cols-2 gap-x-4 gap-y-3">
+                <div className="space-y-1.5">
+                    <div className="flex justify-between items-center">
+                        <Label htmlFor="shadowOffsetXInput" className="text-xs">Offset X (px)</Label>
+                        <Input
+                            id="shadowOffsetXInput"
+                            type="number"
+                            min={-20} max={20} step={1}
+                            value={currentStyle.shadowOffsetX || 0}
+                            onChange={(e) => {
+                                const val = parseFloat(e.target.value);
+                                if (!isNaN(val)) handleStyleChange('shadowOffsetX', Math.max(-20, Math.min(val, 20)));
+                            }}
+                            className="h-8 w-20 text-xs"
+                        />
+                    </div>
                     <Slider 
                         id="shadowOffsetXSlider" 
                         min={-20} max={20} step={1} 
-                        defaultValue={[0]} 
                         value={[currentStyle.shadowOffsetX || 0]} 
                         onValueChange={([value]) => handleStyleChange('shadowOffsetX', value)}
                         onPointerDownCapture={startInteractiveOperation}
                         onPointerUpCapture={endInteractiveOperation}
                     />
                 </div>
-                <div>
-                    <Label htmlFor="shadowOffsetYSlider" className="text-xs mb-5 block">Offset Y: {currentStyle.shadowOffsetY?.toFixed(0) || 0}px</Label>
+                <div className="space-y-1.5">
+                    <div className="flex justify-between items-center">
+                        <Label htmlFor="shadowOffsetYInput" className="text-xs">Offset Y (px)</Label>
+                        <Input
+                            id="shadowOffsetYInput"
+                            type="number"
+                            min={-20} max={20} step={1}
+                            value={currentStyle.shadowOffsetY || 0}
+                            onChange={(e) => {
+                                const val = parseFloat(e.target.value);
+                                if (!isNaN(val)) handleStyleChange('shadowOffsetY', Math.max(-20, Math.min(val, 20)));
+                            }}
+                            className="h-8 w-20 text-xs"
+                        />
+                    </div>
                     <Slider 
                         id="shadowOffsetYSlider" 
                         min={-20} max={20} step={1} 
-                        defaultValue={[0]} 
                         value={[currentStyle.shadowOffsetY || 0]} 
                         onValueChange={([value]) => handleStyleChange('shadowOffsetY', value)}
                         onPointerDownCapture={startInteractiveOperation}
@@ -444,12 +516,24 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
                     />
                 </div>
               </div>
-              <div>
-                <Label htmlFor="shadowBlurSlider" className="text-xs mb-5 block">Blur: {currentStyle.shadowBlur?.toFixed(0) || 0}px</Label>
+              <div className="space-y-1.5">
+                <div className="flex justify-between items-center">
+                    <Label htmlFor="shadowBlurInput" className="text-xs">Blur (px)</Label>
+                    <Input
+                        id="shadowBlurInput"
+                        type="number"
+                        min={0} max={30} step={1}
+                        value={currentStyle.shadowBlur || 0}
+                        onChange={(e) => {
+                            const val = parseFloat(e.target.value);
+                            if (!isNaN(val)) handleStyleChange('shadowBlur', Math.max(0, Math.min(val, 30)));
+                        }}
+                        className="h-8 w-20 text-xs"
+                    />
+                </div>
                 <Slider 
                     id="shadowBlurSlider" 
                     min={0} max={30} step={1} 
-                    defaultValue={[0]} 
                     value={[currentStyle.shadowBlur || 0]} 
                     onValueChange={([value]) => handleStyleChange('shadowBlur', value)}
                     onPointerDownCapture={startInteractiveOperation}
@@ -509,3 +593,5 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
     </div>
   );
 }
+
+    
