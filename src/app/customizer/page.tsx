@@ -326,7 +326,7 @@ function CustomizerLayoutAndLogic() {
           </div>
           
           
-          <main className="flex-1 p-4 md:p-6 flex flex-col items-center overflow-hidden"> 
+          <main className="flex-1 p-4 md:p-6 flex flex-col items-center overflow-hidden min-h-0"> 
             {error && productDetails?.id === defaultFallbackProduct.id && ( 
                <div className="w-full max-w-4xl p-3 mb-4 border border-destructive bg-destructive/10 rounded-md text-destructive text-sm flex-shrink-0">
                  <AlertTriangle className="inline h-4 w-4 mr-1" /> {error} Using default product view.
@@ -405,3 +405,4 @@ export default function CustomizerPage() {
 
 
     
+
