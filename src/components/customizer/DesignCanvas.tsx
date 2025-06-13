@@ -22,8 +22,8 @@ const defaultProductBase = {
   name: 'Plain White T-shirt (Default)',
   imageUrl: 'https://placehold.co/700x700.png',
   imageAlt: 'Plain white T-shirt ready for customization',
-  width: 700, // Reverted
-  height: 700, // Reverted
+  width: 700,
+  height: 700,
   aiHint: 't-shirt mockup',
 };
 
@@ -55,8 +55,7 @@ export default function DesignCanvas({
     imageUrl: productImageUrl || defaultProductBase.imageUrl,
     imageAlt: productImageAlt || defaultProductBase.imageAlt,
     aiHint: productImageAiHint || defaultProductBase.aiHint,
-    name: productImageAlt || defaultProductBase.name, // Use alt as name if available
-    // width and height will use defaultProductBase values implicitly now
+    name: productImageAlt || defaultProductBase.name,
   };
   
   const {
@@ -119,21 +118,35 @@ export default function DesignCanvas({
   useEffect(() => {
     if (canvasImages.length > 0) {
         const latestImage = canvasImages[canvasImages.length -1];
-        if (latestImage && latestImage.x === 50 && latestImage.y === 50 && latestImage.viewId === activeViewId) setLastAddedItemId(latestImage.id);
+        if (latestImage && latestImage.x === 50 && latestImage.y === 50 && latestImage.viewId === activeViewId) {
+          if (latestImage.id !== lastAddedItemId) {
+            setLastAddedItemId(latestImage.id);
+          }
+        }
     }
-  }, [canvasImages, activeViewId]);
-    useEffect(() => {
+  }, [canvasImages, activeViewId, lastAddedItemId]);
+
+  useEffect(() => {
     if (canvasTexts.length > 0) {
         const latestText = canvasTexts[canvasTexts.length -1];
-        if (latestText && latestText.x === 50 && latestText.y === 50 && latestText.viewId === activeViewId) setLastAddedItemId(latestText.id);
+        if (latestText && latestText.x === 50 && latestText.y === 50 && latestText.viewId === activeViewId) {
+          if (latestText.id !== lastAddedItemId) {
+            setLastAddedItemId(latestText.id);
+          }
+        }
     }
-  }, [canvasTexts, activeViewId]);
-    useEffect(() => {
+  }, [canvasTexts, activeViewId, lastAddedItemId]);
+
+  useEffect(() => {
     if (canvasShapes.length > 0) {
         const latestShape = canvasShapes[canvasShapes.length -1];
-        if (latestShape && latestShape.x === 50 && latestShape.y === 50 && latestShape.viewId === activeViewId) setLastAddedItemId(latestShape.id);
+        if (latestShape && latestShape.x === 50 && latestShape.y === 50 && latestShape.viewId === activeViewId) {
+          if (latestShape.id !== lastAddedItemId) {
+            setLastAddedItemId(latestShape.id);
+          }
+        }
     }
-  }, [canvasShapes, activeViewId]);
+  }, [canvasShapes, activeViewId, lastAddedItemId]);
 
 
   const getMouseOrTouchCoords = (e: MouseEvent | TouchEvent | ReactMouseEvent | ReactTouchEvent<SVGElement> | ReactMouseEvent<HTMLDivElement> | ReactTouchEvent<HTMLDivElement>) => {
@@ -145,7 +158,6 @@ export default function DesignCanvas({
 
   const handleCanvasClick = (e: ReactMouseEvent<HTMLDivElement>) => {
     const target = e.target as HTMLElement;
-     // Check if the click is on the canvasRef div or its direct parent, or the designated outer container
     if (target === canvasRef.current || 
         target === canvasRef.current?.parentElement ||
         target.classList.contains('product-image-outer-container') ||
@@ -394,21 +406,21 @@ export default function DesignCanvas({
 
   return (
     <div
-      className="w-full max-w-3xl mx-auto bg-card border border-dashed border-border rounded-lg shadow-inner p-4 relative overflow-hidden select-none product-image-outer-container min-h-[500px] lg:min-h-[700px]" // Reverted min-h
+      className="w-full max-w-3xl mx-auto bg-card border border-dashed border-border rounded-lg shadow-inner p-4 relative overflow-hidden select-none product-image-outer-container min-h-[500px] lg:min-h-[700px]"
       onClick={handleCanvasClick} 
       onTouchStart={handleCanvasClick as any} 
     >
-      <div className="relative w-full h-full flex items-center justify-center product-canvas-wrapper"> {/* Reverted wrapper for canvasRef */}
+      <div className="relative w-full h-full flex items-center justify-center product-canvas-wrapper">
         <div
           ref={canvasRef} 
           className="relative product-image-canvas-area bg-muted/10" 
-          style={{ width: productToDisplay.width, height: productToDisplay.height }} // Reverted fixed style width/height
+          style={{ width: productToDisplay.width, height: productToDisplay.height }}
         >
           <Image
             src={productToDisplay.imageUrl}
             alt={productToDisplay.imageAlt}
-            width={productToDisplay.width} // Reverted to fixed width
-            height={productToDisplay.height} // Reverted to fixed height
+            width={productToDisplay.width}
+            height={productToDisplay.height}
             className="rounded-md object-contain pointer-events-none select-none" 
             data-ai-hint={productToDisplay.aiHint}
             priority
@@ -491,7 +503,7 @@ export default function DesignCanvas({
           ))}
         </div>
       </div>
-      <div className="text-center pt-2"> {/* Reverted product name and instructions location */}
+      <div className="text-center pt-2">
         <p className="mt-2 text-muted-foreground font-medium">{productToDisplay.name}</p>
         <p className="text-sm text-muted-foreground">
           {productDefinedBoundaryBoxes.length > 0 ? "Items will be kept within the dashed areas. " : ""}
@@ -506,3 +518,4 @@ export default function DesignCanvas({
     
 
   
+
