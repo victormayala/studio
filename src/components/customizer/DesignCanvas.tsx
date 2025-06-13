@@ -116,34 +116,28 @@ export default function DesignCanvas({
   }, [canvasImages, canvasTexts, canvasShapes, productDefinedBoundaryBoxes, updateCanvasImage, updateCanvasText, updateCanvasShape, lastAddedItemId, activeViewId, startInteractiveOperation, endInteractiveOperation]);
 
   useEffect(() => {
-    if (canvasImages.length > 0) {
+    if (canvasImages.length > 0 && activeViewId && lastAddedItemId === null) {
         const latestImage = canvasImages[canvasImages.length -1];
         if (latestImage && latestImage.x === 50 && latestImage.y === 50 && latestImage.viewId === activeViewId) {
-          if (latestImage.id !== lastAddedItemId) {
-            setLastAddedItemId(latestImage.id);
-          }
+          setLastAddedItemId(latestImage.id);
         }
     }
   }, [canvasImages, activeViewId, lastAddedItemId]);
 
   useEffect(() => {
-    if (canvasTexts.length > 0) {
+    if (canvasTexts.length > 0 && activeViewId && lastAddedItemId === null) {
         const latestText = canvasTexts[canvasTexts.length -1];
         if (latestText && latestText.x === 50 && latestText.y === 50 && latestText.viewId === activeViewId) {
-          if (latestText.id !== lastAddedItemId) {
-            setLastAddedItemId(latestText.id);
-          }
+          setLastAddedItemId(latestText.id);
         }
     }
   }, [canvasTexts, activeViewId, lastAddedItemId]);
 
   useEffect(() => {
-    if (canvasShapes.length > 0) {
+    if (canvasShapes.length > 0 && activeViewId && lastAddedItemId === null) {
         const latestShape = canvasShapes[canvasShapes.length -1];
         if (latestShape && latestShape.x === 50 && latestShape.y === 50 && latestShape.viewId === activeViewId) {
-          if (latestShape.id !== lastAddedItemId) {
-            setLastAddedItemId(latestShape.id);
-          }
+           setLastAddedItemId(latestShape.id);
         }
     }
   }, [canvasShapes, activeViewId, lastAddedItemId]);
@@ -519,3 +513,6 @@ export default function DesignCanvas({
 
   
 
+
+
+    
