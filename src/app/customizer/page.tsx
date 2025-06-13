@@ -323,7 +323,7 @@ function CustomizerLayoutAndLogic() {
           <div
             id="tool-panel-content"
             className={cn(
-              "border-r bg-card shadow-sm flex flex-col flex-shrink-0 transition-all duration-300 ease-in-out",
+              "border-r bg-card shadow-sm flex flex-col flex-shrink-0 transition-all duration-300 ease-in-out h-full",
               isToolPanelOpen ? "w-72 md:w-80 opacity-100" : "w-0 opacity-0 pointer-events-none"
             )}
           >
@@ -357,14 +357,14 @@ function CustomizerLayoutAndLogic() {
             {isToolPanelOpen ? <PanelLeftClose className="h-5 w-5"/> : <PanelRightOpen className="h-5 w-5"/>}
           </Button>
           
-          <main className="flex-1 p-4 md:p-6 pb-20 flex flex-col items-center min-h-0"> 
+          <main className="flex-1 p-4 md:p-6 flex flex-col items-center min-h-0"> 
             {error && productDetails?.id === defaultFallbackProduct.id && ( 
                <div className="w-full max-w-4xl p-3 mb-4 border border-destructive bg-destructive/10 rounded-md text-destructive text-sm flex-shrink-0">
                  <AlertTriangle className="inline h-4 w-4 mr-1" /> {error} Using default product view.
                </div>
             )}
             
-            <div className="w-full flex-1 flex flex-col items-center justify-center min-h-0"> 
+            <div className="w-full flex-1 flex flex-col items-center justify-center min-h-0 pb-20"> 
               <DesignCanvas 
                 productImageUrl={currentProductImage}
                 productImageAlt={`${currentProductName} - ${currentProductAlt}`}
@@ -400,7 +400,7 @@ function CustomizerLayoutAndLogic() {
             activeViewId={activeViewId}
             setActiveViewId={setActiveViewId}
             className={cn(
-              "transition-all duration-300 ease-in-out flex-shrink-0",
+              "transition-all duration-300 ease-in-out flex-shrink-0 h-full",
               isRightSidebarOpen ? "w-72 md:w-80 lg:w-96 opacity-100" : "w-0 opacity-0 pointer-events-none"
             )}
           /> 
