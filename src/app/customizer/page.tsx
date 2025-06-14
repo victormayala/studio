@@ -45,7 +45,7 @@ export interface ProductView {
   imageUrl: string;
   aiHint?: string;
   boundaryBoxes: BoundaryBox[];
-  price?: number; // Added price per view
+  price?: number; 
 }
 
 interface ColorGroupOptionsForCustomizer { 
@@ -317,7 +317,7 @@ function CustomizerLayoutAndLogic() {
     if (!productDetails || !viewBaseImages) {
       return;
     }
-    if (productDetails.type === 'variable' && !productVariations) {
+    if (productDetails.type === 'variable' && !productVariations && Object.keys(selectedVariationOptions).length > 0) { // Added check for selectedVariationOptions
         return;
     }
 
@@ -358,7 +358,7 @@ function CustomizerLayoutAndLogic() {
           finalImageUrl = currentVariantViewImages[view.id].imageUrl;
           finalAiHint = currentVariantViewImages[view.id].aiHint || baseAiHint; 
         } 
-        else if (primaryVariationImageSrc && view.id === activeViewId) {
+        else if (primaryVariationImageSrc && view.id === activeViewId) { // Only apply primary variation image to the active view if no specific variant view image exists for it
           finalImageUrl = primaryVariationImageSrc;
           finalAiHint = primaryVariationImageAiHint || baseAiHint;
         }
@@ -366,22 +366,24 @@ function CustomizerLayoutAndLogic() {
           finalImageUrl = baseImageUrl;
           finalAiHint = baseAiHint;
         }
+        // Ensure price is always part of the view object being returned
         return { ...view, imageUrl: finalImageUrl!, aiHint: finalAiHint, price: view.price ?? 0 };
       });
       
+      // Always return a new object to ensure React detects the change
       return { ...prevProductDetails, views: updatedViews };
     });
 
   }, [
     selectedVariationOptions, 
     productVariations, 
-    productDetails?.id, 
+    productDetails?.id, // Changed from productDetails to productDetails.id to be more specific or consider productDetails if its reference changes meaningfully
     activeViewId, 
     viewBaseImages, 
     loadedOptionsByColor, 
     loadedGroupingAttributeName,
-    configurableAttributes, 
-    productDetails?.type 
+    configurableAttributes, // Added as it influences matchingVariation
+    productDetails?.type // Added as it influences matchingVariation logic
   ]);
 
   useEffect(() => {
@@ -406,7 +408,7 @@ function CustomizerLayoutAndLogic() {
     }
     setTotalCustomizationPrice(newTotal);
 
-  }, [canvasImages, canvasTexts, canvasShapes, productDetails?.views]);
+  }, [canvasImages, canvasTexts, canvasShapes, productDetails?.views, activeViewId]);
 
 
   const getToolPanelTitle = (toolId: string): string => {
@@ -654,3 +656,6 @@ export default function CustomizerPage() {
 }
     
 
+
+
+    
