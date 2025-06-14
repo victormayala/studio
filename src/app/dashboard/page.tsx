@@ -49,6 +49,8 @@ interface ProductToDelete {
   name: string;
 }
 
+const LOCALLY_HIDDEN_PRODUCTS_KEY_PREFIX = 'cstmzr_locally_hidden_products_';
+
 export default function DashboardPage() {
   const router = useRouter();
   const { user, isLoading: authIsLoading, signOut: authSignOut } = useAuth();
@@ -72,6 +74,31 @@ export default function DashboardPage() {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [productToDelete, setProductToDelete] = useState<ProductToDelete | null>(null);
 
+  const getLocallyHiddenProductIds = useCallback((): string[] => {
+    if (!user) return [];
+    try {
+      const storedIds = localStorage.getItem(`${LOCALLY_HIDDEN_PRODUCTS_KEY_PREFIX}${user.id}`);
+      return storedIds ? JSON.parse(storedIds) : [];
+    } catch (e) {
+      console.error("Error getting locally hidden product IDs:", e);
+      return [];
+    }
+  }, [user]);
+
+  const setLocallyHiddenProductIds = useCallback((ids: string[]): void => {
+    if (!user) return;
+    try {
+      localStorage.setItem(`${LOCALLY_HIDDEN_PRODUCTS_KEY_PREFIX}${user.id}`, JSON.stringify(ids));
+    } catch (e) {
+      console.error("Error setting locally hidden product IDs:", e);
+      toast({
+        title: "Storage Error",
+        description: "Could not save hidden product preference locally.",
+        variant: "destructive",
+      });
+    }
+  }, [user, toast]);
+
 
   const loadProductsWithCredentials = useCallback(async (creds?: { storeUrl: string; consumerKey: string; consumerSecret: string }, isManualRefresh?: boolean) => {
     setIsLoadingProducts(true);
@@ -91,7 +118,10 @@ export default function DashboardPage() {
         });
         setProducts([]);
       } else if (fetchedProducts) {
-        const displayProducts = fetchedProducts.map(p => ({
+        const hiddenProductIds = getLocallyHiddenProductIds();
+        const filteredFetchedProducts = fetchedProducts.filter(p => !hiddenProductIds.includes(p.id.toString()));
+        
+        const displayProducts = filteredFetchedProducts.map(p => ({
           id: p.id.toString(),
           name: p.name,
           status: p.status,
@@ -127,7 +157,7 @@ export default function DashboardPage() {
     } finally {
       setIsLoadingProducts(false);
     }
-  }, [toast]);
+  }, [toast, getLocallyHiddenProductIds]);
 
   useEffect(() => {
     if (user) {
@@ -235,14 +265,18 @@ export default function DashboardPage() {
   };
 
   const handleConfirmDelete = () => {
-    if (!productToDelete) return;
-    // Actual delete logic would go here. For now, just a toast.
-    console.log(`Deleting product: ${productToDelete.name} (ID: ${productToDelete.id})`);
+    if (!productToDelete || !user) return;
+    
+    const currentHiddenIds = getLocallyHiddenProductIds();
+    if (!currentHiddenIds.includes(productToDelete.id)) {
+      setLocallyHiddenProductIds([...currentHiddenIds, productToDelete.id]);
+    }
+
     toast({
-      title: "Product Deletion (Simulated)",
-      description: `${productToDelete.name} would be deleted. This feature is not fully implemented.`,
+      title: "Product Hidden",
+      description: `${productToDelete.name} has been hidden from your dashboard. It is not deleted from your store.`,
     });
-    setProducts(prev => prev.filter(p => p.id !== productToDelete.id)); // Optimistically remove from UI
+    setProducts(prev => prev.filter(p => p.id !== productToDelete.id)); 
     setIsDeleteDialogOpen(false);
     setProductToDelete(null);
   };
@@ -529,10 +563,10 @@ export default function DashboardPage() {
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Are you sure you want to delete this product?</AlertDialogTitle>
+            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
             <AlertDialogDescription>
-              This action cannot be undone. This will (not actually) permanently delete the product
-              "{productToDelete?.name}" and all its associated customization data.
+              This action will hide the product "{productToDelete?.name}" from your dashboard in this browser. 
+              It will not be deleted from your WooCommerce store.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -541,7 +575,7 @@ export default function DashboardPage() {
               onClick={handleConfirmDelete}
               className={cn(buttonVariants({variant: "destructive"}))}
             >
-              Delete Product
+              Hide Product
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
