@@ -62,6 +62,7 @@ interface LocalStorageCustomizerOptions {
 export interface ProductForCustomizer {
   id: string;
   name: string;
+  basePrice: number; // Added base product price
   views: ProductView[]; 
   type?: 'simple' | 'variable' | 'grouped' | 'external'; 
 }
@@ -74,6 +75,7 @@ export interface ConfigurableAttribute {
 const defaultFallbackProduct: ProductForCustomizer = {
   id: 'fallback_product',
   name: 'Product Customizer (Default)',
+  basePrice: 25.00, // Default base price
   views: [
     {
       id: 'fallback_view_1',
@@ -150,6 +152,7 @@ function CustomizerLayoutAndLogic() {
     setViewBaseImages({});
     setLoadedOptionsByColor(null);
     setLoadedGroupingAttributeName(null);
+    setTotalCustomizationPrice(0);
     
     if (!productId) {
       setError("No product ID provided. Displaying default customizer.");
@@ -157,7 +160,7 @@ function CustomizerLayoutAndLogic() {
       const baseImagesMap: Record<string, {url: string, aiHint?: string, price?: number}> = {};
       defaultViews.forEach(view => { baseImagesMap[view.id] = { url: view.imageUrl, aiHint: view.aiHint, price: view.price ?? 0 }; });
       setViewBaseImages(baseImagesMap);
-      setProductDetails(defaultFallbackProduct);
+      setProductDetails(defaultFallbackProduct); // Use default fallback which now includes basePrice
       setActiveViewId(defaultViews[0]?.id || null);
       setIsLoading(false);
       return;
@@ -192,7 +195,7 @@ function CustomizerLayoutAndLogic() {
       const baseImagesMapError: Record<string, {url: string, aiHint?: string, price?: number}> = {};
       defaultViewsError.forEach(view => { baseImagesMapError[view.id] = { url: view.imageUrl, aiHint: view.aiHint, price: view.price ?? 0 }; });
       setViewBaseImages(baseImagesMapError);
-      setProductDetails(defaultFallbackProduct);
+      setProductDetails(defaultFallbackProduct); // Use default fallback
       setActiveViewId(defaultViewsError[0]?.id || null);
       setConfigurableAttributes([]); 
       setSelectedVariationOptions({}); 
@@ -204,7 +207,6 @@ function CustomizerLayoutAndLogic() {
     let finalDefaultViews: ProductView[] = [];
     let tempLoadedOptionsByColor: Record<string, ColorGroupOptionsForCustomizer> | null = null;
     let tempLoadedGroupingAttributeName: string | null = null;
-
 
     const localStorageKey = user ? `cstmzr_product_options_${user.id}_${productId}` : `cstmzr_product_options_anonymous_${productId}`;
     try {
@@ -245,9 +247,12 @@ function CustomizerLayoutAndLogic() {
     finalDefaultViews.forEach(view => { baseImagesMapFinal[view.id] = { url: view.imageUrl, aiHint: view.aiHint, price: view.price ?? 0 }; });
     setViewBaseImages(baseImagesMapFinal);
     
+    const productBasePrice = parseFloat(wcProduct.price || wcProduct.regular_price || '0');
+
     setProductDetails({
       id: wcProduct.id.toString(),
       name: wcProduct.name || `Product ${productId}`,
+      basePrice: productBasePrice,
       views: finalDefaultViews, 
       type: wcProduct.type,
     });
@@ -376,7 +381,7 @@ function CustomizerLayoutAndLogic() {
   }, [
     selectedVariationOptions, 
     productVariations, 
-    productDetails?.id,
+    productDetails?.id, // Keep this to ensure runs if product changes
     activeViewId, 
     viewBaseImages, 
     loadedOptionsByColor, 
@@ -400,19 +405,20 @@ function CustomizerLayoutAndLogic() {
 
     const viewsToPrice = new Set<string>(usedViewIdsWithElements);
     if (activeViewId) {
-      viewsToPrice.add(activeViewId); // Add the currently active view to be priced
+      viewsToPrice.add(activeViewId); 
     }
 
-    let newTotal = 0;
+    let viewSurcharges = 0;
     if (productDetails?.views) {
         viewsToPrice.forEach(viewId => {
             const view = productDetails.views.find(v => v.id === viewId);
-            newTotal += view?.price ?? 0;
+            viewSurcharges += view?.price ?? 0;
         });
     }
-    setTotalCustomizationPrice(newTotal);
+    const basePrice = productDetails?.basePrice ?? 0;
+    setTotalCustomizationPrice(basePrice + viewSurcharges);
 
-  }, [canvasImages, canvasTexts, canvasShapes, productDetails?.views, activeViewId]);
+  }, [canvasImages, canvasTexts, canvasShapes, productDetails?.views, productDetails?.basePrice, activeViewId]);
 
 
   const getToolPanelTitle = (toolId: string): string => {
@@ -469,6 +475,18 @@ function CustomizerLayoutAndLogic() {
     }
 
     const currentProductIdFromParams = searchParams.get('productId'); 
+    const baseProductPrice = productDetails?.basePrice ?? 0;
+    let viewSurcharges = 0;
+    const viewsUsed = new Set<string>();
+    canvasImages.forEach(item => { if(item.viewId) viewsUsed.add(item.viewId); });
+    canvasTexts.forEach(item => { if(item.viewId) viewsUsed.add(item.viewId); });
+    canvasShapes.forEach(item => { if(item.viewId) viewsUsed.add(item.viewId); });
+    if (activeViewId) viewsUsed.add(activeViewId);
+
+    viewsUsed.forEach(vid => {
+        viewSurcharges += productDetails?.views.find(v => v.id === vid)?.price ?? 0;
+    });
+
 
     const designData = {
       images: canvasImages.filter(item => item.viewId === activeViewId), 
@@ -478,7 +496,9 @@ function CustomizerLayoutAndLogic() {
       userId: user?.id, 
       activeViewId: activeViewId, 
       selectedVariationOptions: selectedVariationOptions, 
-      customizationPrice: totalCustomizationPrice, 
+      baseProductPrice: baseProductPrice,
+      totalViewSurcharge: viewSurcharges,
+      totalCustomizationPrice: totalCustomizationPrice, 
     };
 
     let targetOrigin = '*'; 
@@ -663,3 +683,4 @@ export default function CustomizerPage() {
 
 
     
+
