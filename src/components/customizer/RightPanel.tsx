@@ -53,7 +53,7 @@ export default function RightPanel({
 
       {/* Product Views Section */}
       <div>
-        <div className="p-4 border-t border-b"> 
+        <div className="p-4 border-t"> 
           <h2 className="font-headline text-lg font-semibold text-foreground">
             Product Views
           </h2>
@@ -73,7 +73,7 @@ export default function RightPanel({
       
       {/* Canvas Helpers Section */}
       <div>
-        <div className="p-4 border-t border-b"> 
+        <div className="p-4 border-t"> 
           <h2 className="font-headline text-lg font-semibold text-foreground">Canvas Helpers</h2>
         </div>
         <div className="px-4 py-4 space-y-4"> 
