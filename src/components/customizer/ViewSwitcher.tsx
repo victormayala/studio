@@ -22,34 +22,47 @@ export default function ViewSwitcher({ productViews, activeViewId, setActiveView
         {productViews.length > 1 ? "Select View" : "Current View"}
       </h4>
       <div className="flex flex-wrap justify-start gap-2">
-        {productViews.map(view => (
-          <button
-            key={view.id}
-            onClick={() => setActiveViewId(view.id)}
-            className={cn(
-              "rounded-md border-2 p-1 transition-all hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 flex flex-col items-start text-left",
-              activeViewId === view.id
-                ? "border-primary opacity-100 ring-1 ring-primary ring-offset-background shadow-sm"
-                : "border-transparent opacity-70 hover:border-muted-foreground/30 bg-muted/30 hover:bg-muted/50"
-            )}
-            title={`Select ${view.name} view`}
-            aria-pressed={activeViewId === view.id}
-          >
-            <div className="relative h-12 w-12 bg-background rounded-sm overflow-hidden shadow-sm">
-              <NextImage
-                src={view.imageUrl || 'https://placehold.co/60x60.png'}
-                alt={`Thumbnail for ${view.name}`}
-                fill
-                sizes="(max-width: 768px) 4rem, 3rem"
-                className="object-contain"
-                data-ai-hint={view.aiHint || "product view thumbnail"}
-              />
-            </div>
-            <p className="text-xs mt-1 w-12 truncate">{view.name}</p>
-          </button>
-        ))}
+        {productViews.map(view => {
+          const viewPrice = view.price ?? 0;
+          let priceDisplay = "FREE";
+          if (viewPrice > 0) {
+            priceDisplay = `+ $${viewPrice.toFixed(2)}`;
+          }
+
+          return (
+            <button
+              key={view.id}
+              onClick={() => setActiveViewId(view.id)}
+              className={cn(
+                "rounded-md border-2 p-1.5 transition-all hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 flex flex-col items-start text-left w-[70px]", // Adjusted width for better fit
+                activeViewId === view.id
+                  ? "border-primary opacity-100 ring-1 ring-primary ring-offset-background shadow-sm"
+                  : "border-transparent opacity-70 hover:border-muted-foreground/30 bg-muted/30 hover:bg-muted/50"
+              )}
+              title={`Select ${view.name} view ${viewPrice > 0 ? `(Adds $${viewPrice.toFixed(2)})` : '(Free to use)'}`}
+              aria-pressed={activeViewId === view.id}
+            >
+              <div className="relative h-12 w-full bg-background rounded-sm overflow-hidden shadow-sm">
+                <NextImage
+                  src={view.imageUrl || 'https://placehold.co/60x60.png'}
+                  alt={`Thumbnail for ${view.name}`}
+                  fill
+                  sizes="(max-width: 768px) 4rem, 3rem"
+                  className="object-contain"
+                  data-ai-hint={view.aiHint || "product view thumbnail"}
+                />
+              </div>
+              <p className="text-xs mt-1 w-full truncate font-medium">{view.name}</p>
+              <p className={cn(
+                "text-[10px] w-full truncate",
+                viewPrice > 0 ? "text-primary font-semibold" : "text-muted-foreground"
+              )}>
+                {priceDisplay}
+              </p>
+            </button>
+          );
+        })}
       </div>
     </div>
   );
 }
-
