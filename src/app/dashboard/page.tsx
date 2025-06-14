@@ -204,6 +204,13 @@ export default function DashboardPage() {
     }
   }, [user, isLoadingCredentials, loadProductsWithCredentials]);
 
+  useEffect(() => {
+    // Fetch products if on products tab, user is loaded, creds are ready, and products aren't already loaded/loading/errored.
+    if (activeTab === 'products' && user && !isLoadingCredentials && products.length === 0 && !isLoadingProducts && !error) {
+      handleRefreshDashboardData();
+    }
+  }, [activeTab, user, isLoadingCredentials, products.length, isLoadingProducts, error, handleRefreshDashboardData]);
+
 
   if (authIsLoading || !user) {
     return (
@@ -291,7 +298,7 @@ export default function DashboardPage() {
                         </CardDescription>
                       </CardHeader>
                       <CardContent>
-                        {isLoadingProducts || isLoadingCredentials ? (
+                        {isLoadingProducts || (isLoadingCredentials && products.length === 0) ? ( // Show loader if product loading or if initial cred load hasn't finished & no products yet
                           <div className="flex justify-center items-center py-10">
                             <Loader2 className="h-8 w-8 animate-spin text-primary" />
                             <p className="ml-3 text-muted-foreground">Loading products...</p>
