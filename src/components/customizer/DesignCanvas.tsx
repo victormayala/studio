@@ -81,6 +81,8 @@ export default function DesignCanvas({
 
   const canvasRef = useRef<HTMLDivElement>(null); 
   const [lastAddedItemId, setLastAddedItemId] = useState<string | null>(null);
+  const dragUpdateRef = useRef(0);
+
 
   useEffect(() => {
     if (!canvasRef.current || !productDefinedBoundaryBoxes || productDefinedBoundaryBoxes.length === 0 || !activeViewId || !lastAddedItemId) return;
@@ -89,7 +91,6 @@ export default function DesignCanvas({
       if (item.x === 50 && item.y === 50 && item.id === lastAddedItemId && item.viewId === activeViewId && !item.movedFromDefault) {
         const firstBox = productDefinedBoundaryBoxes[0];
         
-        // Calculate position relative to the centered square container
         const canvasRect = canvasRef.current?.getBoundingClientRect();
         if (!canvasRect || canvasRect.width === 0 || canvasRect.height === 0) return;
 
@@ -99,11 +100,9 @@ export default function DesignCanvas({
         const squareOffsetX = (parentW - squareSide) / 2;
         const squareOffsetY = (parentH - squareSide) / 2;
 
-        // Position of the first boundary box's center, in pixels, relative to the square container
         const boxCenterXpx_sq = (firstBox.x + firstBox.width / 2) / 100 * squareSide;
         const boxCenterYpx_sq = (firstBox.y + firstBox.height / 2) / 100 * squareSide;
         
-        // Convert this to percentage relative to the main canvasRef container
         const newXpercent_canvas = ((squareOffsetX + boxCenterXpx_sq) / parentW) * 100;
         const newYpercent_canvas = ((squareOffsetY + boxCenterYpx_sq) / parentH) * 100;
         
@@ -178,7 +177,6 @@ export default function DesignCanvas({
 
   const handleCanvasClick = (e: ReactMouseEvent<HTMLDivElement>) => {
     const target = e.target as HTMLElement;
-    // Check if click is on canvasRef or its direct children like the centered-square-container
     if (target === canvasRef.current || target.classList.contains('centered-square-container') ||
         target === canvasRef.current?.parentElement ||
         target.classList.contains('product-image-outer-container') ||
@@ -271,161 +269,158 @@ export default function DesignCanvas({
 
   const handleDragging = useCallback((e: MouseEvent | TouchEvent) => {
     if (!activeDrag || !canvasRef.current) return;
-    
-    let activeItemData: CanvasImage | CanvasText | CanvasShape | undefined;
-    if (activeDrag.itemType === 'image') activeItemData = canvasImages.find(img => img.id === activeDrag.itemId);
-    else if (activeDrag.itemType === 'text') activeItemData = canvasTexts.find(txt => txt.id === activeDrag.itemId);
-    else if (activeDrag.itemType === 'shape') activeItemData = canvasShapes.find(shp => shp.id === activeDrag.itemId);
 
-    if (activeItemData?.isLocked) { setActiveDrag(null); return; }
+    cancelAnimationFrame(dragUpdateRef.current);
+    dragUpdateRef.current = requestAnimationFrame(() => {
+      let activeItemData: CanvasImage | CanvasText | CanvasShape | undefined;
+      if (activeDrag.itemType === 'image') activeItemData = canvasImages.find(img => img.id === activeDrag.itemId);
+      else if (activeDrag.itemType === 'text') activeItemData = canvasTexts.find(txt => txt.id === activeDrag.itemId);
+      else if (activeDrag.itemType === 'shape') activeItemData = canvasShapes.find(shp => shp.id === activeDrag.itemId);
 
-    const coords = getMouseOrTouchCoords(e);
-    const {
-        type, itemId, itemType, startX, startY,
-        initialRotation, initialScale, initialX, initialY,
-        itemCenterX, itemCenterY, itemInitialWidth, itemInitialHeight
-    } = activeDrag;
+      if (activeItemData?.isLocked) { setActiveDrag(null); return; }
 
-    if (initialRotation === undefined || initialScale === undefined || initialX === undefined || initialY === undefined || itemCenterX === undefined || itemCenterY === undefined || itemInitialWidth === undefined || itemInitialHeight === undefined) {
-        console.warn("Dragging with undefined initial values", activeDrag);
-        return;
-    }
+      const coords = getMouseOrTouchCoords(e);
+      const {
+          type, itemId, itemType, startX, startY,
+          initialRotation, initialScale, initialX, initialY,
+          itemCenterX, itemCenterY, itemInitialWidth, itemInitialHeight
+      } = activeDrag;
 
-    const canvasRect = canvasRef.current.getBoundingClientRect();
-
-    if (type === 'rotate') {
-      const angle = Math.atan2(coords.y - (canvasRect.top + itemCenterY) , coords.x - (canvasRect.left + itemCenterX)) * (180 / Math.PI);
-      const startAngle = Math.atan2(startY - (canvasRect.top + itemCenterY), startX - (canvasRect.left + itemCenterX)) * (180 / Math.PI);
-      let newRotation = initialRotation + (angle - startAngle);
-      if (itemType === 'image') updateCanvasImage(itemId, { rotation: newRotation % 360 });
-      else if (itemType === 'text') updateCanvasText(itemId, { rotation: newRotation % 360 });
-      else if (itemType === 'shape') updateCanvasShape(itemId, { rotation: newRotation % 360 });
-    } else if (type === 'resize') {
-      const distFromCenter = Math.sqrt(Math.pow(coords.x - (canvasRect.left + itemCenterX), 2) + Math.pow(coords.y - (canvasRect.top + itemCenterY), 2));
-      const initialDistFromCenter = Math.sqrt(Math.pow(startX - (canvasRect.left + itemCenterX), 2) + Math.pow(startY - (canvasRect.top + itemCenterY), 2));
-      if (initialDistFromCenter === 0) return;
-      const scaleRatio = distFromCenter / initialDistFromCenter;
-      let newScale = initialScale * scaleRatio;
-      newScale = Math.max(0.1, Math.min(newScale, itemType === 'text' ? 20 : 10)); 
-      
-      if (productDefinedBoundaryBoxes && productDefinedBoundaryBoxes.length > 0 && itemInitialWidth > 0 && itemInitialHeight > 0 && canvasRect.width > 0 && canvasRect.height > 0) {
-        const targetBox = productDefinedBoundaryBoxes[0]; 
-
-        const parentW = canvasRect.width;
-        const parentH = canvasRect.height;
-        const squareSide = Math.min(parentW, parentH);
-        
-        const boxMinXPercent_sq = targetBox.x;
-        const boxMaxXPercent_sq = targetBox.x + targetBox.width;
-        const boxMinYPercent_sq = targetBox.y;
-        const boxMaxYPercent_sq = targetBox.y + targetBox.height;
-
-        // Item current center relative to the square container (0-100%)
-        // This needs the item's center in pixels relative to the square, then converted to % of squareSide
-        const squareOffsetX = (parentW - squareSide) / 2;
-        const squareOffsetY = (parentH - squareSide) / 2;
-        const itemCenterXpx_canvas = (activeItemData?.x || initialX) / 100 * parentW;
-        const itemCenterYpx_canvas = (activeItemData?.y || initialY) / 100 * parentH;
-        
-        const itemCenterXpercent_sq = ((itemCenterXpx_canvas - squareOffsetX) / squareSide) * 100;
-        const itemCenterYpercent_sq = ((itemCenterYpx_canvas - squareOffsetY) / squareSide) * 100;
-
-
-        const distToBoxLeftEdge_sq = itemCenterXpercent_sq - boxMinXPercent_sq;
-        const distToBoxRightEdge_sq = boxMaxXPercent_sq - itemCenterXpercent_sq;
-        const distToBoxTopEdge_sq = itemCenterYpercent_sq - boxMinYPercent_sq;
-        const distToBoxBottomEdge_sq = boxMaxYPercent_sq - itemCenterYpercent_sq;
-
-        const maxAllowedHalfWidthPercent_sq = Math.min(distToBoxLeftEdge_sq, distToBoxRightEdge_sq);
-        const maxAllowedHalfHeightPercent_sq = Math.min(distToBoxTopEdge_sq, distToBoxBottomEdge_sq);
-
-        if (maxAllowedHalfWidthPercent_sq < 0 || maxAllowedHalfHeightPercent_sq < 0) {
-            if (newScale > initialScale) { 
-                 newScale = initialScale;
-            }
-        } else {
-            const maxAllowedWidthPx_sq = (maxAllowedHalfWidthPercent_sq * 2 / 100) * squareSide;
-            const maxAllowedHeightPx_sq = (maxAllowedHalfHeightPercent_sq * 2 / 100) * squareSide;
-
-            const maxScaleBasedOnWidth = maxAllowedWidthPx_sq / itemInitialWidth;
-            const maxScaleBasedOnHeight = maxAllowedHeightPx_sq / itemInitialHeight;
-            
-            newScale = Math.min(newScale, maxScaleBasedOnWidth, maxScaleBasedOnHeight);
-        }
-        newScale = Math.max(0.1, newScale); 
+      if (initialRotation === undefined || initialScale === undefined || initialX === undefined || initialY === undefined || itemCenterX === undefined || itemCenterY === undefined || itemInitialWidth === undefined || itemInitialHeight === undefined) {
+          console.warn("Dragging with undefined initial values", activeDrag);
+          return;
       }
-      
-      if (itemType === 'image') updateCanvasImage(itemId, { scale: newScale });
-      else if (itemType === 'text') updateCanvasText(itemId, { scale: newScale });
-      else if (itemType === 'shape') updateCanvasShape(itemId, { scale: newScale });
-    } else if (type === 'move') {
-        const dx = coords.x - startX;
-        const dy = coords.y - startY;
-        const dxPercent_canvas = (dx / canvasRect.width) * 100;
-        const dyPercent_canvas = (dy / canvasRect.height) * 100;
-        let newX_canvas = initialX + dxPercent_canvas;
-        let newY_canvas = initialY + dyPercent_canvas;
+
+      const canvasRect = canvasRef.current.getBoundingClientRect();
+
+      if (type === 'rotate') {
+        const angle = Math.atan2(coords.y - (canvasRect.top + itemCenterY) , coords.x - (canvasRect.left + itemCenterX)) * (180 / Math.PI);
+        const startAngle = Math.atan2(startY - (canvasRect.top + itemCenterY), startX - (canvasRect.left + itemCenterX)) * (180 / Math.PI);
+        let newRotation = initialRotation + (angle - startAngle);
+        if (itemType === 'image') updateCanvasImage(itemId, { rotation: newRotation % 360 });
+        else if (itemType === 'text') updateCanvasText(itemId, { rotation: newRotation % 360 });
+        else if (itemType === 'shape') updateCanvasShape(itemId, { rotation: newRotation % 360 });
+      } else if (type === 'resize') {
+        const distFromCenter = Math.sqrt(Math.pow(coords.x - (canvasRect.left + itemCenterX), 2) + Math.pow(coords.y - (canvasRect.top + itemCenterY), 2));
+        const initialDistFromCenter = Math.sqrt(Math.pow(startX - (canvasRect.left + itemCenterX), 2) + Math.pow(startY - (canvasRect.top + itemCenterY), 2));
+        if (initialDistFromCenter === 0) return;
+        const scaleRatio = distFromCenter / initialDistFromCenter;
+        let newScale = initialScale * scaleRatio;
+        newScale = Math.max(0.1, Math.min(newScale, itemType === 'text' ? 20 : 10)); 
         
-        const currentItemScaleFactor = activeItemData?.scale || initialScale;
-        const scaledItemWidthPx = itemInitialWidth > 0 ? itemInitialWidth * currentItemScaleFactor : 0;
-        const scaledItemHeightPx = itemInitialHeight > 0 ? itemInitialHeight * currentItemScaleFactor : 0;
+        if (productDefinedBoundaryBoxes && productDefinedBoundaryBoxes.length > 0 && itemInitialWidth > 0 && itemInitialHeight > 0 && canvasRect.width > 0 && canvasRect.height > 0) {
+          const targetBox = productDefinedBoundaryBoxes[0]; 
 
-        const itemHalfWidthPercent_canvas = canvasRect.width > 0 ? (scaledItemWidthPx / 2 / canvasRect.width) * 100 : 0;
-        const itemHalfHeightPercent_canvas = canvasRect.height > 0 ? (scaledItemHeightPx / 2 / canvasRect.height) * 100 : 0;
+          const parentW = canvasRect.width;
+          const parentH = canvasRect.height;
+          const squareSide = Math.min(parentW, parentH);
+          
+          const boxMinXPercent_sq = targetBox.x;
+          const boxMaxXPercent_sq = targetBox.x + targetBox.width;
+          const boxMinYPercent_sq = targetBox.y;
+          const boxMaxYPercent_sq = targetBox.y + targetBox.height;
 
+          const squareOffsetX = (parentW - squareSide) / 2;
+          const squareOffsetY = (parentH - squareSide) / 2;
+          const itemCenterXpx_canvas = (activeItemData?.x || initialX) / 100 * parentW;
+          const itemCenterYpx_canvas = (activeItemData?.y || initialY) / 100 * parentH;
+          
+          const itemCenterXpercent_sq = ((itemCenterXpx_canvas - squareOffsetX) / squareSide) * 100;
+          const itemCenterYpercent_sq = ((itemCenterYpx_canvas - squareOffsetY) / squareSide) * 100;
 
-        if (productDefinedBoundaryBoxes && productDefinedBoundaryBoxes.length > 0) {
-            const targetBox = productDefinedBoundaryBoxes[0]; 
-            
-            const parentW = canvasRect.width;
-            const parentH = canvasRect.height;
-            const squareSide = Math.min(parentW, parentH);
-            const squareOffsetX = (parentW - squareSide) / 2;
-            const squareOffsetY = (parentH - squareSide) / 2;
+          const distToBoxLeftEdge_sq = itemCenterXpercent_sq - boxMinXPercent_sq;
+          const distToBoxRightEdge_sq = boxMaxXPercent_sq - itemCenterXpercent_sq;
+          const distToBoxTopEdge_sq = itemCenterYpercent_sq - boxMinYPercent_sq;
+          const distToBoxBottomEdge_sq = boxMaxYpercent_sq - itemCenterYpercent_sq;
 
-            // Boundary box edges in pixels, relative to the main canvas
-            const boxMinXpx_canvas = squareOffsetX + (targetBox.x / 100 * squareSide);
-            const boxMaxXpx_canvas = squareOffsetX + ((targetBox.x + targetBox.width) / 100 * squareSide);
-            const boxMinYpx_canvas = squareOffsetY + (targetBox.y / 100 * squareSide);
-            const boxMaxYpx_canvas = squareOffsetY + ((targetBox.y + targetBox.height) / 100 * squareSide);
+          const maxAllowedHalfWidthPercent_sq = Math.min(distToBoxLeftEdge_sq, distToBoxRightEdge_sq);
+          const maxAllowedHalfHeightPercent_sq = Math.min(distToBoxTopEdge_sq, distToBoxBottomEdge_sq);
 
-            // Convert pixel limits to main canvas percentages
-            const boxMinXpercent_canvas = (boxMinXpx_canvas / parentW) * 100;
-            const boxMaxXpercent_canvas = (boxMaxXpx_canvas / parentW) * 100;
-            const boxMinYpercent_canvas = (boxMinYpx_canvas / parentH) * 100;
-            const boxMaxYpercent_canvas = (boxMaxYpx_canvas / parentH) * 100;
+          if (maxAllowedHalfWidthPercent_sq < 0 || maxAllowedHalfHeightPercent_sq < 0) {
+              if (newScale > initialScale) { 
+                   newScale = initialScale;
+              }
+          } else {
+              const maxAllowedWidthPx_sq = (maxAllowedHalfWidthPercent_sq * 2 / 100) * squareSide;
+              const maxAllowedHeightPx_sq = (maxAllowedHalfHeightPercent_sq * 2 / 100) * squareSide;
 
-
-            let clampedX_canvas = Math.max(
-                boxMinXpercent_canvas + itemHalfWidthPercent_canvas,
-                Math.min(newX_canvas, boxMaxXpercent_canvas - itemHalfWidthPercent_canvas)
-            );
-            let clampedY_canvas = Math.max(
-                boxMinYpercent_canvas + itemHalfHeightPercent_canvas,
-                Math.min(newY_canvas, boxMaxYpercent_canvas - itemHalfHeightPercent_canvas)
-            );
-
-            if (itemHalfWidthPercent_canvas * 2 > (boxMaxXpercent_canvas - boxMinXpercent_canvas)) { 
-                clampedX_canvas = boxMinXpercent_canvas + (boxMaxXpercent_canvas - boxMinXpercent_canvas) / 2; 
-            }
-             if (itemHalfHeightPercent_canvas * 2 > (boxMaxYpercent_canvas - boxMinYpercent_canvas)) { 
-                clampedY_canvas = boxMinYpercent_canvas + (boxMaxYpercent_canvas - boxMinYpercent_canvas) / 2; 
-            }
-            newX_canvas = clampedX_canvas;
-            newY_canvas = clampedY_canvas;
-        } else {
-            newX_canvas = Math.max(itemHalfWidthPercent_canvas, Math.min(newX_canvas, 100 - itemHalfWidthPercent_canvas));
-            newY_canvas = Math.max(itemHalfHeightPercent_canvas, Math.min(newY_canvas, 100 - itemHalfHeightPercent_canvas));
+              const maxScaleBasedOnWidth = maxAllowedWidthPx_sq / itemInitialWidth;
+              const maxScaleBasedOnHeight = maxAllowedHeightPx_sq / itemInitialHeight;
+              
+              newScale = Math.min(newScale, maxScaleBasedOnWidth, maxScaleBasedOnHeight);
+          }
+          newScale = Math.max(0.1, newScale); 
         }
         
-        if (isNaN(newX_canvas) || isNaN(newY_canvas)) return;
-        if (itemType === 'image') updateCanvasImage(itemId, { x: newX_canvas, y: newY_canvas });
-        else if (itemType === 'text') updateCanvasText(itemId, { x: newX_canvas, y: newY_canvas });
-        else if (itemType === 'shape') updateCanvasShape(itemId, { x: newX_canvas, y: newY_canvas });
-    }
+        if (itemType === 'image') updateCanvasImage(itemId, { scale: newScale });
+        else if (itemType === 'text') updateCanvasText(itemId, { scale: newScale });
+        else if (itemType === 'shape') updateCanvasShape(itemId, { scale: newScale });
+      } else if (type === 'move') {
+          const dx = coords.x - startX;
+          const dy = coords.y - startY;
+          const dxPercent_canvas = (dx / canvasRect.width) * 100;
+          const dyPercent_canvas = (dy / canvasRect.height) * 100;
+          let newX_canvas = initialX + dxPercent_canvas;
+          let newY_canvas = initialY + dyPercent_canvas;
+          
+          const currentItemScaleFactor = activeItemData?.scale || initialScale;
+          const scaledItemWidthPx = itemInitialWidth > 0 ? itemInitialWidth * currentItemScaleFactor : 0;
+          const scaledItemHeightPx = itemInitialHeight > 0 ? itemInitialHeight * currentItemScaleFactor : 0;
+
+          const itemHalfWidthPercent_canvas = canvasRect.width > 0 ? (scaledItemWidthPx / 2 / canvasRect.width) * 100 : 0;
+          const itemHalfHeightPercent_canvas = canvasRect.height > 0 ? (scaledItemHeightPx / 2 / canvasRect.height) * 100 : 0;
+
+          if (productDefinedBoundaryBoxes && productDefinedBoundaryBoxes.length > 0) {
+              const targetBox = productDefinedBoundaryBoxes[0]; 
+              
+              const parentW = canvasRect.width;
+              const parentH = canvasRect.height;
+              const squareSide = Math.min(parentW, parentH);
+              const squareOffsetX = (parentW - squareSide) / 2;
+              const squareOffsetY = (parentH - squareSide) / 2;
+
+              const boxMinXpx_canvas = squareOffsetX + (targetBox.x / 100 * squareSide);
+              const boxMaxXpx_canvas = squareOffsetX + ((targetBox.x + targetBox.width) / 100 * squareSide);
+              const boxMinYpx_canvas = squareOffsetY + (targetBox.y / 100 * squareSide);
+              const boxMaxYpx_canvas = squareOffsetY + ((targetBox.y + targetBox.height) / 100 * squareSide);
+
+              const boxMinXpercent_canvas = (boxMinXpx_canvas / parentW) * 100;
+              const boxMaxXpercent_canvas = (boxMaxXpx_canvas / parentW) * 100;
+              const boxMinYpercent_canvas = (boxMinYpx_canvas / parentH) * 100;
+              const boxMaxYpercent_canvas = (boxMaxYpx_canvas / parentH) * 100;
+
+              let clampedX_canvas = Math.max(
+                  boxMinXpercent_canvas + itemHalfWidthPercent_canvas,
+                  Math.min(newX_canvas, boxMaxXpercent_canvas - itemHalfWidthPercent_canvas)
+              );
+              let clampedY_canvas = Math.max(
+                  boxMinYpercent_canvas + itemHalfHeightPercent_canvas,
+                  Math.min(newY_canvas, boxMaxYpercent_canvas - itemHalfHeightPercent_canvas)
+              );
+
+              if (itemHalfWidthPercent_canvas * 2 > (boxMaxXpercent_canvas - boxMinXpercent_canvas)) { 
+                  clampedX_canvas = boxMinXpercent_canvas + (boxMaxXpercent_canvas - boxMinXpercent_canvas) / 2; 
+              }
+               if (itemHalfHeightPercent_canvas * 2 > (boxMaxYpercent_canvas - boxMinYpercent_canvas)) { 
+                  clampedY_canvas = boxMinYpercent_canvas + (boxMaxYpercent_canvas - boxMinYpercent_canvas) / 2; 
+              }
+              newX_canvas = clampedX_canvas;
+              newY_canvas = clampedY_canvas;
+          } else {
+              newX_canvas = Math.max(itemHalfWidthPercent_canvas, Math.min(newX_canvas, 100 - itemHalfWidthPercent_canvas));
+              newY_canvas = Math.max(itemHalfHeightPercent_canvas, Math.min(newY_canvas, 100 - itemHalfHeightPercent_canvas));
+          }
+          
+          if (isNaN(newX_canvas) || isNaN(newY_canvas)) return;
+          if (itemType === 'image') updateCanvasImage(itemId, { x: newX_canvas, y: newY_canvas });
+          else if (itemType === 'text') updateCanvasText(itemId, { x: newX_canvas, y: newY_canvas });
+          else if (itemType === 'shape') updateCanvasShape(itemId, { x: newX_canvas, y: newY_canvas });
+      }
+    });
   }, [activeDrag, updateCanvasImage, canvasImages, updateCanvasText, canvasTexts, updateCanvasShape, canvasShapes, productDefinedBoundaryBoxes]);
 
   const handleDragEnd = useCallback(() => {
+    cancelAnimationFrame(dragUpdateRef.current);
     endInteractiveOperation(); 
     setActiveDrag(null);
   }, [endInteractiveOperation]);
@@ -442,6 +437,7 @@ export default function DesignCanvas({
       window.removeEventListener('touchmove',handleDragging);
       window.removeEventListener('mouseup', handleDragEnd);
       window.removeEventListener('touchend', handleDragEnd);
+      cancelAnimationFrame(dragUpdateRef.current);
     };
   }, [activeDrag, handleDragging, handleDragEnd]);
 
@@ -470,7 +466,7 @@ export default function DesignCanvas({
           <div
             className="relative centered-square-container"
             style={{
-              width: 'min(100%, calc(100svh - 10rem))', // Example: 10rem for header/footer/padding
+              width: 'min(100%, calc(100svh - 10rem))', 
               height: 'min(100%, calc(100svh - 10rem))',
               aspectRatio: '1 / 1',
             }}
@@ -523,7 +519,6 @@ export default function DesignCanvas({
               </div>
             ))}
           </div>
-          {/* Interactive items remain children of canvasRef, positioned relative to it */}
           {visibleImages.map((img) => (
             <InteractiveCanvasImage
               key={`${img.id}-${img.zIndex}`} image={img}

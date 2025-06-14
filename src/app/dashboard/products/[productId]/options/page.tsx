@@ -103,6 +103,7 @@ export default function ProductOptionsPage() {
   const [selectedBoundaryBoxId, setSelectedBoundaryBoxId] = useState<string | null>(null);
   const imageWrapperRef = useRef<HTMLDivElement>(null);
   const [activeDrag, setActiveDrag] = useState<ActiveDragState | null>(null);
+  const dragUpdateRef = useRef(0);
 
   const [isDeleteViewDialogOpen, setIsDeleteViewDialogOpen] = useState(false);
   const [viewIdToDelete, setViewIdToDelete] = useState<string | null>(null);
@@ -228,7 +229,7 @@ export default function ProductOptionsPage() {
     setIsRefreshing(false);
     if (isRefreshing) toast({ title: "Product Data Refreshed", description: "Base product details updated from store."});
 
-  }, [productId, user, toast, isRefreshing]); 
+  }, [productId, user, toast, isRefreshing, activeViewId]); 
 
   useEffect(() => {
     fetchAndSetProductData();
@@ -274,69 +275,76 @@ export default function ProductOptionsPage() {
     if (!activeDrag || !productOptions || !activeViewId || !imageWrapperRef.current) return;
     e.preventDefault();
 
-    const pointerCoords = getPointerCoords(e);
-    const deltaXpx = pointerCoords.x - activeDrag.pointerStartX;
-    const deltaYpx = pointerCoords.y - activeDrag.pointerStartY;
+    cancelAnimationFrame(dragUpdateRef.current);
 
-    let deltaXPercent = (deltaXpx / activeDrag.containerWidthPx) * 100;
-    let deltaYPercent = (deltaYpx / activeDrag.containerHeightPx) * 100;
+    dragUpdateRef.current = requestAnimationFrame(() => {
+      const pointerCoords = getPointerCoords(e);
+      const deltaXpx = pointerCoords.x - activeDrag.pointerStartX;
+      const deltaYpx = pointerCoords.y - activeDrag.pointerStartY;
 
-    let newX = activeDrag.initialBoxX, newY = activeDrag.initialBoxY;
-    let newWidth = activeDrag.initialBoxWidth, newHeight = activeDrag.initialBoxHeight;
+      let deltaXPercent = (deltaXpx / activeDrag.containerWidthPx) * 100;
+      let deltaYPercent = (deltaYpx / activeDrag.containerHeightPx) * 100;
 
-    if (activeDrag.type === 'move') {
-      newX += deltaXPercent;
-      newY += deltaYPercent;
-    } else { 
-        const originalProposedWidth = newWidth, originalProposedHeight = newHeight;
-        if (activeDrag.type === 'resize_br') { newWidth += deltaXPercent; newHeight += deltaYPercent; } 
-        else if (activeDrag.type === 'resize_bl') { newX += deltaXPercent; newWidth -= deltaXPercent; newHeight += deltaYPercent; } 
-        else if (activeDrag.type === 'resize_tr') { newY += deltaYPercent; newWidth += deltaXPercent; newHeight -= deltaYPercent; } 
-        else if (activeDrag.type === 'resize_tl') { newX += deltaXPercent; newY += deltaYPercent; newWidth -= deltaXPercent; newHeight -= deltaYPercent; }
+      let newX = activeDrag.initialBoxX, newY = activeDrag.initialBoxY;
+      let newWidth = activeDrag.initialBoxWidth, newHeight = activeDrag.initialBoxHeight;
 
-        newWidth = Math.max(MIN_BOX_SIZE_PERCENT, newWidth);
-        newHeight = Math.max(MIN_BOX_SIZE_PERCENT, newHeight);
+      if (activeDrag.type === 'move') {
+        newX += deltaXPercent;
+        newY += deltaYPercent;
+      } else { 
+          const originalProposedWidth = newWidth, originalProposedHeight = newHeight;
+          if (activeDrag.type === 'resize_br') { newWidth += deltaXPercent; newHeight += deltaYPercent; } 
+          else if (activeDrag.type === 'resize_bl') { newX += deltaXPercent; newWidth -= deltaXPercent; newHeight += deltaYPercent; } 
+          else if (activeDrag.type === 'resize_tr') { newY += deltaYPercent; newWidth += deltaXPercent; newHeight -= deltaYPercent; } 
+          else if (activeDrag.type === 'resize_tl') { newX += deltaXPercent; newY += deltaYPercent; newWidth -= deltaXPercent; newHeight -= deltaYPercent; }
 
-        if (activeDrag.type === 'resize_tl') {
-          if (newWidth !== originalProposedWidth) newX = activeDrag.initialBoxX + activeDrag.initialBoxWidth - newWidth;
-          if (newHeight !== originalProposedHeight) newY = activeDrag.initialBoxY + activeDrag.initialBoxHeight - newHeight;
-        } else if (activeDrag.type === 'resize_tr') {
-          if (newHeight !== originalProposedHeight) newY = activeDrag.initialBoxY + activeDrag.initialBoxHeight - newHeight;
-        } else if (activeDrag.type === 'resize_bl') {
-          if (newWidth !== originalProposedWidth) newX = activeDrag.initialBoxX + activeDrag.initialBoxWidth - newWidth;
-        }
-    }
-    
-    newX = Math.max(0, Math.min(newX, 100 - MIN_BOX_SIZE_PERCENT));
-    newWidth = Math.min(newWidth, 100 - newX);
-    newWidth = Math.max(MIN_BOX_SIZE_PERCENT, newWidth); 
-    newX = Math.max(0, Math.min(newX, 100 - newWidth)); 
+          newWidth = Math.max(MIN_BOX_SIZE_PERCENT, newWidth);
+          newHeight = Math.max(MIN_BOX_SIZE_PERCENT, newHeight);
 
-    newY = Math.max(0, Math.min(newY, 100 - MIN_BOX_SIZE_PERCENT));
-    newHeight = Math.min(newHeight, 100 - newY);
-    newHeight = Math.max(MIN_BOX_SIZE_PERCENT, newHeight); 
-    newY = Math.max(0, Math.min(newY, 100 - newHeight)); 
-    
-    if (isNaN(newX) || isNaN(newY) || isNaN(newWidth) || isNaN(newHeight)) return;
+          if (activeDrag.type === 'resize_tl') {
+            if (newWidth !== originalProposedWidth) newX = activeDrag.initialBoxX + activeDrag.initialBoxWidth - newWidth;
+            if (newHeight !== originalProposedHeight) newY = activeDrag.initialBoxY + activeDrag.initialBoxHeight - newHeight;
+          } else if (activeDrag.type === 'resize_tr') {
+            if (newHeight !== originalProposedHeight) newY = activeDrag.initialBoxY + activeDrag.initialBoxHeight - newHeight;
+          } else if (activeDrag.type === 'resize_bl') {
+            if (newWidth !== originalProposedWidth) newX = activeDrag.initialBoxX + activeDrag.initialBoxWidth - newWidth;
+          }
+      }
+      
+      newX = Math.max(0, Math.min(newX, 100 - MIN_BOX_SIZE_PERCENT));
+      newWidth = Math.min(newWidth, 100 - newX);
+      newWidth = Math.max(MIN_BOX_SIZE_PERCENT, newWidth); 
+      newX = Math.max(0, Math.min(newX, 100 - newWidth)); 
 
-    setProductOptions(prev => {
-      if (!prev || !activeViewId) return prev;
-      return {
-        ...prev,
-        views: prev.views.map(view => 
-          view.id === activeViewId ? {
-            ...view,
-            boundaryBoxes: view.boundaryBoxes.map(b => 
-              b.id === activeDrag.boxId ? { ...b, x: newX, y: newY, width: newWidth, height: newHeight } : b
-            )
-          } : view
-        )
-      };
+      newY = Math.max(0, Math.min(newY, 100 - MIN_BOX_SIZE_PERCENT));
+      newHeight = Math.min(newHeight, 100 - newY);
+      newHeight = Math.max(MIN_BOX_SIZE_PERCENT, newHeight); 
+      newY = Math.max(0, Math.min(newY, 100 - newHeight)); 
+      
+      if (isNaN(newX) || isNaN(newY) || isNaN(newWidth) || isNaN(newHeight)) return;
+
+      setProductOptions(prev => {
+        if (!prev || !activeViewId) return prev;
+        return {
+          ...prev,
+          views: prev.views.map(view => 
+            view.id === activeViewId ? {
+              ...view,
+              boundaryBoxes: view.boundaryBoxes.map(b => 
+                b.id === activeDrag.boxId ? { ...b, x: newX, y: newY, width: newWidth, height: newHeight } : b
+              )
+            } : view
+          )
+        };
+      });
+      setHasUnsavedChanges(true);
     });
-    setHasUnsavedChanges(true);
-  }, [activeDrag, productOptions, activeViewId]);
+  }, [activeDrag, productOptions, activeViewId, setProductOptions, setHasUnsavedChanges]);
 
-  const handleInteractionEnd = useCallback(() => setActiveDrag(null), []);
+  const handleInteractionEnd = useCallback(() => {
+    cancelAnimationFrame(dragUpdateRef.current);
+    setActiveDrag(null);
+  }, []);
 
   useEffect(() => {
     if (activeDrag) {
@@ -350,6 +358,7 @@ export default function ProductOptionsPage() {
       window.removeEventListener('touchmove', handleDragging);
       window.removeEventListener('mouseup', handleInteractionEnd);
       window.removeEventListener('touchend', handleInteractionEnd);
+      cancelAnimationFrame(dragUpdateRef.current);
     };
   }, [activeDrag, handleDragging, handleInteractionEnd]);
 
@@ -382,7 +391,6 @@ export default function ProductOptionsPage() {
   const handleSelectView = (viewId: string) => {
     setActiveViewId(viewId);
     setSelectedBoundaryBoxId(null);
-    // Removed setHasUnsavedChanges(true); to prevent re-fetch
   };
 
   const handleAddNewView = () => {
@@ -692,7 +700,7 @@ export default function ProductOptionsPage() {
                         )}
                     </div>
                     {productOptions.views.length >= MAX_PRODUCT_VIEWS && !currentActiveView && (
-                        <p className="text-xs text-muted-foreground mb-4 text-center">Maximum {MAX_PRODUCT_VIEWS} views reached.</p>
+                        <p className="text-xs text-muted-foreground mb-4 text-center">Maximum ${MAX_PRODUCT_VIEWS} views reached.</p>
                     )}
 
                     {currentActiveView && (
