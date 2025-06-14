@@ -105,6 +105,7 @@ function CustomizerLayoutAndLogic() {
   const [error, setError] = useState<string | null>(null);
   const [activeTool, setActiveTool] = useState<string>(toolItems[0]?.id || "layers");
   const [showGrid, setShowGrid] = useState(false);
+  const [showBoundaryBoxes, setShowBoundaryBoxes] = useState(true); 
 
   const [isToolPanelOpen, setIsToolPanelOpen] = useState(true);
   const [isRightSidebarOpen, setIsRightSidebarOpen] = useState(true);
@@ -116,6 +117,7 @@ function CustomizerLayoutAndLogic() {
 
 
   const toggleGrid = () => setShowGrid(prev => !prev);
+  const toggleBoundaryBoxes = () => setShowBoundaryBoxes(prev => !prev);
   const toggleToolPanel = () => setIsToolPanelOpen(prev => !prev);
   const toggleRightSidebar = () => setIsRightSidebarOpen(prev => !prev);
 
@@ -518,6 +520,7 @@ function CustomizerLayoutAndLogic() {
                 productDefinedBoundaryBoxes={currentBoundaryBoxes}
                 activeViewId={activeViewId}
                 showGrid={showGrid}
+                showBoundaryBoxes={showBoundaryBoxes}
               />
             </div>
           </main>
@@ -541,13 +544,15 @@ function CustomizerLayoutAndLogic() {
           <RightPanel 
             showGrid={showGrid} 
             toggleGrid={toggleGrid} 
+            showBoundaryBoxes={showBoundaryBoxes}
+            toggleBoundaryBoxes={toggleBoundaryBoxes}
             productDetails={productDetails}
             activeViewId={activeViewId}
             setActiveViewId={setActiveViewId}
             configurableAttributes={configurableAttributes}
             selectedVariationOptions={selectedVariationOptions}
             onVariantOptionSelect={handleVariantOptionSelect}
-            productVariations={productVariations} // Pass productVariations
+            productVariations={productVariations} 
             className={cn(
               "transition-all duration-300 ease-in-out flex-shrink-0 h-full",
               isRightSidebarOpen ? "w-72 md:w-80 lg:w-96 opacity-100" : "w-0 opacity-0 pointer-events-none"

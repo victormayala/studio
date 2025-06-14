@@ -6,13 +6,16 @@ import GridControls from './GridControls';
 import HistoryControls from './HistoryControls'; 
 import ViewSwitcher from './ViewSwitcher';
 import VariantSelector from './VariantSelector'; 
+import BoundaryBoxControls from './BoundaryBoxControls'; // Import the new component
 import type { ProductForCustomizer, ConfigurableAttribute } from '@/app/customizer/page';
-import type { WCVariation } from '@/types/woocommerce'; // Import WCVariation
+import type { WCVariation } from '@/types/woocommerce'; 
 import { cn } from '@/lib/utils'; 
 
 interface RightPanelProps {
   showGrid: boolean;
   toggleGrid: () => void;
+  showBoundaryBoxes: boolean; // New prop
+  toggleBoundaryBoxes: () => void; // New prop
   productDetails: ProductForCustomizer | null;
   activeViewId: string | null;
   setActiveViewId: (id: string) => void;
@@ -20,12 +23,14 @@ interface RightPanelProps {
   configurableAttributes: ConfigurableAttribute[] | null; 
   selectedVariationOptions: Record<string, string>; 
   onVariantOptionSelect: (attributeName: string, optionValue: string) => void; 
-  productVariations?: WCVariation[] | null; // Add productVariations prop
+  productVariations?: WCVariation[] | null; 
 }
 
 export default function RightPanel({ 
   showGrid, 
   toggleGrid,
+  showBoundaryBoxes, // Destructure new prop
+  toggleBoundaryBoxes, // Destructure new prop
   productDetails,
   activeViewId,
   setActiveViewId,
@@ -33,7 +38,7 @@ export default function RightPanel({
   configurableAttributes,
   selectedVariationOptions,
   onVariantOptionSelect,
-  productVariations, // Destructure productVariations
+  productVariations, 
 }: RightPanelProps) {
   return (
   <div 
@@ -74,7 +79,7 @@ export default function RightPanel({
               attributes={configurableAttributes}
               selectedOptions={selectedVariationOptions}
               onOptionSelect={onVariantOptionSelect}
-              productVariations={productVariations} // Pass productVariations
+              productVariations={productVariations} 
             />
           </div>
         </div>
@@ -107,6 +112,7 @@ export default function RightPanel({
         </div>
         <div className="px-4 py-4 space-y-4"> 
           <HistoryControls />
+          <BoundaryBoxControls showBoundaryBoxes={showBoundaryBoxes} toggleBoundaryBoxes={toggleBoundaryBoxes} /> 
           <GridControls showGrid={showGrid} toggleGrid={toggleGrid} />
         </div>
       </div>

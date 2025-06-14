@@ -37,6 +37,7 @@ interface DesignCanvasProps {
   productDefinedBoundaryBoxes?: BoundaryBox[];
   activeViewId: string | null;
   showGrid: boolean;
+  showBoundaryBoxes: boolean; // New prop
 }
 
 export default function DesignCanvas({ 
@@ -45,7 +46,8 @@ export default function DesignCanvas({
   productImageAiHint,
   productDefinedBoundaryBoxes = [],
   activeViewId,
-  showGrid
+  showGrid,
+  showBoundaryBoxes // Destructure new prop
 }: DesignCanvasProps) {
 
   const productToDisplay = {
@@ -481,31 +483,31 @@ export default function DesignCanvas({
       <div className="relative w-full flex-1 flex items-center justify-center product-canvas-wrapper min-h-0">
         <div
           ref={canvasRef} 
-          className="relative product-image-canvas-area bg-muted/10 w-full h-full flex items-center justify-center" // Added flex items-center justify-center
+          className="relative product-image-canvas-area bg-muted/10 w-full h-full flex items-center justify-center" 
           onClick={handleCanvasClick} 
-          onTouchStart={handleCanvasClick as any} // Cast for touch event type consistency
+          onTouchStart={handleCanvasClick as any} 
         >
-          {/* Centered Square Container for Product Image and Boundary Boxes */}
+          
           <div
-            className="relative centered-square-container" // This is the new square container
+            className="relative centered-square-container" 
             style={{
-              width: 'min(100%, calc(100svh - 10rem))', // Example: try to fit in viewport, adjust 10rem based on header/footer
+              width: 'min(100%, calc(100svh - 10rem))', 
               height: 'min(100%, calc(100svh - 10rem))',
-              aspectRatio: '1 / 1', // Enforce square aspect ratio
+              aspectRatio: '1 / 1', 
             }}
           >
             <Image
               src={productToDisplay.imageUrl}
               alt={productToDisplay.imageAlt}
               fill 
-              style={{ objectFit: 'contain' }} // Ensures the image fits within the square
+              style={{ objectFit: 'contain' }} 
               className="rounded-md pointer-events-none select-none" 
               data-ai-hint={productToDisplay.aiHint}
               priority
             />
 
-            {/* Boundary boxes are now positioned relative to this square container */}
-            {productDefinedBoundaryBoxes && productDefinedBoundaryBoxes.length > 0 && showGrid && (
+            
+            {productDefinedBoundaryBoxes && productDefinedBoundaryBoxes.length > 0 && showBoundaryBoxes && showGrid && (
               <div
                 style={{
                   position: 'absolute',
@@ -515,25 +517,25 @@ export default function DesignCanvas({
                   height: `${productDefinedBoundaryBoxes[0].height}%`,
                   pointerEvents: 'none',
                   zIndex: 0, 
-                  overflow: 'hidden', // Keep grid within the box
+                  overflow: 'hidden', 
                   backgroundImage: `
                     repeating-linear-gradient(to right, hsla(var(--primary) / 0.8) 0, hsla(var(--primary) / 0.8) 1px, transparent 1px, transparent 100%),
                     repeating-linear-gradient(to bottom, hsla(var(--primary) / 0.8) 0, hsla(var(--primary) / 0.8) 1px, transparent 1px, transparent 100%)
                   `,
-                  backgroundSize: '10% 10%', // Grid density
+                  backgroundSize: '10% 10%', 
                 }}
                 className="grid-overlay"
               />
             )}
 
-            {productDefinedBoundaryBoxes && productDefinedBoundaryBoxes.map(box => (
+            {productDefinedBoundaryBoxes && showBoundaryBoxes && productDefinedBoundaryBoxes.map(box => (
               <div
                 key={`defined-${box.id}`}
                 className="absolute border-2 border-dashed border-primary/30 pointer-events-none"
                 style={{
                   left: `${box.x}%`, top: `${box.y}%`,
                   width: `${box.width}%`, height: `${box.height}%`,
-                  zIndex: 1, // Above image, below interactive items if needed (adjust if items go under)
+                  zIndex: 1, 
                 }}
                 title={box.name}
               >
@@ -542,9 +544,9 @@ export default function DesignCanvas({
                 </span>
               </div>
             ))}
-          </div> {/* End of CenteredSquareContainer */}
+          </div> 
 
-          {/* Interactive items are still positioned relative to canvasRef (product-image-canvas-area) */}
+          
           {visibleImages.map((img) => (
             <InteractiveCanvasImage
               key={`${img.id}-${img.zIndex}`} image={img}
@@ -586,7 +588,7 @@ export default function DesignCanvas({
       </div>
       <div className="text-center pt-2 pb-1 flex-shrink-0">
         <p className="text-sm text-muted-foreground">
-          {productDefinedBoundaryBoxes.length > 0 ? "Items will be kept within the dashed areas. " : ""}
+          {productDefinedBoundaryBoxes.length > 0 && showBoundaryBoxes ? "Items will be kept within the dashed areas. " : ""}
           {visibleImages.length > 0 || visibleTexts.length > 0 || visibleShapes.length > 0 ? 
             (selectedCanvasImageId || selectedCanvasTextId || selectedCanvasShapeId ? "Click & drag item or handles to transform. Click background to deselect." : "Click an item to select and transform it.") 
             : "Add images, text or shapes using the tools on the left."}
