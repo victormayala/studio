@@ -14,8 +14,8 @@ import { cn } from '@/lib/utils';
 interface RightPanelProps {
   showGrid: boolean;
   toggleGrid: () => void;
-  showBoundaryBoxes: boolean; // New prop
-  toggleBoundaryBoxes: () => void; // New prop
+  showBoundaryBoxes: boolean; 
+  toggleBoundaryBoxes: () => void; 
   productDetails: ProductForCustomizer | null;
   activeViewId: string | null;
   setActiveViewId: (id: string) => void;
@@ -29,8 +29,8 @@ interface RightPanelProps {
 export default function RightPanel({ 
   showGrid, 
   toggleGrid,
-  showBoundaryBoxes, // Destructure new prop
-  toggleBoundaryBoxes, // Destructure new prop
+  showBoundaryBoxes, 
+  toggleBoundaryBoxes, 
   productDetails,
   activeViewId,
   setActiveViewId,
@@ -57,11 +57,11 @@ export default function RightPanel({
   
       {/* AI Assistant Section */}
       <div>
-        <div className="p-4"> 
+        <div className="px-4 pt-4 pb-2"> 
           <h2 className="font-headline text-lg font-semibold text-foreground">AI Design Assistant</h2>
         </div>
         <div className="border-b mx-0"></div> 
-        <div className="p-4"> 
+        <div className="px-4 pt-2 pb-4"> 
           <AiAssistant />
         </div>
       </div>
@@ -69,12 +69,12 @@ export default function RightPanel({
       {/* Product Variants Section */}
       {productDetails?.type === 'variable' && configurableAttributes && configurableAttributes.length > 0 && (
         <div>
-          <div className="p-4 border-t">
+          <div className="px-4 pt-4 pb-2 border-t">
             <h2 className="font-headline text-lg font-semibold text-foreground">
               Select Options
             </h2>
           </div>
-          <div className="p-4">
+          <div className="px-4 pt-2 pb-4">
             <VariantSelector
               attributes={configurableAttributes}
               selectedOptions={selectedVariationOptions}
@@ -87,12 +87,12 @@ export default function RightPanel({
 
       {/* Product Views Section */}
       <div>
-        <div className="p-4 border-t"> 
+        <div className="px-4 pt-4 pb-2 border-t"> 
           <h2 className="font-headline text-lg font-semibold text-foreground">
             Product Views
           </h2>
         </div>
-        <div className="p-4"> 
+        <div className="px-4 pt-2 pb-4"> 
           {productDetails && productDetails.views && productDetails.views.length > 0 ? (
             <ViewSwitcher
               productViews={productDetails.views}
@@ -107,10 +107,10 @@ export default function RightPanel({
       
       {/* Canvas Helpers Section */}
       <div>
-        <div className="p-4 border-t"> 
+        <div className="px-4 pt-4 pb-2 border-t"> 
           <h2 className="font-headline text-lg font-semibold text-foreground">Canvas Helpers</h2>
         </div>
-        <div className="px-4 py-4 space-y-4"> 
+        <div className="px-4 pt-2 pb-4 space-y-3"> 
           <HistoryControls />
           <BoundaryBoxControls showBoundaryBoxes={showBoundaryBoxes} toggleBoundaryBoxes={toggleBoundaryBoxes} /> 
           <GridControls showGrid={showGrid} toggleGrid={toggleGrid} />
