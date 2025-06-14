@@ -292,53 +292,64 @@ function CustomizerLayoutAndLogic() {
 
 
   useEffect(() => {
-    if (!productDetails || !activeViewId || !productVariations || Object.keys(viewBaseImages).length === 0) {
+    if (!productDetails || !productVariations || Object.keys(viewBaseImages).length === 0) {
       return;
     }
 
-    const currentView = productDetails.views.find(v => v.id === activeViewId);
-    if (!currentView) return;
-
-    let newImageUrl: string | null = null;
-    let newImageAiHint: string | undefined = undefined;
-
     const matchingVariation = productVariations.find(variation => {
-      if (variation.attributes.length === 0 && Object.keys(selectedVariationOptions).length > 0) return false; 
-      if (variation.attributes.length > 0 && Object.keys(selectedVariationOptions).length === 0 && variation.attributes.length !== configurableAttributes?.length) return false; 
-
+      if (variation.attributes.length === 0 && Object.keys(selectedVariationOptions).length > 0) return false;
+      if (variation.attributes.length > 0 && Object.keys(selectedVariationOptions).length === 0 && configurableAttributes && variation.attributes.length !== configurableAttributes.length) return false;
 
       return variation.attributes.every(
         attr => selectedVariationOptions[attr.name] === attr.option
       );
     });
 
+    let newGlobalImageUrl: string | null = null;
+    let newGlobalImageAiHint: string | undefined = undefined;
+
     if (matchingVariation && matchingVariation.image?.src) {
-      newImageUrl = matchingVariation.image.src;
-      newImageAiHint = matchingVariation.image.alt?.split(" ").slice(0,2).join(" ") || currentView.aiHint;
-    } else {
-      const baseImageInfo = viewBaseImages[activeViewId];
-      if (baseImageInfo) {
-        newImageUrl = baseImageInfo.url;
-        newImageAiHint = baseImageInfo.aiHint || currentView.aiHint;
-      } else { 
-        newImageUrl = defaultFallbackProduct.views[0].imageUrl;
-        newImageAiHint = defaultFallbackProduct.views[0].aiHint;
-      }
+      newGlobalImageUrl = matchingVariation.image.src;
+      newGlobalImageAiHint = matchingVariation.image.alt?.split(" ").slice(0, 2).join(" ") || undefined;
     }
     
-    if (newImageUrl && currentView.imageUrl !== newImageUrl) {
-      setProductDetails(prev => {
-        if (!prev) return null;
-        return {
-          ...prev,
-          views: prev.views.map(v => 
-            v.id === activeViewId ? { ...v, imageUrl: newImageUrl!, aiHint: newImageAiHint || v.aiHint } : v
-          ),
-        };
+    setProductDetails(prevProductDetails => {
+      if (!prevProductDetails) return null;
+
+      const updatedViews = prevProductDetails.views.map(view => {
+        let targetImageUrl = view.imageUrl; // Default to current
+        let targetAiHint = view.aiHint;   // Default to current
+
+        if (newGlobalImageUrl) { // A variation image is found
+          targetImageUrl = newGlobalImageUrl;
+          targetAiHint = newGlobalImageAiHint || view.aiHint || defaultFallbackProduct.views[0].aiHint;
+        } else { // No variation image, use the base image for this specific view
+          const baseImageInfo = viewBaseImages[view.id];
+          if (baseImageInfo && baseImageInfo.url) {
+            targetImageUrl = baseImageInfo.url;
+            targetAiHint = baseImageInfo.aiHint || view.aiHint || defaultFallbackProduct.views[0].aiHint;
+          } else { // Fallback if base image info is somehow missing for this view
+            targetImageUrl = defaultFallbackProduct.views[0].imageUrl;
+            targetAiHint = defaultFallbackProduct.views[0].aiHint;
+          }
+        }
+
+        // Only create a new object if the URL or hint actually changed
+        if (view.imageUrl !== targetImageUrl || view.aiHint !== targetAiHint) {
+          return { ...view, imageUrl: targetImageUrl, aiHint: targetAiHint };
+        }
+        return view;
       });
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedVariationOptions, productVariations, activeViewId, viewBaseImages, productDetails?.id, configurableAttributes]);
+
+      // Check if any view object identity has changed
+      const viewsChanged = updatedViews.some((newView, index) => newView !== prevProductDetails.views[index]);
+
+      if (viewsChanged) {
+        return { ...prevProductDetails, views: updatedViews };
+      }
+      return prevProductDetails; // No actual change, return the same object to prevent re-render loops
+    });
+  }, [selectedVariationOptions, productVariations, viewBaseImages, productDetails?.id, configurableAttributes, setProductDetails]);
 
 
   const getToolPanelTitle = (toolId: string): string => {
