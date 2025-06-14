@@ -117,10 +117,10 @@ export default function ProductOptionsPage() {
   };
 
   const fetchAndSetProductData = useCallback(async () => {
-    if (!productId || !user) {
+    if (!productId || !user?.id) { // Check user.id for stability
       setIsLoading(false);
       setIsRefreshing(false);
-      if (!user) setError("User not authenticated. Please sign in.");
+      if (!user?.id) setError("User not authenticated. Please sign in.");
       else setError("Product ID is missing.");
       setHasUnsavedChanges(true);
       return;
@@ -200,7 +200,7 @@ export default function ProductOptionsPage() {
       cstmzrSelectedVariationIds: localOptions?.cstmzrSelectedVariationIds || [], 
     });
     
-    const currentActiveViewIdInState = activeViewId; 
+    const currentActiveViewIdInState = activeViewId; // Read current state
     if (!currentActiveViewIdInState || !viewsToSet.find(v => v.id === currentActiveViewIdInState)) {
         setActiveViewId(viewsToSet[0]?.id || null);
     }
@@ -229,7 +229,7 @@ export default function ProductOptionsPage() {
     setIsRefreshing(false);
     if (isRefreshing) toast({ title: "Product Data Refreshed", description: "Base product details updated from store."});
 
-  }, [productId, user, toast, isRefreshing, activeViewId]); 
+  }, [productId, user?.id, toast, isRefreshing]);  // Removed activeViewId, changed user to user?.id
 
   useEffect(() => {
     fetchAndSetProductData();
