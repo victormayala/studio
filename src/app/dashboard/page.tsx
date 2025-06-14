@@ -2,7 +2,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -21,6 +21,17 @@ import { useToast } from "@/hooks/use-toast";
 import AppHeader from "@/components/layout/AppHeader";
 import { UploadProvider } from "@/contexts/UploadContext";
 import { SidebarProvider, Sidebar, SidebarHeader, SidebarContent, SidebarFooter, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarInset } from "@/components/ui/sidebar";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { cn } from '@/lib/utils';
 
 interface DisplayProduct {
   id: string;
@@ -32,6 +43,11 @@ interface DisplayProduct {
 }
 
 type ActiveDashboardTab = 'products' | 'storeIntegration' | 'settings' | 'profile';
+
+interface ProductToDelete {
+  id: string;
+  name: string;
+}
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -51,6 +67,10 @@ export default function DashboardPage() {
   const [consumerSecret, setConsumerSecret] = useState('');
   const [isSavingCredentials, setIsSavingCredentials] = useState(false);
   const [isLoadingCredentials, setIsLoadingCredentials] = useState(true);
+
+  // State for delete confirmation
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [productToDelete, setProductToDelete] = useState<ProductToDelete | null>(null);
 
 
   const loadProductsWithCredentials = useCallback(async (creds?: { storeUrl: string; consumerKey: string; consumerSecret: string }, isManualRefresh?: boolean) => {
@@ -109,7 +129,6 @@ export default function DashboardPage() {
     }
   }, [toast]);
 
-  // useEffect to load credentials from localStorage on mount or user change
   useEffect(() => {
     if (user) {
       setIsLoadingCredentials(true);
@@ -125,7 +144,7 @@ export default function DashboardPage() {
       setStoreUrl('');
       setConsumerKey('');
       setConsumerSecret('');
-      setIsLoadingCredentials(false); // Still need to set this if no user
+      setIsLoadingCredentials(false); 
     }
   }, [user]);
 
@@ -143,7 +162,7 @@ export default function DashboardPage() {
         title: "Credentials Saved (Locally)",
         description: "Your WooCommerce credentials have been saved in this browser.",
       });
-      // If products tab is active, or to pre-load, re-fetch with new creds
+      
       if (activeTab === 'products') {
          loadProductsWithCredentials({ storeUrl, consumerKey, consumerSecret }, true);
       }
@@ -174,7 +193,7 @@ export default function DashboardPage() {
         description: "Your WooCommerce credentials have been removed from this browser.",
       });
        if (activeTab === 'products') {
-        loadProductsWithCredentials(undefined, true); // Fetch with global credentials
+        loadProductsWithCredentials(undefined, true); 
       }
     } catch (error) {
       toast({
@@ -200,17 +219,33 @@ export default function DashboardPage() {
         loadProductsWithCredentials(undefined, true);
       }
     } else if (!user && !isLoadingCredentials) {
-      loadProductsWithCredentials(undefined, true); // Attempt with global if no user
+      loadProductsWithCredentials(undefined, true); 
     }
   }, [user, isLoadingCredentials, loadProductsWithCredentials]);
 
   useEffect(() => {
-    // Fetch products if on products tab, user is loaded, creds are ready, and products aren't already loaded/loading/errored.
     if (activeTab === 'products' && user && !isLoadingCredentials && products.length === 0 && !isLoadingProducts && !error) {
       handleRefreshDashboardData();
     }
   }, [activeTab, user, isLoadingCredentials, products.length, isLoadingProducts, error, handleRefreshDashboardData]);
 
+  const handleDeleteProduct = (product: DisplayProduct) => {
+    setProductToDelete({ id: product.id, name: product.name });
+    setIsDeleteDialogOpen(true);
+  };
+
+  const handleConfirmDelete = () => {
+    if (!productToDelete) return;
+    // Actual delete logic would go here. For now, just a toast.
+    console.log(`Deleting product: ${productToDelete.name} (ID: ${productToDelete.id})`);
+    toast({
+      title: "Product Deletion (Simulated)",
+      description: `${productToDelete.name} would be deleted. This feature is not fully implemented.`,
+    });
+    setProducts(prev => prev.filter(p => p.id !== productToDelete.id)); // Optimistically remove from UI
+    setIsDeleteDialogOpen(false);
+    setProductToDelete(null);
+  };
 
   if (authIsLoading || !user) {
     return (
@@ -298,7 +333,7 @@ export default function DashboardPage() {
                         </CardDescription>
                       </CardHeader>
                       <CardContent>
-                        {isLoadingProducts || (isLoadingCredentials && products.length === 0) ? ( // Show loader if product loading or if initial cred load hasn't finished & no products yet
+                        {isLoadingProducts || (isLoadingCredentials && products.length === 0) ? ( 
                           <div className="flex justify-center items-center py-10">
                             <Loader2 className="h-8 w-8 animate-spin text-primary" />
                             <p className="ml-3 text-muted-foreground">Loading products...</p>
@@ -355,7 +390,7 @@ export default function DashboardPage() {
                                         <DropdownMenuItem onSelect={() => router.push(`/customizer?productId=${product.id}`)} >
                                           <Code className="mr-2 h-4 w-4" /> Open in Customizer
                                         </DropdownMenuItem>
-                                        <DropdownMenuItem className="text-destructive focus:bg-destructive/10 focus:text-destructive" onSelect={() => toast({ title: "Delete Clicked (Not Implemented)", description: `Would delete ${product.name}`})}>
+                                        <DropdownMenuItem className="text-destructive focus:bg-destructive/10 focus:text-destructive" onSelect={() => handleDeleteProduct(product)}>
                                           <Trash2 className="mr-2 h-4 w-4" /> Delete
                                         </DropdownMenuItem>
                                       </DropdownMenuContent>
@@ -387,7 +422,7 @@ export default function DashboardPage() {
                         </CardDescription>
                       </CardHeader>
                       <CardContent>
-                        {isLoadingCredentials && !storeUrl && !consumerKey && !consumerSecret ? ( // Show loader only on initial check for credentials
+                        {isLoadingCredentials && !storeUrl && !consumerKey && !consumerSecret ? ( 
                           <div className="flex items-center justify-center py-10">
                             <Loader2 className="h-6 w-6 animate-spin text-primary" />
                             <p className="ml-2 text-muted-foreground">Loading credentials...</p>
@@ -491,6 +526,26 @@ export default function DashboardPage() {
           </div>
         </SidebarProvider>
       </div>
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure you want to delete this product?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will (not actually) permanently delete the product
+              "{productToDelete?.name}" and all its associated customization data.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setProductToDelete(null)}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmDelete}
+              className={cn(buttonVariants({variant: "destructive"}))}
+            >
+              Delete Product
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </UploadProvider>
   );
 }
