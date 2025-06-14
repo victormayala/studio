@@ -499,6 +499,7 @@ export default function DesignCanvas({
             <Image
               src={productToDisplay.imageUrl}
               alt={productToDisplay.imageAlt}
+              key={productToDisplay.imageUrl} // Added key to force re-render on src change
               fill 
               style={{ objectFit: 'contain' }} 
               className="rounded-md pointer-events-none select-none" 
@@ -597,6 +598,8 @@ export default function DesignCanvas({
     </div>
   );
 }
+    
+
     
 
     
