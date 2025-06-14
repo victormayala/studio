@@ -25,8 +25,8 @@ export default function AiAssistant({ activeViewId }: AiAssistantProps) {
   const [generatedImageDataUrl, setGeneratedImageDataUrl] = useState<string | null>(null);
   const [generatedImageDescription, setGeneratedImageDescription] = useState<string | null>(null);
 
-  const [isMakingTransparent, setIsMakingTransparent] = useState(false); // New state
-  const [transparencyError, setTransparencyError] = useState<string | null>(null); // New state
+  const [isMakingTransparent, setIsMakingTransparent] = useState(false);
+  const [transparencyError, setTransparencyError] = useState<string | null>(null);
   
   const { addCanvasImageFromUrl } = useUploads();
   const { toast } = useToast();
@@ -38,7 +38,7 @@ export default function AiAssistant({ activeViewId }: AiAssistantProps) {
     }
     setIsLoading(true);
     setError(null);
-    setTransparencyError(null); // Clear transparency error as well
+    setTransparencyError(null);
     setGeneratedImageDataUrl(null);
     setGeneratedImageDescription(null);
 
@@ -107,14 +107,12 @@ export default function AiAssistant({ activeViewId }: AiAssistantProps) {
     }
     setIsMakingTransparent(true);
     setTransparencyError(null);
-    setError(null); // Clear general errors too
+    setError(null); 
 
     try {
       const input: MakeBackgroundTransparentInput = { imageDataUri: generatedImageDataUrl };
       const result: MakeBackgroundTransparentOutput = await makeBackgroundTransparent(input);
       setGeneratedImageDataUrl(result.processedImageUrl);
-      // Optionally, update description or add feedback:
-      // setGeneratedImageDescription(prev => prev + " (BG Removed Attempted)");
       if (result.feedbackText) {
         toast({ title: "Background Removal", description: result.feedbackText, variant: "info" });
       }
@@ -153,7 +151,7 @@ export default function AiAssistant({ activeViewId }: AiAssistantProps) {
           />
         </div>
         <Button type="submit" disabled={isLoading || isMakingTransparent || !promptText.trim()} className="w-full bg-primary text-primary-foreground hover:bg-primary/90">
-          {(isLoading && !generatedImageDataUrl) ? (
+          {(isLoading && !generatedImageDataUrl && !isMakingTransparent) ? (
             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
           ) : (
             <Sparkles className="mr-2 h-4 w-4" />
@@ -175,7 +173,7 @@ export default function AiAssistant({ activeViewId }: AiAssistantProps) {
         <Alert variant="destructive">
           <AlertTitle>Generation Error</AlertTitle>
           <AlertDescription>{error}</AlertDescription>
-           <Button onClick={handleTryAgain} variant="outline" size="sm" className="mt-2" disabled={isMakingTransparent}>
+           <Button onClick={handleTryAgain} variant="outline" size="sm" className="mt-2" disabled={isMakingTransparent || !promptText.trim()}>
               <RefreshCcwIcon className="mr-2 h-4 w-4" /> Try Again With Same Prompt
             </Button>
         </Alert>
@@ -199,21 +197,21 @@ export default function AiAssistant({ activeViewId }: AiAssistantProps) {
               fill 
               className="object-contain"
               data-ai-hint={generatedImageDescription?.split(" ").slice(0,2).join(" ") || "ai generated"}
-              key={generatedImageDataUrl} // Force re-render if URL changes
+              key={generatedImageDataUrl} 
             />
           </div>
           {generatedImageDescription && (
             <p className="text-xs text-muted-foreground italic">Description: {generatedImageDescription}</p>
           )}
-          <div className="grid grid-cols-1 gap-2 sm:grid-cols-3 mt-2">
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 mt-2">
             <Button onClick={handleUseDesign} className="sm:col-span-1 bg-green-600 hover:bg-green-700 text-white">
               <Play className="mr-2 h-4 w-4" /> Use
             </Button>
-            <Button onClick={handleMakeTransparent} variant="outline" className="sm:col-span-1" disabled={isLoading || isMakingTransparent}>
-              <Wand2 className="mr-2 h-4 w-4" /> Make Transparent
-            </Button>
             <Button onClick={handleTryAgain} variant="outline" className="sm:col-span-1" disabled={isLoading || isMakingTransparent || !promptText.trim()}>
               <RefreshCcwIcon className="mr-2 h-4 w-4" /> Try Again
+            </Button>
+            <Button onClick={handleMakeTransparent} variant="outline" className="sm:col-span-2" disabled={isLoading || isMakingTransparent}>
+              <Wand2 className="mr-2 h-4 w-4" /> Make Transparent
             </Button>
           </div>
         </div>
