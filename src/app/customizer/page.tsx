@@ -47,15 +47,21 @@ export interface ProductView {
   boundaryBoxes: BoundaryBox[];
 }
 
-interface LocalStorageCustomizerOptions {
-  views: ProductView[];
-  cstmzrSelectedVariationIds: string[];
+interface ColorGroupOptionsForCustomizer { // Renamed from OptionsPage's ColorGroupOptions
+  selectedVariationIds: string[]; // This might not be directly used in customizer display logic, but good to have
+  variantViewImages: Record<string, { imageUrl: string; aiHint?: string }>; // Key: defaultView.id
+}
+
+interface LocalStorageCustomizerOptions { // Updated to match Product Options page
+  defaultViews: ProductView[];
+  optionsByColor: Record<string, ColorGroupOptionsForCustomizer>;
+  groupingAttributeName: string | null;
 }
 
 export interface ProductForCustomizer {
   id: string;
   name: string;
-  views: ProductView[];
+  views: ProductView[]; // These will be the dynamically updated views for display
   type?: 'simple' | 'variable' | 'grouped' | 'external'; 
 }
 
@@ -113,6 +119,10 @@ function CustomizerLayoutAndLogic() {
   const [productVariations, setProductVariations] = useState<WCVariation[] | null>(null);
   const [configurableAttributes, setConfigurableAttributes] = useState<ConfigurableAttribute[] | null>(null);
   const [selectedVariationOptions, setSelectedVariationOptions] = useState<Record<string, string>>({});
+  
+  // New state for options loaded from product options page
+  const [loadedOptionsByColor, setLoadedOptionsByColor] = useState<Record<string, ColorGroupOptionsForCustomizer> | null>(null);
+  const [loadedGroupingAttributeName, setLoadedGroupingAttributeName] = useState<string | null>(null);
   const [viewBaseImages, setViewBaseImages] = useState<Record<string, {url: string, aiHint?: string}>>({});
 
 
@@ -135,6 +145,8 @@ function CustomizerLayoutAndLogic() {
     setConfigurableAttributes(null); 
     setSelectedVariationOptions({}); 
     setViewBaseImages({});
+    setLoadedOptionsByColor(null);
+    setLoadedGroupingAttributeName(null);
     
     if (!productId) {
       setError("No product ID provided. Displaying default customizer.");
@@ -173,12 +185,12 @@ function CustomizerLayoutAndLogic() {
 
     if (fetchError || !wcProduct) {
       setError(fetchError || `Failed to load product (ID: ${productId}). Displaying default.`);
-      const defaultViews = defaultFallbackProduct.views;
+      const defaultViewsError = defaultFallbackProduct.views;
       const baseImagesMapError: Record<string, {url: string, aiHint?: string}> = {};
-      defaultViews.forEach(view => { baseImagesMapError[view.id] = { url: view.imageUrl, aiHint: view.aiHint }; });
+      defaultViewsError.forEach(view => { baseImagesMapError[view.id] = { url: view.imageUrl, aiHint: view.aiHint }; });
       setViewBaseImages(baseImagesMapError);
       setProductDetails(defaultFallbackProduct);
-      setActiveViewId(defaultViews[0]?.id || null);
+      setActiveViewId(defaultViewsError[0]?.id || null);
       setConfigurableAttributes([]); 
       setSelectedVariationOptions({}); 
       setIsLoading(false);
@@ -186,46 +198,62 @@ function CustomizerLayoutAndLogic() {
       return;
     }
 
-    let loadedViews: ProductView[] = [];
-    let cstmzrSelectedVariationIds: string[] = [];
+    let finalDefaultViews: ProductView[] = [];
+    let cstmzrSelectedVariationIdsForCustomizer: string[] = []; // May not be used directly if optionsByColor dictates selection
+    let tempLoadedOptionsByColor: Record<string, ColorGroupOptionsForCustomizer> | null = null;
+    let tempLoadedGroupingAttributeName: string | null = null;
+
 
     const localStorageKey = user ? `cstmzr_product_options_${user.id}_${productId}` : `cstmzr_product_options_anonymous_${productId}`;
     try {
-      const savedOptions = localStorage.getItem(localStorageKey);
-      if (savedOptions) {
-        const parsedOptions = JSON.parse(savedOptions) as LocalStorageCustomizerOptions;
-        loadedViews = parsedOptions.views || [];
-        cstmzrSelectedVariationIds = parsedOptions.cstmzrSelectedVariationIds || [];
+      const savedOptionsString = localStorage.getItem(localStorageKey);
+      if (savedOptionsString) {
+        const parsedOptions = JSON.parse(savedOptionsString) as LocalStorageCustomizerOptions;
+        if (parsedOptions.defaultViews && parsedOptions.optionsByColor) { // New structure
+          finalDefaultViews = parsedOptions.defaultViews || [];
+          tempLoadedOptionsByColor = parsedOptions.optionsByColor || {};
+          tempLoadedGroupingAttributeName = parsedOptions.groupingAttributeName || null;
+        } else if ((parsedOptions as any).views && (parsedOptions as any).cstmzrSelectedVariationIds) { // Old structure for fallback
+          console.warn("Customizer: Found old CSTMZR options format. Using basic views.");
+          finalDefaultViews = (parsedOptions as any).views || [];
+          cstmzrSelectedVariationIdsForCustomizer = (parsedOptions as any).cstmzrSelectedVariationIds || [];
+        }
       }
     } catch (e) {
       console.warn("Customizer: Error parsing CSTMZR options from localStorage:", e);
       toast({ title: "Local Settings Error", description: "Could not load saved CSTMZR settings. Using defaults.", variant: "info"});
     }
     
-    const finalViews = loadedViews.length > 0 ? loadedViews : [
-      { 
-        id: `default_view_wc_${wcProduct.id}`,
-        name: "Front View",
-        imageUrl: wcProduct.images && wcProduct.images.length > 0 ? wcProduct.images[0].src : defaultFallbackProduct.views[0].imageUrl,
-        aiHint: wcProduct.images && wcProduct.images.length > 0 && wcProduct.images[0].alt ? wcProduct.images[0].alt.split(" ").slice(0,2).join(" ") : defaultFallbackProduct.views[0].aiHint,
-        boundaryBoxes: defaultFallbackProduct.views[0].boundaryBoxes,
-      }
-    ];
+    if (finalDefaultViews.length === 0) {
+        finalDefaultViews = [
+            { 
+                id: `default_view_wc_${wcProduct.id}`,
+                name: "Front View",
+                imageUrl: wcProduct.images && wcProduct.images.length > 0 ? wcProduct.images[0].src : defaultFallbackProduct.views[0].imageUrl,
+                aiHint: wcProduct.images && wcProduct.images.length > 0 && wcProduct.images[0].alt ? wcProduct.images[0].alt.split(" ").slice(0,2).join(" ") : defaultFallbackProduct.views[0].aiHint,
+                boundaryBoxes: defaultFallbackProduct.views[0].boundaryBoxes,
+            }
+        ];
+    }
     
+    setLoadedOptionsByColor(tempLoadedOptionsByColor);
+    setLoadedGroupingAttributeName(tempLoadedGroupingAttributeName);
+
     const baseImagesMapFinal: Record<string, {url: string, aiHint?: string}> = {};
-    finalViews.forEach(view => { baseImagesMapFinal[view.id] = { url: view.imageUrl, aiHint: view.aiHint }; });
+    finalDefaultViews.forEach(view => { baseImagesMapFinal[view.id] = { url: view.imageUrl, aiHint: view.aiHint }; });
     setViewBaseImages(baseImagesMapFinal);
     
     setProductDetails({
       id: wcProduct.id.toString(),
       name: wcProduct.name || `Product ${productId}`,
-      views: finalViews,
+      views: finalDefaultViews, // Start with default views; useEffect will update them
       type: wcProduct.type,
     });
 
-    setActiveViewId(finalViews[0]?.id || null);
-
-    if (wcProduct.type === 'variable' && cstmzrSelectedVariationIds.length > 0) {
+    setActiveViewId(finalDefaultViews[0]?.id || null);
+    
+    // If product is variable, fetch variations to populate dropdowns and potentially determine initial selected options
+    if (wcProduct.type === 'variable') {
       const { variations: fetchedVariations, error: variationsError } = await fetchWooCommerceProductVariations(productId, userCredentials);
       if (variationsError) {
         toast({ title: "Variations Load Error", description: variationsError, variant: "destructive" });
@@ -233,40 +261,35 @@ function CustomizerLayoutAndLogic() {
         setConfigurableAttributes([]); 
         setSelectedVariationOptions({});
       } else if (fetchedVariations && fetchedVariations.length > 0) {
-        setProductVariations(fetchedVariations); 
-        const relevantVariations = fetchedVariations.filter(v => cstmzrSelectedVariationIds.includes(v.id.toString()));
+        setProductVariations(fetchedVariations);
         
-        if (relevantVariations.length > 0) {
-          const attributesMap: Record<string, Set<string>> = {};
-          relevantVariations.forEach(variation => {
-            variation.attributes.forEach(attr => {
-              if (!attributesMap[attr.name]) {
-                attributesMap[attr.name] = new Set();
-              }
-              attributesMap[attr.name].add(attr.option);
-            });
+        // Determine configurable attributes from ALL fetched variations for the dropdowns
+        const attributesMap: Record<string, Set<string>> = {};
+        fetchedVariations.forEach(variation => {
+          variation.attributes.forEach(attr => {
+            if (!attributesMap[attr.name]) {
+              attributesMap[attr.name] = new Set();
+            }
+            attributesMap[attr.name].add(attr.option);
           });
+        });
+        const allConfigurableAttributes: ConfigurableAttribute[] = Object.entries(attributesMap).map(([name, optionsSet]) => ({
+          name,
+          options: Array.from(optionsSet),
+        }));
+        setConfigurableAttributes(allConfigurableAttributes);
 
-          const finalConfigurableAttributes: ConfigurableAttribute[] = Object.entries(attributesMap).map(([name, optionsSet]) => ({
-            name,
-            options: Array.from(optionsSet),
-          }));
-          setConfigurableAttributes(finalConfigurableAttributes);
-          
-          if (finalConfigurableAttributes.length > 0) {
-            const initialSelectedOptions: Record<string, string> = {};
-            finalConfigurableAttributes.forEach(attr => {
-              if (attr.options.length > 0) {
-                initialSelectedOptions[attr.name] = attr.options[0];
-              }
-            });
-            setSelectedVariationOptions(initialSelectedOptions);
-          } else {
-            setSelectedVariationOptions({});
-          }
+        // Set initial selected options for dropdowns
+        if (allConfigurableAttributes.length > 0) {
+          const initialSelectedOptions: Record<string, string> = {};
+          allConfigurableAttributes.forEach(attr => {
+            if (attr.options.length > 0) {
+              initialSelectedOptions[attr.name] = attr.options[0]; // Default to the first option
+            }
+          });
+          setSelectedVariationOptions(initialSelectedOptions);
         } else {
-           setConfigurableAttributes([]); 
-           setSelectedVariationOptions({});
+          setSelectedVariationOptions({});
         }
       } else {
          setProductVariations(null);
@@ -291,74 +314,85 @@ function CustomizerLayoutAndLogic() {
   }, [productId, authLoading, loadCustomizerData]);
 
 
-  useEffect(() => {
-    if (!productDetails || !productVariations) {
+ useEffect(() => {
+    if (!productDetails || !productVariations || !viewBaseImages) {
       return;
     }
-  
+
+    // Find the overall matching variation based on all selected options
     const matchingVariation = productVariations.find(variation => {
-      if (variation.attributes.length === 0 && Object.keys(selectedVariationOptions).length > 0) return false;
-      if (variation.attributes.length > 0 && Object.keys(selectedVariationOptions).length === 0 && configurableAttributes && variation.attributes.length !== configurableAttributes.length) return false;
-  
+      if (Object.keys(selectedVariationOptions).length === 0) return false; // No options selected, no match
       return variation.attributes.every(
         attr => selectedVariationOptions[attr.name] === attr.option
       );
     });
-  
-    let variationSpecificImageSrc: string | null = null;
-    let variationSpecificImageAiHint: string | undefined = undefined;
-  
-    if (matchingVariation && matchingVariation.image?.src) {
-      variationSpecificImageSrc = matchingVariation.image.src;
-      variationSpecificImageAiHint = matchingVariation.image.alt?.split(" ").slice(0, 2).join(" ") || undefined;
+
+    let primaryVariationImageSrc: string | null = null;
+    let primaryVariationImageAiHint: string | undefined = undefined;
+
+    if (matchingVariation?.image?.src) {
+      primaryVariationImageSrc = matchingVariation.image.src;
+      primaryVariationImageAiHint = matchingVariation.image.alt?.split(" ").slice(0, 2).join(" ") || undefined;
+    }
+
+    // Determine current color key for optionsByColor
+    let currentColorKey: string | null = null;
+    if (loadedGroupingAttributeName && selectedVariationOptions[loadedGroupingAttributeName]) {
+      currentColorKey = selectedVariationOptions[loadedGroupingAttributeName];
     }
     
+    const currentVariantViewImages = currentColorKey && loadedOptionsByColor ? loadedOptionsByColor[currentColorKey]?.variantViewImages : null;
+
     setProductDetails(prevProductDetails => {
       if (!prevProductDetails) return null;
-  
+
       const updatedViews = prevProductDetails.views.map(view => {
-        let finalImageUrl: string;
-        let finalAiHint: string | undefined;
-  
-        // Determine the base image and hint for the current view
+        let finalImageUrl: string | undefined = undefined;
+        let finalAiHint: string | undefined = undefined;
+        
         const baseImageInfo = viewBaseImages[view.id];
-        const baseImageUrl = baseImageInfo?.url || view.imageUrl; // Fallback to current if base not in map
-        const baseAiHint = baseImageInfo?.aiHint || view.aiHint;
-  
-        if (variationSpecificImageSrc) {
-          // A specific image for the selected variation combination exists
-          if (view.id === activeViewId) {
-            // This is the active view, so it gets the variation-specific image
-            finalImageUrl = variationSpecificImageSrc;
-            finalAiHint = variationSpecificImageAiHint || baseAiHint; // Prioritize variation hint
-          } else {
-            // This is a non-active view, so it uses its own base image
-            finalImageUrl = baseImageUrl;
-            finalAiHint = baseAiHint;
-          }
-        } else {
-          // No specific image for the selected variation combination, ALL views use their base image
+        const baseImageUrl = baseImageInfo?.url || defaultFallbackProduct.views[0].imageUrl; // Fallback to absolute default
+        const baseAiHint = baseImageInfo?.aiHint || defaultFallbackProduct.views[0].aiHint;
+
+        // Priority 1: Variant-specific image for this view and current color group
+        if (currentVariantViewImages && currentVariantViewImages[view.id]?.imageUrl) {
+          finalImageUrl = currentVariantViewImages[view.id].imageUrl;
+          finalAiHint = currentVariantViewImages[view.id].aiHint || baseAiHint;
+        } 
+        // Priority 2: Primary image of the overall selected variation (for active view only)
+        else if (primaryVariationImageSrc && view.id === activeViewId) {
+          finalImageUrl = primaryVariationImageSrc;
+          finalAiHint = primaryVariationImageAiHint || baseAiHint;
+        }
+        // Priority 3: Base image for the view angle
+        else {
           finalImageUrl = baseImageUrl;
           finalAiHint = baseAiHint;
         }
-  
-        // Only create a new view object if something actually changed
+
         if (view.imageUrl !== finalImageUrl || view.aiHint !== finalAiHint) {
-          return { ...view, imageUrl: finalImageUrl, aiHint: finalAiHint };
+          return { ...view, imageUrl: finalImageUrl!, aiHint: finalAiHint };
         }
         return view;
       });
-  
-      // Check if any view object identity has changed
+      
       const viewsChanged = updatedViews.some((newView, index) => newView !== prevProductDetails.views[index]);
-  
       if (viewsChanged) {
         return { ...prevProductDetails, views: updatedViews };
       }
-      return prevProductDetails; // No actual change, return the same object to prevent re-render loops
+      return prevProductDetails;
     });
-  // Ensure all dependencies are correctly listed.
-  }, [selectedVariationOptions, productVariations, productDetails?.id, activeViewId, viewBaseImages, configurableAttributes, setProductDetails]);
+
+  }, [
+    selectedVariationOptions, 
+    productVariations, 
+    productDetails?.id, // Keep to re-run if product itself changes
+    activeViewId, 
+    viewBaseImages, 
+    loadedOptionsByColor, 
+    loadedGroupingAttributeName,
+    // productDetails (object) is not directly used in deps to avoid loops, only its ID
+  ]);
 
 
   const getToolPanelTitle = (toolId: string): string => {
