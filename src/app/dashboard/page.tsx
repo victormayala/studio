@@ -109,21 +109,6 @@ export default function DashboardPage() {
     }
   }, [toast]);
 
-  // useEffect for loading products based on activeTab and credentials
-  useEffect(() => {
-    if (activeTab === 'products' && user && !isLoadingCredentials) { // Ensure credentials loaded first
-      const userStoreUrl = localStorage.getItem(`wc_store_url_${user.id}`);
-      const userConsumerKey = localStorage.getItem(`wc_consumer_key_${user.id}`);
-      const userConsumerSecret = localStorage.getItem(`wc_consumer_secret_${user.id}`);
-
-      if (userStoreUrl && userConsumerKey && userConsumerSecret) {
-        loadProductsWithCredentials({ storeUrl: userStoreUrl, consumerKey: userConsumerKey, consumerSecret: userConsumerSecret });
-      } else {
-        loadProductsWithCredentials();
-      }
-    }
-  }, [activeTab, user, loadProductsWithCredentials, isLoadingCredentials]);
-
   // useEffect to load credentials from localStorage on mount or user change
   useEffect(() => {
     if (user) {
@@ -283,7 +268,7 @@ export default function DashboardPage() {
                     </div>
                     {activeTab === 'products' && (
                        <div className="flex items-center gap-2">
-                        <Button onClick={handleRefreshDashboardData} className="bg-primary text-primary-foreground hover:bg-primary/90" disabled={isLoadingProducts}>
+                        <Button onClick={handleRefreshDashboardData} className="bg-primary text-primary-foreground hover:bg-primary/90" disabled={isLoadingProducts || isLoadingCredentials}>
                           {isLoadingProducts ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <RefreshCcw className="mr-2 h-5 w-5" />}
                           Refresh Product Data
                         </Button>
@@ -378,7 +363,7 @@ export default function DashboardPage() {
                             <PackageIcon className="mx-auto h-12 w-12 text-muted-foreground" />
                             <p className="mt-4 text-muted-foreground">No products found.</p>
                             <p className="text-sm text-muted-foreground mt-1">
-                              Try fetching from your WooCommerce store or add product configurations.
+                              Click "Refresh Product Data" to fetch from your WooCommerce store.
                             </p>
                           </div>
                         )}
