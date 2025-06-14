@@ -5,8 +5,9 @@ import AiAssistant from './AiAssistant';
 import GridControls from './GridControls'; 
 import HistoryControls from './HistoryControls'; 
 import ViewSwitcher from './ViewSwitcher';
-import type { ProductForCustomizer } from '@/app/customizer/page';
-import { cn } from '@/lib/utils'; // Import cn
+import VariantSelector from './VariantSelector'; // Import VariantSelector
+import type { ProductForCustomizer, ConfigurableAttribute } from '@/app/customizer/page';
+import { cn } from '@/lib/utils'; 
 
 interface RightPanelProps {
   showGrid: boolean;
@@ -14,7 +15,10 @@ interface RightPanelProps {
   productDetails: ProductForCustomizer | null;
   activeViewId: string | null;
   setActiveViewId: (id: string) => void;
-  className?: string; // Add className prop
+  className?: string;
+  configurableAttributes: ConfigurableAttribute[] | null; // New prop
+  selectedVariationOptions: Record<string, string>; // New prop
+  onVariantOptionSelect: (attributeName: string, optionValue: string) => void; // New prop
 }
 
 export default function RightPanel({ 
@@ -23,14 +27,17 @@ export default function RightPanel({
   productDetails,
   activeViewId,
   setActiveViewId,
-  className // Destructure className
+  className,
+  configurableAttributes,
+  selectedVariationOptions,
+  onVariantOptionSelect,
 }: RightPanelProps) {
   return (
   <div 
     id="right-panel-content"
     className={cn(
-      "shadow-sm border-l bg-card flex flex-col", // Base classes
-      className // Apply passed className for width, transition, opacity etc.
+      "shadow-sm border-l bg-card flex flex-col", 
+      className 
     )}
   >
     <div 
@@ -38,7 +45,7 @@ export default function RightPanel({
         "flex-1 h-full overflow-y-auto overflow-x-hidden pb-20",
         "[&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:rounded-full [&::-webkit-scrollbar-track]:bg-gray-100 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-gray-300 dark:[&::-webkit-scrollbar-track]:bg-neutral-700 dark:[&::-webkit-scrollbar-thumb]:bg-neutral-500"
       )}
-    > {/* Added pb-20 for footer */}
+    >
   
       {/* AI Assistant Section */}
       <div>
@@ -50,6 +57,24 @@ export default function RightPanel({
           <AiAssistant />
         </div>
       </div>
+
+      {/* Product Variants Section - NEW */}
+      {productDetails?.type === 'variable' && configurableAttributes && configurableAttributes.length > 0 && (
+        <div>
+          <div className="p-4 border-t">
+            <h2 className="font-headline text-lg font-semibold text-foreground">
+              Select Options
+            </h2>
+          </div>
+          <div className="p-4">
+            <VariantSelector
+              attributes={configurableAttributes}
+              selectedOptions={selectedVariationOptions}
+              onOptionSelect={onVariantOptionSelect}
+            />
+          </div>
+        </div>
+      )}
 
       {/* Product Views Section */}
       <div>

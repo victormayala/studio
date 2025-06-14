@@ -7,7 +7,7 @@ import DesignCanvas from '@/components/customizer/DesignCanvas';
 import RightPanel from '@/components/customizer/RightPanel';
 import { UploadProvider, useUploads } from "@/contexts/UploadContext"; 
 import { useEffect, useState, useCallback } from 'react';
-import { fetchWooCommerceProductById } from '@/app/actions/woocommerceActions';
+import { fetchWooCommerceProductById, fetchWooCommerceProductVariations } from '@/app/actions/woocommerceActions';
 import { useAuth } from '@/contexts/AuthContext';
 import { 
   Loader2, AlertTriangle, ShoppingCart, UploadCloud, Layers, Type, Shapes as ShapesIconLucide, Smile, Palette, Gem as GemIcon, Settings2 as SettingsIcon,
@@ -15,7 +15,7 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import type { WCCustomProduct } from '@/types/woocommerce';
+import type { WCCustomProduct, WCVariation, WCVariationAttribute } from '@/types/woocommerce';
 import { useToast } from '@/hooks/use-toast';
 import CustomizerIconNav, { type CustomizerTool } from '@/components/customizer/CustomizerIconNav';
 import { cn } from '@/lib/utils'; 
@@ -55,6 +55,12 @@ export interface ProductForCustomizer {
   id: string;
   name: string;
   views: ProductView[];
+  type?: 'simple' | 'variable' | 'grouped' | 'external'; // Added type
+}
+
+export interface ConfigurableAttribute {
+  name: string;
+  options: string[];
 }
 
 const defaultFallbackProduct: ProductForCustomizer = {
@@ -70,7 +76,8 @@ const defaultFallbackProduct: ProductForCustomizer = {
         { id: 'fallback_area_1', name: 'Default Area', x: 25, y: 25, width: 50, height: 50 },
       ],
     }
-  ]
+  ],
+  type: 'simple',
 };
 
 const toolItems: CustomizerTool[] = [
@@ -101,14 +108,31 @@ function CustomizerLayoutAndLogic() {
   const [isToolPanelOpen, setIsToolPanelOpen] = useState(true);
   const [isRightSidebarOpen, setIsRightSidebarOpen] = useState(true);
 
+  // State for variations and selected options
+  const [productVariations, setProductVariations] = useState<WCVariation[] | null>(null);
+  const [configurableAttributes, setConfigurableAttributes] = useState<ConfigurableAttribute[] | null>(null);
+  const [selectedVariationOptions, setSelectedVariationOptions] = useState<Record<string, string>>({});
+
+
   const toggleGrid = () => setShowGrid(prev => !prev);
   const toggleToolPanel = () => setIsToolPanelOpen(prev => !prev);
   const toggleRightSidebar = () => setIsRightSidebarOpen(prev => !prev);
 
+  const handleVariantOptionSelect = (attributeName: string, optionValue: string) => {
+    setSelectedVariationOptions(prev => ({
+      ...prev,
+      [attributeName]: optionValue,
+    }));
+    // TODO: Potentially update activeViewId or product image based on selection in a future step
+    // For now, we'll just update the selection state.
+  };
 
   const loadCustomizerData = useCallback(async () => {
     setIsLoading(true); 
     setError(null);
+    setProductVariations(null);
+    setConfigurableAttributes(null);
+    setSelectedVariationOptions({});
     
     if (!productId) {
       setError("No product ID provided. Displaying default customizer.");
@@ -151,6 +175,7 @@ function CustomizerLayoutAndLogic() {
     }
 
     let loadedViews: ProductView[] = [];
+    let cstmzrSelectedVariationIds: string[] = [];
 
     if (user) {
       const localStorageKey = `cstmzr_product_options_${user.id}_${productId}`;
@@ -159,6 +184,7 @@ function CustomizerLayoutAndLogic() {
         if (savedOptions) {
           const parsedOptions = JSON.parse(savedOptions) as LocalStorageCustomizerOptions;
           loadedViews = parsedOptions.views || [];
+          cstmzrSelectedVariationIds = parsedOptions.cstmzrSelectedVariationIds || [];
         }
       } catch (e) {
         console.warn("Customizer: Error parsing CSTMZR options from localStorage:", e);
@@ -182,11 +208,50 @@ function CustomizerLayoutAndLogic() {
       id: wcProduct.id.toString(),
       name: wcProduct.name || `Product ${productId}`,
       views: finalViews,
+      type: wcProduct.type,
     });
 
     setActiveViewId(finalViews[0]?.id || null);
+
+    if (wcProduct.type === 'variable' && cstmzrSelectedVariationIds.length > 0) {
+      const { variations: fetchedVariations, error: variationsError } = await fetchWooCommerceProductVariations(productId, userCredentials);
+      if (variationsError) {
+        toast({ title: "Variations Load Error", description: variationsError, variant: "destructive" });
+      } else if (fetchedVariations) {
+        const relevantVariations = fetchedVariations.filter(v => cstmzrSelectedVariationIds.includes(v.id.toString()));
+        setProductVariations(relevantVariations);
+
+        if (relevantVariations.length > 0) {
+          const attributesMap: Record<string, Set<string>> = {};
+          relevantVariations.forEach(variation => {
+            variation.attributes.forEach(attr => {
+              if (!attributesMap[attr.name]) {
+                attributesMap[attr.name] = new Set();
+              }
+              attributesMap[attr.name].add(attr.option);
+            });
+          });
+
+          const finalConfigurableAttributes: ConfigurableAttribute[] = Object.entries(attributesMap).map(([name, optionsSet]) => ({
+            name,
+            options: Array.from(optionsSet),
+          }));
+          setConfigurableAttributes(finalConfigurableAttributes);
+
+          // Initialize selected options
+          const initialSelectedOptions: Record<string, string> = {};
+          finalConfigurableAttributes.forEach(attr => {
+            if (attr.options.length > 0) {
+              initialSelectedOptions[attr.name] = attr.options[0];
+            }
+          });
+          setSelectedVariationOptions(initialSelectedOptions);
+        }
+      }
+    }
+
     setIsLoading(false);
-  }, [productId, user?.id, authLoading, toast]); // Changed user to user?.id
+  }, [productId, user?.id, authLoading, toast]);
 
   useEffect(() => {
     loadCustomizerData();
@@ -254,6 +319,7 @@ function CustomizerLayoutAndLogic() {
       productId: currentProductIdFromParams, 
       userId: user?.id, 
       activeViewId: activeViewId, 
+      selectedVariationOptions: selectedVariationOptions, // Add selected variation options
     };
 
     let targetOrigin = '*'; 
@@ -399,6 +465,9 @@ function CustomizerLayoutAndLogic() {
             productDetails={productDetails}
             activeViewId={activeViewId}
             setActiveViewId={setActiveViewId}
+            configurableAttributes={configurableAttributes}
+            selectedVariationOptions={selectedVariationOptions}
+            onVariantOptionSelect={handleVariantOptionSelect}
             className={cn(
               "transition-all duration-300 ease-in-out flex-shrink-0 h-full",
               isRightSidebarOpen ? "w-72 md:w-80 lg:w-96 opacity-100" : "w-0 opacity-0 pointer-events-none"
