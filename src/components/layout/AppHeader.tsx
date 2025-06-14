@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { Button } from "@/components/ui/button";
 import { Logo } from "@/components/icons/Logo";
 import { EmbedCodeModal } from "@/components/customizer/EmbedCodeModal";
-import { CodeXml, LayoutDashboard, LogOut } from "lucide-react"; 
+import { CodeXml, LayoutDashboard, LogOut, Settings } from "lucide-react"; 
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { usePathname, useSearchParams } from 'next/navigation';
@@ -19,12 +19,15 @@ export default function AppHeader() {
   const searchParams = useSearchParams();
 
   const [customizerShareUrlPath, setCustomizerShareUrlPath] = useState<string | null>(null);
+  const [currentProductId, setCurrentProductId] = useState<string | null>(null);
 
   useEffect(() => {
+    const productIdFromParams = searchParams.get('productId');
+    setCurrentProductId(productIdFromParams);
+
     if (pathname.startsWith('/customizer')) {
-      const productId = searchParams.get('productId');
-      if (productId) {
-        let urlPath = `/customizer?productId=${productId}`;
+      if (productIdFromParams) {
+        let urlPath = `/customizer?productId=${productIdFromParams}`;
         if (user?.id) {
           urlPath += `&userId=${user.id}`;
         }
@@ -51,6 +54,8 @@ export default function AppHeader() {
     }
   };
 
+  const showCustomizerSpecificButtons = pathname.startsWith('/customizer');
+
   return (
     <header className="flex items-center justify-between h-16 border-b bg-card shadow-sm px-4 md:px-6 w-full flex-shrink-0">
       <div className="flex items-center gap-4">
@@ -59,7 +64,7 @@ export default function AppHeader() {
         </Link>
       </div>
       <div className="flex items-center gap-2">
-        {pathname.startsWith('/customizer') && (
+        {showCustomizerSpecificButtons && (
           <Button 
             onClick={() => setIsEmbedModalOpen(true)} 
             variant="outline" 
@@ -68,6 +73,14 @@ export default function AppHeader() {
           >
             <CodeXml className="mr-2 h-4 w-4" />
             Embed Code
+          </Button>
+        )}
+        {showCustomizerSpecificButtons && currentProductId && (
+          <Button asChild variant="outline" className="hover:bg-accent hover:text-accent-foreground">
+            <Link href={`/dashboard/products/${currentProductId}/options`}>
+              <Settings className="mr-2 h-4 w-4" />
+              Product Options
+            </Link>
           </Button>
         )}
         <Button asChild variant="outline" className="hover:bg-accent hover:text-accent-foreground">
@@ -96,5 +109,3 @@ export default function AppHeader() {
     </header>
   );
 }
-
-    
