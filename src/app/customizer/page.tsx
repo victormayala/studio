@@ -97,6 +97,8 @@ const toolItems: CustomizerTool[] = [
   { id: "premium-designs", label: "Premium Designs", icon: GemIcon },
 ];
 
+const FEE_PER_VIEW = 5.00; // Define the fee per used view
+
 // Inner component that uses the context
 function CustomizerLayoutAndLogic() {
   const searchParams = useSearchParams();
@@ -123,6 +125,7 @@ function CustomizerLayoutAndLogic() {
   const [loadedOptionsByColor, setLoadedOptionsByColor] = useState<Record<string, ColorGroupOptionsForCustomizer> | null>(null);
   const [loadedGroupingAttributeName, setLoadedGroupingAttributeName] = useState<string | null>(null);
   const [viewBaseImages, setViewBaseImages] = useState<Record<string, {url: string, aiHint?: string}>>({});
+  const [totalCustomizationPrice, setTotalCustomizationPrice] = useState<number>(0);
 
 
   const toggleGrid = () => setShowGrid(prev => !prev);
@@ -313,10 +316,12 @@ function CustomizerLayoutAndLogic() {
       return;
     }
     if (productDetails.type === 'variable' && !productVariations) {
+        // If it's a variable product but variations haven't loaded yet (or errored), don't proceed.
         return;
     }
 
     const matchingVariation = productDetails.type === 'variable' && productVariations ? productVariations.find(variation => {
+      // If no variation options are selected yet, but there are configurable attributes, then no variation matches by default.
       if (Object.keys(selectedVariationOptions).length === 0 && configurableAttributes && configurableAttributes.length > 0) return false; 
       return variation.attributes.every(
         attr => selectedVariationOptions[attr.name] === attr.option
@@ -331,11 +336,13 @@ function CustomizerLayoutAndLogic() {
       primaryVariationImageAiHint = matchingVariation.image.alt?.split(" ").slice(0, 2).join(" ") || undefined;
     }
 
+    // Determine the current color key based on the grouping attribute
     let currentColorKey: string | null = null;
     if (loadedGroupingAttributeName && selectedVariationOptions[loadedGroupingAttributeName]) {
       currentColorKey = selectedVariationOptions[loadedGroupingAttributeName];
     }
     
+    // Get the variant-specific images for the current color group
     const currentVariantViewImages = currentColorKey && loadedOptionsByColor ? loadedOptionsByColor[currentColorKey]?.variantViewImages : null;
 
     setProductDetails(prevProductDetails => {
@@ -346,17 +353,20 @@ function CustomizerLayoutAndLogic() {
         let finalAiHint: string | undefined = undefined;
         
         const baseImageInfo = viewBaseImages[view.id];
-        const baseImageUrl = baseImageInfo?.url || defaultFallbackProduct.views[0].imageUrl; 
+        const baseImageUrl = baseImageInfo?.url || defaultFallbackProduct.views[0].imageUrl; // Fallback to absolute default if base not found
         const baseAiHint = baseImageInfo?.aiHint || defaultFallbackProduct.views[0].aiHint;
 
+        // Priority 1: Variant-specific image for this view ID and current color group
         if (currentVariantViewImages && currentVariantViewImages[view.id]?.imageUrl) {
           finalImageUrl = currentVariantViewImages[view.id].imageUrl;
-          finalAiHint = currentVariantViewImages[view.id].aiHint || baseAiHint;
+          finalAiHint = currentVariantViewImages[view.id].aiHint || baseAiHint; // Use base hint if variant specific hint is missing
         } 
+        // Priority 2: Primary image of the matching variation (if this view is the active one)
         else if (primaryVariationImageSrc && view.id === activeViewId) {
           finalImageUrl = primaryVariationImageSrc;
           finalAiHint = primaryVariationImageAiHint || baseAiHint;
         }
+        // Priority 3: Fallback to the base image for this view
         else {
           finalImageUrl = baseImageUrl;
           finalAiHint = baseAiHint;
@@ -375,7 +385,7 @@ function CustomizerLayoutAndLogic() {
   }, [
     selectedVariationOptions, 
     productVariations, 
-    productDetails?.id, 
+    productDetails?.id, // Re-run if product ID changes (though unlikely within same page)
     activeViewId, 
     viewBaseImages, 
     loadedOptionsByColor, 
@@ -383,6 +393,25 @@ function CustomizerLayoutAndLogic() {
     configurableAttributes, // Added as it's used in matchingVariation logic check
     productDetails?.type // Added as it's used in matchingVariation logic check
   ]);
+
+  // Effect to calculate customization price based on used views
+  useEffect(() => {
+    const usedViewIds = new Set<string>();
+
+    canvasImages.forEach(item => {
+      if (item.viewId) usedViewIds.add(item.viewId);
+    });
+    canvasTexts.forEach(item => {
+      if (item.viewId) usedViewIds.add(item.viewId);
+    });
+    canvasShapes.forEach(item => {
+      if (item.viewId) usedViewIds.add(item.viewId);
+    });
+
+    const newTotal = usedViewIds.size * FEE_PER_VIEW;
+    setTotalCustomizationPrice(newTotal);
+
+  }, [canvasImages, canvasTexts, canvasShapes]);
 
 
   const getToolPanelTitle = (toolId: string): string => {
@@ -448,6 +477,7 @@ function CustomizerLayoutAndLogic() {
       userId: user?.id, 
       activeViewId: activeViewId, 
       selectedVariationOptions: selectedVariationOptions, 
+      customizationPrice: totalCustomizationPrice, // Include the customization price
     };
 
     let targetOrigin = '*'; 
@@ -609,7 +639,7 @@ function CustomizerLayoutAndLogic() {
                 {currentProductName}
             </div>
             <div className="flex items-center gap-3">
-                <div className="text-lg font-semibold text-foreground">Total: $0.00</div>
+                <div className="text-lg font-semibold text-foreground">Total: ${totalCustomizationPrice.toFixed(2)}</div>
                 <Button size="default" className="bg-primary text-primary-foreground hover:bg-primary/90" onClick={handleAddToCart}>
                 <ShoppingCart className="mr-2 h-5 w-5" /> Add to Cart
                 </Button>
