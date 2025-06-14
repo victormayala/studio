@@ -11,7 +11,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, Shirt, RefreshCcw, ExternalLink, Loader2, AlertTriangle, LayersIcon } from 'lucide-react';
+import { ArrowLeft, Shirt, RefreshCcw, ExternalLink, Loader2, AlertTriangle, LayersIcon, Palette } from 'lucide-react';
 import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
@@ -19,7 +19,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import { fetchWooCommerceProductById, fetchWooCommerceProductVariations } from '@/app/actions/woocommerceActions';
 import type { WCCustomProduct, WCVariation } from '@/types/woocommerce';
 import { Alert as ShadCnAlert, AlertDescription as ShadCnAlertDescription, AlertTitle as ShadCnAlertTitle } from "@/components/ui/alert";
-import ProductViewSetup from '@/components/product-options/ProductViewSetup'; // New Import
+import ProductViewSetup from '@/components/product-options/ProductViewSetup'; 
+import { Separator } from '@/components/ui/separator';
 
 // Interfaces (BoundaryBox, ProductView, ProductOptionsData, LocalStorageData, ActiveDragState) remain the same
 interface BoundaryBox {
@@ -67,8 +68,8 @@ interface ActiveDragState {
   containerHeightPx: number;
 }
 
-const MIN_BOX_SIZE_PERCENT = 5; // Keep here as it's used in calculations within this file
-const MAX_PRODUCT_VIEWS = 4; // Keep here or pass if ProductViewSetup needs it explicitly
+const MIN_BOX_SIZE_PERCENT = 5; 
+const MAX_PRODUCT_VIEWS = 4; 
 
 export default function ProductOptionsPage() {
   const params = useParams();
@@ -97,6 +98,10 @@ export default function ProductOptionsPage() {
   const [isDeleteViewDialogOpen, setIsDeleteViewDialogOpen] = useState(false);
   const [viewIdToDelete, setViewIdToDelete] = useState<string | null>(null);
 
+  const [groupingAttributeName, setGroupingAttributeName] = useState<string | null>(null);
+  const [groupedVariations, setGroupedVariations] = useState<Record<string, WCVariation[]> | null>(null);
+
+
   const fetchAndSetProductData = useCallback(async () => {
     if (!productId || !user?.id) {
       setIsLoading(false);
@@ -108,6 +113,7 @@ export default function ProductOptionsPage() {
     }
 
     setIsLoading(true); setError(null); setVariationsError(null); setVariations([]);
+    setGroupedVariations(null); setGroupingAttributeName(null);
 
     let userCredentials;
     try {
@@ -130,9 +136,49 @@ export default function ProductOptionsPage() {
     
     if (wcProduct.type === 'variable') {
       setIsLoadingVariations(true);
-      const { variations: vars, error: varsError } = await fetchWooCommerceProductVariations(productId, userCredentials);
-      if (varsError) setVariationsError(varsError);
-      else if (vars) setVariations(vars);
+      const { variations: fetchedVars, error: varsError } = await fetchWooCommerceProductVariations(productId, userCredentials);
+      if (varsError) {
+        setVariationsError(varsError);
+        setVariations([]);
+      } else if (fetchedVars) {
+        setVariations(fetchedVars);
+
+        // Group variations
+        if (fetchedVars.length > 0) {
+          let identifiedGroupingAttr: string | null = null;
+          const firstVarAttributes = fetchedVars[0].attributes;
+
+          // Try to find "Color" or "Colour"
+          const colorAttr = firstVarAttributes.find(attr => attr.name.toLowerCase() === 'color' || attr.name.toLowerCase() === 'colour');
+          if (colorAttr) {
+            identifiedGroupingAttr = colorAttr.name;
+          } else {
+            // Fallback: use the first attribute that isn't "Size" or "Talla"
+            const nonSizeAttr = firstVarAttributes.find(attr => !['size', 'talla'].includes(attr.name.toLowerCase()));
+            if (nonSizeAttr) {
+              identifiedGroupingAttr = nonSizeAttr.name;
+            } else if (firstVarAttributes.length > 0) {
+              identifiedGroupingAttr = firstVarAttributes[0].name; // Last resort
+            }
+          }
+          setGroupingAttributeName(identifiedGroupingAttr);
+
+          if (identifiedGroupingAttr) {
+            const groups: Record<string, WCVariation[]> = {};
+            fetchedVars.forEach(v => {
+              const groupAttr = v.attributes.find(a => a.name === identifiedGroupingAttr);
+              const groupKey = groupAttr ? groupAttr.option : 'Other';
+              if (!groups[groupKey]) {
+                groups[groupKey] = [];
+              }
+              groups[groupKey].push(v);
+            });
+            setGroupedVariations(groups);
+          } else {
+            setGroupedVariations({ 'All Variations': fetchedVars }); // No clear grouping, show all under one
+          }
+        }
+      }
       setIsLoadingVariations(false);
     }
 
@@ -184,7 +230,7 @@ export default function ProductOptionsPage() {
   }, [fetchAndSetProductData]);
 
   const handleRefreshData = () => {
-    setIsRefreshing(true); // This will trigger fetchAndSetProductData via its useEffect dependency
+    setIsRefreshing(true); 
   };
 
   const getPointerCoords = (e: MouseEvent | TouchEvent | React.MouseEvent | React.TouchEvent) => {
@@ -263,7 +309,7 @@ export default function ProductOptionsPage() {
     }
     return () => {
       window.removeEventListener('mousemove', handleDragging); window.removeEventListener('touchmove', handleDragging);
-      window.removeEventListener('mouseup', handleInteractionEnd); window.removeEventListener('touchend', handleInteractionEnd);
+      window.removeEventListener('mouseup', handleDragging); window.removeEventListener('touchend', handleInteractionEnd);
       cancelAnimationFrame(dragUpdateRef.current);
     };
   }, [activeDrag, handleDragging, handleInteractionEnd]);
@@ -276,7 +322,7 @@ export default function ProductOptionsPage() {
     const localStorageKey = `cstmzr_product_options_${user.id}_${productOptions.id}`;
     const dataToSave: LocalStorageData = {
       views: productOptions.views,
-      cstmzrSelectedVariationIds: productOptions.selectedVariationIdsForCstmzr,
+      selectedVariationIdsForCstmzr: productOptions.selectedVariationIdsForCstmzr,
     };
     try {
       localStorage.setItem(localStorageKey, JSON.stringify(dataToSave));
@@ -407,6 +453,23 @@ export default function ProductOptionsPage() {
     setProductOptions(prev => prev ? { ...prev, selectedVariationIdsForCstmzr: checked ? variations.map(v => v.id.toString()) : [] } : null);
     setHasUnsavedChanges(true);
   };
+  
+  const handleSelectAllVariationsInGroup = (groupKey: string, checked: boolean) => {
+    if (!productOptions || !groupedVariations || !groupedVariations[groupKey]) return;
+    const groupVariationIds = groupedVariations[groupKey].map(v => v.id.toString());
+    
+    setProductOptions(prev => {
+      if (!prev) return null;
+      let newSelectedIds;
+      if (checked) {
+        newSelectedIds = Array.from(new Set([...prev.selectedVariationIdsForCstmzr, ...groupVariationIds]));
+      } else {
+        newSelectedIds = prev.selectedVariationIdsForCstmzr.filter(id => !groupVariationIds.includes(id));
+      }
+      return { ...prev, selectedVariationIdsForCstmzr: newSelectedIds };
+    });
+    setHasUnsavedChanges(true);
+  };
 
   const handleVariationSelectionChange = (variationId: string, checked: boolean) => {
     if (!productOptions) return;
@@ -462,21 +525,57 @@ export default function ProductOptionsPage() {
               <CardContent>
                 {isLoadingVariations || (isRefreshing && isLoading) ? <div className="flex items-center justify-center py-6"><Loader2 className="h-6 w-6 animate-spin text-primary" /><p className="ml-2 text-muted-foreground">Loading variations...</p></div>
                 : variationsError ? <div className="text-center py-6"><AlertTriangle className="mx-auto h-10 w-10 text-destructive" /><p className="mt-3 text-destructive font-semibold">Error loading variations</p><p className="text-sm text-muted-foreground mt-1">{variationsError}</p></div>
-                : variations.length > 0 ? (<>
+                : groupedVariations && Object.keys(groupedVariations).length > 0 ? (<>
                     <div className="mb-4 flex items-center space-x-2 p-2 border-b">
                       <Checkbox id="selectAllVariations" checked={allVariationsSelected} onCheckedChange={(cs) => handleSelectAllVariations(cs === 'indeterminate' ? true : cs as boolean)} data-state={someVariationsSelected && !allVariationsSelected ? 'indeterminate' : (allVariationsSelected ? 'checked' : 'unchecked')} />
-                      <Label htmlFor="selectAllVariations" className="text-sm font-medium">{allVariationsSelected ? "Deselect All" : "Select All"}</Label>
+                      <Label htmlFor="selectAllVariations" className="text-sm font-medium">{allVariationsSelected ? "Deselect All" : "Select All Variations"}</Label>
                     </div>
-                    <div className="space-y-3 max-h-96 overflow-y-auto pr-2">
-                      {variations.map((variation) => (
-                        <div key={variation.id} className={cn("p-3 border rounded-md flex items-start gap-3 transition-colors", productOptions.selectedVariationIdsForCstmzr.includes(variation.id.toString()) ? "bg-primary/10 border-primary" : "bg-muted/30 hover:bg-muted/50")}>
-                          <Checkbox id={`variation-${variation.id}`} checked={productOptions.selectedVariationIdsForCstmzr.includes(variation.id.toString())} onCheckedChange={(c) => handleVariationSelectionChange(variation.id.toString(), c as boolean)} className="mt-1 flex-shrink-0" />
-                          <div className="relative h-16 w-16 rounded-md overflow-hidden border bg-card flex-shrink-0"><NextImage src={variation.image?.src || (currentView?.imageUrl) || 'https://placehold.co/100x100.png'} alt={variation.image?.alt || productOptions.name} fill className="object-contain" data-ai-hint={variation.image?.alt ? variation.image.alt.split(" ").slice(0,2).join(" ") : "variation image"}/></div>
-                          <div className="flex-grow"><p className="text-sm font-medium text-foreground">{variation.attributes.map(attr => `${attr.name}: ${attr.option}`).join(' / ')}</p><p className="text-xs text-muted-foreground">SKU: {variation.sku || 'N/A'}</p><p className="text-xs text-muted-foreground">Price: $${parseFloat(variation.price).toFixed(2)}</p></div>
-                          <Badge variant={variation.stock_status === 'instock' ? 'default' : (variation.stock_status === 'onbackorder' ? 'secondary' : 'destructive')} className={cn("self-start", variation.stock_status === 'instock' && 'bg-green-500/10 text-green-700 border-green-500/30', variation.stock_status === 'onbackorder' && 'bg-yellow-500/10 text-yellow-700 border-yellow-500/30', variation.stock_status === 'outofstock' && 'bg-red-500/10 text-red-700 border-red-500/30')}>{variation.stock_status === 'instock' ? 'In Stock' : variation.stock_status === 'onbackorder' ? 'On Backorder' : 'Out of Stock'}{variation.stock_quantity !== null && ` (${variation.stock_quantity})`}</Badge>
-                        </div>))}
-                    </div></>
-                ) : <div className="text-center py-6"><LayersIcon className="mx-auto h-10 w-10 text-muted-foreground" /><p className="mt-3 text-muted-foreground">No variations found for this product.</p></div>}
+                    <div className="space-y-6 max-h-[600px] overflow-y-auto pr-2">
+                    {Object.entries(groupedVariations).map(([groupKey, groupItems]) => {
+                      const allInGroupSelected = groupItems.every(v => productOptions.selectedVariationIdsForCstmzr.includes(v.id.toString()));
+                      const someInGroupSelected = groupItems.some(v => productOptions.selectedVariationIdsForCstmzr.includes(v.id.toString())) && !allInGroupSelected;
+                      return (
+                        <div key={groupKey} className="space-y-3">
+                          <div className="flex justify-between items-center pt-2">
+                            <h4 className="text-md font-semibold text-foreground flex items-center">
+                              <Palette className="mr-2 h-5 w-5 text-primary/80" />
+                              {groupingAttributeName || "Group"}: <span className="text-primary">{groupKey}</span> ({groupItems.length})
+                            </h4>
+                            <div className="flex items-center space-x-2">
+                               <Checkbox 
+                                id={`selectAll-${groupKey.replace(/\s+/g, '-')}`} 
+                                checked={allInGroupSelected} 
+                                onCheckedChange={(cs) => handleSelectAllVariationsInGroup(groupKey, cs === 'indeterminate' ? true : cs as boolean)} 
+                                data-state={someInGroupSelected ? 'indeterminate' : (allInGroupSelected ? 'checked' : 'unchecked')}
+                               />
+                              <Label htmlFor={`selectAll-${groupKey.replace(/\s+/g, '-')}`} className="text-xs font-medium">
+                                Select All in {groupKey}
+                              </Label>
+                            </div>
+                          </div>
+                          <Separator/>
+                          <div className="space-y-3 pl-2">
+                            {groupItems.map((variation) => (
+                              <div key={variation.id} className={cn("p-3 border rounded-md flex items-start gap-3 transition-colors", productOptions.selectedVariationIdsForCstmzr.includes(variation.id.toString()) ? "bg-primary/10 border-primary shadow-sm" : "bg-muted/30 hover:bg-muted/50")}>
+                                <Checkbox id={`variation-${variation.id}`} checked={productOptions.selectedVariationIdsForCstmzr.includes(variation.id.toString())} onCheckedChange={(c) => handleVariationSelectionChange(variation.id.toString(), c as boolean)} className="mt-1 flex-shrink-0" />
+                                <div className="relative h-16 w-16 rounded-md overflow-hidden border bg-card flex-shrink-0"><NextImage src={variation.image?.src || (currentView?.imageUrl) || 'https://placehold.co/100x100.png'} alt={variation.image?.alt || productOptions.name} fill className="object-contain" data-ai-hint={variation.image?.alt ? variation.image.alt.split(" ").slice(0,2).join(" ") : "variation image"}/></div>
+                                <div className="flex-grow">
+                                  <p className="text-sm font-medium text-foreground">
+                                    {variation.attributes.filter(attr => attr.name !== groupingAttributeName).map(attr => `${attr.name}: ${attr.option}`).join(' / ') || "Base"}
+                                  </p>
+                                  <p className="text-xs text-muted-foreground">SKU: {variation.sku || 'N/A'}</p>
+                                  <p className="text-xs text-muted-foreground">Price: $${parseFloat(variation.price).toFixed(2)}</p>
+                                </div>
+                                <Badge variant={variation.stock_status === 'instock' ? 'default' : (variation.stock_status === 'onbackorder' ? 'secondary' : 'destructive')} className={cn("self-start text-xs", variation.stock_status === 'instock' && 'bg-green-500/10 text-green-700 border-green-500/30', variation.stock_status === 'onbackorder' && 'bg-yellow-500/10 text-yellow-700 border-yellow-500/30', variation.stock_status === 'outofstock' && 'bg-red-500/10 text-red-700 border-red-500/30')}>{variation.stock_status === 'instock' ? 'In Stock' : variation.stock_status === 'onbackorder' ? 'On Backorder' : 'Out of Stock'}{variation.stock_quantity !== null && ` (${variation.stock_quantity})`}</Badge>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  </>
+                ) : <div className="text-center py-6"><LayersIcon className="mx-auto h-10 w-10 text-muted-foreground" /><p className="mt-3 text-muted-foreground">No variations found or grouping failed.</p></div>}
               </CardContent>
             </Card>
           )}
@@ -551,3 +650,4 @@ export default function ProductOptionsPage() {
     
 
     
+
