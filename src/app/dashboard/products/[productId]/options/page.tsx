@@ -11,7 +11,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, Shirt, RefreshCcw, ExternalLink, Loader2, AlertTriangle, LayersIcon, Palette, Tag } from 'lucide-react';
+import { ArrowLeft, Shirt, RefreshCcw, ExternalLink, Loader2, AlertTriangle, LayersIcon, Tag } from 'lucide-react';
 import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
@@ -564,7 +564,6 @@ export default function ProductOptionsPage() {
                           </div>
                           <div className="flex-grow">
                             <h4 className="text-md font-semibold text-foreground flex items-center mb-1">
-                              <Palette className="mr-2 h-5 w-5 text-primary/80 flex-shrink-0" />
                               {groupingAttributeName || "Group"}: <span className="text-primary ml-1">{groupKey}</span>
                             </h4>
                             {secondaryAttributeName && secondaryOptions.length > 0 && (
@@ -662,3 +661,6 @@ export default function ProductOptionsPage() {
     
 
 
+
+
+    
