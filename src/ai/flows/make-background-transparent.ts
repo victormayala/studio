@@ -50,13 +50,7 @@ const makeBackgroundTransparentFlow = ai.defineFlow(
       model: model,
       prompt: [
         { media: { url: input.imageDataUri } },
-        { text: `Analyze the provided image. Your primary task is to make the background of this image transparent, creating a PNG with an alpha channel. The main subject(s) of the image should be preserved accurately.
-
-IMPORTANT:
-- Do NOT add a solid white or any other color background as a substitute for true transparency.
-- Focus on achieving a clean cutout of the main subject with a transparent background.
-- If you are confident you have successfully made the background transparent, provide the modified image.
-- If you cannot make the background transparent or are unsure, you should ideally return the original image data and clearly state in the text output that you could not perform the background removal or that the result might not be as requested.` }
+        { text: "Make the background of the input image transparent. Ensure the output is a PNG with an alpha channel. Preserve the main subject accurately. Do not use a solid color background unless it's part of the original subject." }
       ],
       config: {
         responseModalities: ['TEXT', 'IMAGE'],
@@ -82,3 +76,4 @@ IMPORTANT:
     };
   }
 );
+
