@@ -84,12 +84,11 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
     endInteractiveOperation
   } = useUploads();
   const { toast } = useToast();
-  const [textValue, setTextValue] = useState(initialTextToolPanelDefaultStyle.content);
-
+  
   const selectedText = canvasTexts.find(t => t.id === selectedCanvasTextId && t.viewId === activeViewId);
 
-  const [currentStyle, setCurrentStyle] = useState<CanvasText>(initialTextToolPanelDefaultStyle);
-
+  const [textValue, setTextValue] = useState(initialTextToolPanelDefaultStyle.content);
+  const [currentStyle, setCurrentStyle] = useState<CanvasText>({...initialTextToolPanelDefaultStyle, viewId: activeViewId || ''});
   const [localTextColorHex, setLocalTextColorHex] = useState(initialTextToolPanelDefaultStyle.color);
   const [localOutlineColorHex, setLocalOutlineColorHex] = useState(initialTextToolPanelDefaultStyle.outlineColor);
   const [localShadowColorHex, setLocalShadowColorHex] = useState(initialTextToolPanelDefaultStyle.shadowColor);
@@ -98,54 +97,21 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
   useEffect(() => {
     if (selectedText) {
       const newStyleCandidate = { ...initialTextToolPanelDefaultStyle, ...selectedText };
-      let needsUpdate = false;
-
-      // Compare essential style properties to avoid unnecessary updates
-      for (const key in newStyleCandidate) {
-        if (key !== 'id' && key !== 'viewId' && key !== 'content' && key !== 'itemType' &&
-            (newStyleCandidate as any)[key] !== (currentStyle as any)[key]) {
-          needsUpdate = true;
-          break;
-        }
-      }
-      if (selectedText.content !== textValue) needsUpdate = true;
-      if (selectedText.color !== localTextColorHex) needsUpdate = true;
-      if (selectedText.outlineColor !== localOutlineColorHex) needsUpdate = true;
-      if (selectedText.shadowColor !== localShadowColorHex) needsUpdate = true;
-
-
-      if (needsUpdate) {
-        setCurrentStyle(newStyleCandidate);
-        setTextValue(selectedText.content);
-        setLocalTextColorHex(selectedText.color);
-        setLocalOutlineColorHex(selectedText.outlineColor);
-        setLocalShadowColorHex(selectedText.shadowColor);
-      }
+      setCurrentStyle(newStyleCandidate);
+      setTextValue(selectedText.content);
+      setLocalTextColorHex(selectedText.color);
+      setLocalOutlineColorHex(selectedText.outlineColor);
+      setLocalShadowColorHex(selectedText.shadowColor);
     } else {
+      // Reset panel to defaults if no text is selected or activeViewId changes
       const resetStyle = { ...initialTextToolPanelDefaultStyle, viewId: activeViewId || '' };
-      let needsReset = false;
-      for (const key in resetStyle) {
-        if (key !== 'id' && 
-            (resetStyle as any)[key] !== (currentStyle as any)[key]) {
-              needsReset = true;
-              break;
-        }
-      }
-      if (initialTextToolPanelDefaultStyle.content !== textValue) needsReset = true;
-      if (resetStyle.color !== localTextColorHex) needsReset = true;
-      if (resetStyle.outlineColor !== localOutlineColorHex) needsReset = true;
-      if (resetStyle.shadowColor !== localShadowColorHex) needsReset = true;
-
-
-      if (needsReset) {
-        setCurrentStyle(resetStyle);
-        setTextValue(initialTextToolPanelDefaultStyle.content);
-        setLocalTextColorHex(resetStyle.color);
-        setLocalOutlineColorHex(resetStyle.outlineColor);
-        setLocalShadowColorHex(resetStyle.shadowColor);
-      }
+      setCurrentStyle(resetStyle);
+      setTextValue(initialTextToolPanelDefaultStyle.content);
+      setLocalTextColorHex(resetStyle.color);
+      setLocalOutlineColorHex(resetStyle.outlineColor);
+      setLocalShadowColorHex(resetStyle.shadowColor);
     }
-  }, [selectedText, activeViewId, currentStyle, textValue, localTextColorHex, localOutlineColorHex, localShadowColorHex]);
+  }, [selectedText, activeViewId]);
 
 
   const handleStyleChange = useCallback(<K extends keyof CanvasText>(property: K, value: CanvasText[K]) => {
@@ -174,14 +140,17 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
       toast({ title: "No Active View", description: "Please select a product view first.", variant: "info" });
       return;
     }
-    const contentToAdd = textValue.trim() || "New Text";
+    const contentToAdd = textValue.trim() || "New Text"; // Uses the current textValue
     const styleForNewText: Partial<CanvasText> = {
-      ...currentStyle,
-      content: contentToAdd,
+      ...currentStyle, // currentStyle should have the typed content if no item is selected
+      content: contentToAdd, // Explicitly set contentToAdd here
     };
     addCanvasText(contentToAdd, activeViewId, styleForNewText);
+    
+    // If no item was selected before adding, reset the input field and currentStyle.content for the next new text
     if (!selectedText) { 
         setTextValue(initialTextToolPanelDefaultStyle.content); 
+        setCurrentStyle(prev => ({...prev, content: initialTextToolPanelDefaultStyle.content}));
     }
   };
 
@@ -190,6 +159,7 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
     if (selectedCanvasTextId && selectedText) {
        handleStyleChange('content', newContent);
     } else {
+        // If no item is selected, update currentStyle.content so new items get this text
         setCurrentStyle(prev => ({...prev, content: newContent}));
     }
   };
@@ -609,3 +579,5 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
   );
 }
 
+
+    
