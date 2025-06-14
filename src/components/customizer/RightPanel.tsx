@@ -1,7 +1,6 @@
 
 "use client";
 
-import AiAssistant from './AiAssistant';
 import GridControls from './GridControls'; 
 import HistoryControls from './HistoryControls'; 
 import ViewSwitcher from './ViewSwitcher';
@@ -55,25 +54,15 @@ export default function RightPanel({
       )}
     >
   
-      {/* AI Assistant Section */}
-      <div>
-        <div className="px-4 pt-4 pb-1"> 
-          <h2 className="font-headline text-lg font-semibold text-foreground">AI Design Assistant</h2>
-        </div>
-        <div className="border-b mx-0"></div> 
-        <div className="px-4 py-3"> 
-          <AiAssistant activeViewId={activeViewId} />
-        </div>
-      </div>
-
       {/* Product Variants Section */}
       {productDetails?.type === 'variable' && configurableAttributes && configurableAttributes.length > 0 && (
         <div>
-          <div className="px-4 pt-3 pb-1 border-t">
+          <div className="px-4 pt-4 pb-1">
             <h2 className="font-headline text-lg font-semibold text-foreground">
               Select Options
             </h2>
           </div>
+          <div className="border-b mx-0"></div> 
           <div className="px-4 py-3">
             <VariantSelector
               attributes={configurableAttributes}
@@ -92,6 +81,7 @@ export default function RightPanel({
             Product Views
           </h2>
         </div>
+        <div className="border-b mx-0"></div> 
         <div className="px-4 py-3"> 
           {productDetails && productDetails.views && productDetails.views.length > 0 ? (
             <ViewSwitcher
@@ -110,6 +100,7 @@ export default function RightPanel({
         <div className="px-4 pt-3 pb-1 border-t"> 
           <h2 className="font-headline text-lg font-semibold text-foreground">Canvas Helpers</h2>
         </div>
+        <div className="border-b mx-0"></div> 
         <div className="px-4 py-3 space-y-3"> 
           <HistoryControls />
           <BoundaryBoxControls showBoundaryBoxes={showBoundaryBoxes} toggleBoundaryBoxes={toggleBoundaryBoxes} /> 

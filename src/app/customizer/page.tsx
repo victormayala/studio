@@ -11,7 +11,7 @@ import { fetchWooCommerceProductById, fetchWooCommerceProductVariations } from '
 import { useAuth } from '@/contexts/AuthContext';
 import { 
   Loader2, AlertTriangle, ShoppingCart, UploadCloud, Layers, Type, Shapes as ShapesIconLucide, Smile, Palette, Gem as GemIcon, Settings2 as SettingsIcon,
-  PanelLeftClose, PanelRightOpen, PanelRightClose, PanelLeftOpen 
+  PanelLeftClose, PanelRightOpen, PanelRightClose, PanelLeftOpen, Sparkles
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
@@ -29,6 +29,7 @@ import ClipartPanel from '@/components/customizer/ClipartPanel';
 import FreeDesignsPanel from '@/components/customizer/FreeDesignsPanel';
 import PremiumDesignsPanel from '@/components/customizer/PremiumDesignsPanel';
 import VariantSelector from '@/components/customizer/VariantSelector';
+import AiAssistant from '@/components/customizer/AiAssistant'; // Import AiAssistant
 
 interface BoundaryBox {
   id: string;
@@ -62,7 +63,7 @@ interface LocalStorageCustomizerOptions {
 export interface ProductForCustomizer {
   id: string;
   name: string;
-  basePrice: number; // Added base product price
+  basePrice: number;
   views: ProductView[]; 
   type?: 'simple' | 'variable' | 'grouped' | 'external'; 
 }
@@ -75,7 +76,7 @@ export interface ConfigurableAttribute {
 const defaultFallbackProduct: ProductForCustomizer = {
   id: 'fallback_product',
   name: 'Product Customizer (Default)',
-  basePrice: 25.00, // Default base price
+  basePrice: 25.00, 
   views: [
     {
       id: 'fallback_view_1',
@@ -93,6 +94,7 @@ const defaultFallbackProduct: ProductForCustomizer = {
 
 const toolItems: CustomizerTool[] = [
   { id: "layers", label: "Layers", icon: Layers },
+  { id: "ai-assistant", label: "AI Assistant", icon: Sparkles }, // Added AI Assistant
   { id: "uploads", label: "Uploads", icon: UploadCloud },
   { id: "text", label: "Text", icon: Type },
   { id: "shapes", label: "Shapes", icon: ShapesIconLucide },
@@ -160,7 +162,7 @@ function CustomizerLayoutAndLogic() {
       const baseImagesMap: Record<string, {url: string, aiHint?: string, price?: number}> = {};
       defaultViews.forEach(view => { baseImagesMap[view.id] = { url: view.imageUrl, aiHint: view.aiHint, price: view.price ?? 0 }; });
       setViewBaseImages(baseImagesMap);
-      setProductDetails(defaultFallbackProduct); // Use default fallback which now includes basePrice
+      setProductDetails(defaultFallbackProduct);
       setActiveViewId(defaultViews[0]?.id || null);
       setIsLoading(false);
       return;
@@ -195,7 +197,7 @@ function CustomizerLayoutAndLogic() {
       const baseImagesMapError: Record<string, {url: string, aiHint?: string, price?: number}> = {};
       defaultViewsError.forEach(view => { baseImagesMapError[view.id] = { url: view.imageUrl, aiHint: view.aiHint, price: view.price ?? 0 }; });
       setViewBaseImages(baseImagesMapError);
-      setProductDetails(defaultFallbackProduct); // Use default fallback
+      setProductDetails(defaultFallbackProduct); 
       setActiveViewId(defaultViewsError[0]?.id || null);
       setConfigurableAttributes([]); 
       setSelectedVariationOptions({}); 
@@ -381,7 +383,7 @@ function CustomizerLayoutAndLogic() {
   }, [
     selectedVariationOptions, 
     productVariations, 
-    productDetails?.id, // Keep this to ensure runs if product changes
+    productDetails?.id, 
     activeViewId, 
     viewBaseImages, 
     loadedOptionsByColor, 
@@ -392,16 +394,9 @@ function CustomizerLayoutAndLogic() {
 
   useEffect(() => {
     const usedViewIdsWithElements = new Set<string>();
-
-    canvasImages.forEach(item => {
-      if (item.viewId) usedViewIdsWithElements.add(item.viewId);
-    });
-    canvasTexts.forEach(item => {
-      if (item.viewId) usedViewIdsWithElements.add(item.viewId);
-    });
-    canvasShapes.forEach(item => {
-      if (item.viewId) usedViewIdsWithElements.add(item.viewId);
-    });
+    canvasImages.forEach(item => { if (item.viewId) usedViewIdsWithElements.add(item.viewId); });
+    canvasTexts.forEach(item => { if (item.viewId) usedViewIdsWithElements.add(item.viewId); });
+    canvasShapes.forEach(item => { if (item.viewId) usedViewIdsWithElements.add(item.viewId); });
 
     const viewsToPrice = new Set<string>(usedViewIdsWithElements);
     if (activeViewId) {
@@ -427,7 +422,7 @@ function CustomizerLayoutAndLogic() {
   };
 
   const renderActiveToolPanelContent = () => {
-     if (!activeViewId && (activeTool !== "layers")) {
+     if (!activeViewId && (activeTool !== "layers" && activeTool !== "ai-assistant")) {
        return (
          <div className="p-4 text-center text-muted-foreground flex flex-col items-center justify-center">
            <SettingsIcon className="w-12 h-12 mb-4 text-muted-foreground/50" />
@@ -437,8 +432,9 @@ function CustomizerLayoutAndLogic() {
        );
     }
     switch (activeTool) {
-      case "uploads": return <UploadArea activeViewId={activeViewId} />;
       case "layers": return <LayersPanel activeViewId={activeViewId} />;
+      case "ai-assistant": return <AiAssistant activeViewId={activeViewId} />;
+      case "uploads": return <UploadArea activeViewId={activeViewId} />;
       case "text": return <TextToolPanel activeViewId={activeViewId} />;
       case "shapes": return <ShapesPanel activeViewId={activeViewId} />;
       case "clipart": return <ClipartPanel activeViewId={activeViewId} />;
@@ -476,15 +472,16 @@ function CustomizerLayoutAndLogic() {
 
     const currentProductIdFromParams = searchParams.get('productId'); 
     const baseProductPrice = productDetails?.basePrice ?? 0;
-    let viewSurcharges = 0;
-    const viewsUsed = new Set<string>();
-    canvasImages.forEach(item => { if(item.viewId) viewsUsed.add(item.viewId); });
-    canvasTexts.forEach(item => { if(item.viewId) viewsUsed.add(item.viewId); });
-    canvasShapes.forEach(item => { if(item.viewId) viewsUsed.add(item.viewId); });
-    if (activeViewId) viewsUsed.add(activeViewId);
+    
+    const viewsUsedForSurcharge = new Set<string>();
+    canvasImages.forEach(item => { if(item.viewId) viewsUsedForSurcharge.add(item.viewId); });
+    canvasTexts.forEach(item => { if(item.viewId) viewsUsedForSurcharge.add(item.viewId); });
+    canvasShapes.forEach(item => { if(item.viewId) viewsUsedForSurcharge.add(item.viewId); });
+    if (activeViewId) viewsUsedForSurcharge.add(activeViewId);
 
-    viewsUsed.forEach(vid => {
-        viewSurcharges += productDetails?.views.find(v => v.id === vid)?.price ?? 0;
+    let totalViewSurcharge = 0;
+    viewsUsedForSurcharge.forEach(vid => {
+        totalViewSurcharge += productDetails?.views.find(v => v.id === vid)?.price ?? 0;
     });
 
 
@@ -497,7 +494,7 @@ function CustomizerLayoutAndLogic() {
       activeViewId: activeViewId, 
       selectedVariationOptions: selectedVariationOptions, 
       baseProductPrice: baseProductPrice,
-      totalViewSurcharge: viewSurcharges,
+      totalViewSurcharge: totalViewSurcharge,
       totalCustomizationPrice: totalCustomizationPrice, 
     };
 
@@ -607,7 +604,7 @@ function CustomizerLayoutAndLogic() {
                </div>
             )}
             
-             <div className="w-full flex flex-col flex-1 min-h-0 pb-4"> {}
+             <div className="w-full flex flex-col flex-1 min-h-0 pb-4">
               <DesignCanvas 
                 productImageUrl={currentProductImage}
                 productImageAlt={`${currentProductName} - ${currentProductAlt}`}
@@ -679,8 +676,3 @@ export default function CustomizerPage() {
   );
 }
     
-
-
-
-    
-
