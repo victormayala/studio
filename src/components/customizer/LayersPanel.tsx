@@ -154,7 +154,7 @@ export default function LayersPanel({ activeViewId }: LayersPanelProps) {
                     <ShapesIcon className="h-5 w-5 text-foreground" /> 
                   </div>
                 ) : null}
-                <span className="text-sm truncate flex-grow">{displayName}</span>
+                <span className="text-sm truncate flex-grow min-w-0">{displayName}</span>
                 <div className="flex gap-0.5">
                   <Button variant="ghost" size="icon" className="h-7 w-7" onClick={handleDuplicate} title={`Duplicate ${item.itemType}`} disabled={item.isLocked} >
                     <Copy className="h-4 w-4" />
