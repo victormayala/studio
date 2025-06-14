@@ -55,7 +55,7 @@ export interface ProductForCustomizer {
   id: string;
   name: string;
   views: ProductView[];
-  type?: 'simple' | 'variable' | 'grouped' | 'external'; // Added type
+  type?: 'simple' | 'variable' | 'grouped' | 'external'; 
 }
 
 export interface ConfigurableAttribute {
@@ -108,7 +108,6 @@ function CustomizerLayoutAndLogic() {
   const [isToolPanelOpen, setIsToolPanelOpen] = useState(true);
   const [isRightSidebarOpen, setIsRightSidebarOpen] = useState(true);
 
-  // State for variations and selected options
   const [productVariations, setProductVariations] = useState<WCVariation[] | null>(null);
   const [configurableAttributes, setConfigurableAttributes] = useState<ConfigurableAttribute[] | null>(null);
   const [selectedVariationOptions, setSelectedVariationOptions] = useState<Record<string, string>>({});
@@ -124,15 +123,14 @@ function CustomizerLayoutAndLogic() {
       [attributeName]: optionValue,
     }));
     // TODO: Potentially update activeViewId or product image based on selection in a future step
-    // For now, we'll just update the selection state.
   };
 
   const loadCustomizerData = useCallback(async () => {
     setIsLoading(true); 
     setError(null);
     setProductVariations(null);
-    setConfigurableAttributes(null);
-    setSelectedVariationOptions({});
+    setConfigurableAttributes(null); // Reset configurable attributes
+    setSelectedVariationOptions({}); // Reset selected options
     
     if (!productId) {
       setError("No product ID provided. Displaying default customizer.");
@@ -142,7 +140,7 @@ function CustomizerLayoutAndLogic() {
       return;
     }
 
-    if (authLoading) { // Only return if auth is loading, allow anonymous to proceed
+    if (authLoading) { 
       return;
     }
     
@@ -177,7 +175,6 @@ function CustomizerLayoutAndLogic() {
     let loadedViews: ProductView[] = [];
     let cstmzrSelectedVariationIds: string[] = [];
 
-    // Load CSTMZR specific options if user is logged in OR if anonymous but data exists (less likely for anonymous)
     const localStorageKey = user ? `cstmzr_product_options_${user.id}_${productId}` : `cstmzr_product_options_anonymous_${productId}`;
     try {
       const savedOptions = localStorage.getItem(localStorageKey);
@@ -210,11 +207,13 @@ function CustomizerLayoutAndLogic() {
 
     setActiveViewId(finalViews[0]?.id || null);
 
+    // Fetch and process variations if it's a variable product and has selected variations for customization
     if (wcProduct.type === 'variable' && cstmzrSelectedVariationIds.length > 0) {
       const { variations: fetchedVariations, error: variationsError } = await fetchWooCommerceProductVariations(productId, userCredentials);
       if (variationsError) {
         toast({ title: "Variations Load Error", description: variationsError, variant: "destructive" });
       } else if (fetchedVariations) {
+        // Filter fetched variations to only those selected in Product Options page
         const relevantVariations = fetchedVariations.filter(v => cstmzrSelectedVariationIds.includes(v.id.toString()));
         setProductVariations(relevantVariations);
 
@@ -235,7 +234,7 @@ function CustomizerLayoutAndLogic() {
           }));
           setConfigurableAttributes(finalConfigurableAttributes);
 
-          // Initialize selected options
+          // Initialize selected options with the first available option for each attribute
           const initialSelectedOptions: Record<string, string> = {};
           finalConfigurableAttributes.forEach(attr => {
             if (attr.options.length > 0) {
@@ -243,8 +242,14 @@ function CustomizerLayoutAndLogic() {
             }
           });
           setSelectedVariationOptions(initialSelectedOptions);
+        } else {
+           setConfigurableAttributes([]); // No relevant variations, so no configurable attributes
         }
+      } else {
+         setConfigurableAttributes([]);
       }
+    } else {
+        setConfigurableAttributes([]); // Not a variable product or no variations selected for CSTMZR
     }
 
     setIsLoading(false);
@@ -316,7 +321,7 @@ function CustomizerLayoutAndLogic() {
       productId: currentProductIdFromParams, 
       userId: user?.id, 
       activeViewId: activeViewId, 
-      selectedVariationOptions: selectedVariationOptions, // Add selected variation options
+      selectedVariationOptions: selectedVariationOptions, 
     };
 
     let targetOrigin = '*'; 
@@ -382,7 +387,6 @@ function CustomizerLayoutAndLogic() {
             setActiveTool={setActiveTool} 
           />
 
-          {/* Tool Panel Content (Old Left Panel area) */}
           <div
             id="tool-panel-content"
             className={cn(
@@ -403,7 +407,6 @@ function CustomizerLayoutAndLogic() {
             </div>
           </div>
           
-          {/* Tool Panel Trigger Button */}
           <Button
             onClick={toggleToolPanel}
             variant="outline"
@@ -439,7 +442,6 @@ function CustomizerLayoutAndLogic() {
             </div>
           </main>
 
-          {/* Right Sidebar Trigger Button */}
            <Button
             onClick={toggleRightSidebar}
             variant="outline"

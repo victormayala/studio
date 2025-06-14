@@ -5,7 +5,7 @@ import AiAssistant from './AiAssistant';
 import GridControls from './GridControls'; 
 import HistoryControls from './HistoryControls'; 
 import ViewSwitcher from './ViewSwitcher';
-import VariantSelector from './VariantSelector'; // Import VariantSelector
+import VariantSelector from './VariantSelector'; 
 import type { ProductForCustomizer, ConfigurableAttribute } from '@/app/customizer/page';
 import { cn } from '@/lib/utils'; 
 
@@ -16,9 +16,9 @@ interface RightPanelProps {
   activeViewId: string | null;
   setActiveViewId: (id: string) => void;
   className?: string;
-  configurableAttributes: ConfigurableAttribute[] | null; // New prop
-  selectedVariationOptions: Record<string, string>; // New prop
-  onVariantOptionSelect: (attributeName: string, optionValue: string) => void; // New prop
+  configurableAttributes: ConfigurableAttribute[] | null; 
+  selectedVariationOptions: Record<string, string>; 
+  onVariantOptionSelect: (attributeName: string, optionValue: string) => void; 
 }
 
 export default function RightPanel({ 
@@ -58,7 +58,7 @@ export default function RightPanel({
         </div>
       </div>
 
-      {/* Product Variants Section - NEW */}
+      {/* Product Variants Section */}
       {productDetails?.type === 'variable' && configurableAttributes && configurableAttributes.length > 0 && (
         <div>
           <div className="p-4 border-t">
@@ -110,3 +110,4 @@ export default function RightPanel({
   </div>
   );
 }
+
