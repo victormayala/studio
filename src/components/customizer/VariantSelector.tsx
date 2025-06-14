@@ -2,9 +2,14 @@
 "use client";
 
 import React from 'react';
-import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import type { ConfigurableAttribute } from '@/app/customizer/page';
 import { cn } from '@/lib/utils';
 
@@ -38,43 +43,45 @@ export default function VariantSelector({ attributes, selectedOptions, onOptionS
   }
 
   return (
-    <div className="space-y-6">
-      {attributes.map((attribute) => (
-        <div key={attribute.name}>
-          <Label className="text-base font-medium text-foreground mb-2 block">{attribute.name}</Label>
-          <RadioGroup
-            value={selectedOptions[attribute.name] || ''}
-            onValueChange={(value) => onOptionSelect(attribute.name, value)}
-            className="space-y-2"
-          >
-            {attribute.options.map((option) => {
-              const isColorAttribute = attribute.name.toLowerCase().includes('color');
-              const colorHex = commonColorHexMap[option.toLowerCase()];
-
-              return (
-                <div key={option} className="flex items-center space-x-2">
-                  <RadioGroupItem value={option} id={`${attribute.name}-${option}`} />
-                  <Label
-                    htmlFor={`${attribute.name}-${option}`}
-                    className={cn(
-                      "flex items-center gap-2 cursor-pointer p-2 border rounded-md hover:bg-accent/50 transition-colors w-full",
-                      selectedOptions[attribute.name] === option ? "bg-primary/10 border-primary" : "border-border"
-                    )}
-                  >
-                    {isColorAttribute && colorHex && (
-                      <span
-                        className="inline-block h-4 w-4 rounded-full border border-input"
-                        style={{ backgroundColor: colorHex }}
-                      />
-                    )}
-                    <span className="text-sm">{option}</span>
-                  </Label>
-                </div>
-              );
-            })}
-          </RadioGroup>
-        </div>
-      ))}
+    <div className="space-y-4">
+      {attributes.map((attribute) => {
+        const isColorAttribute = attribute.name.toLowerCase().includes('color');
+        
+        return (
+          <div key={attribute.name}>
+            <Label htmlFor={`select-${attribute.name.toLowerCase()}`} className="text-base font-medium text-foreground mb-2 block">
+              {attribute.name}
+            </Label>
+            <Select
+              value={selectedOptions[attribute.name] || ''}
+              onValueChange={(value) => onOptionSelect(attribute.name, value)}
+            >
+              <SelectTrigger id={`select-${attribute.name.toLowerCase()}`} className="w-full">
+                <SelectValue placeholder={`Select ${attribute.name}`} />
+              </SelectTrigger>
+              <SelectContent>
+                {attribute.options.map((option) => {
+                  const colorHex = commonColorHexMap[option.toLowerCase()];
+                  return (
+                    <SelectItem key={option} value={option}>
+                      <div className="flex items-center gap-2">
+                        {isColorAttribute && colorHex && (
+                          <span
+                            className="inline-block h-4 w-4 rounded-full border border-input mr-2"
+                            style={{ backgroundColor: colorHex }}
+                          />
+                        )}
+                        <span>{option}</span>
+                      </div>
+                    </SelectItem>
+                  );
+                })}
+              </SelectContent>
+            </Select>
+          </div>
+        );
+      })}
     </div>
   );
 }
+
