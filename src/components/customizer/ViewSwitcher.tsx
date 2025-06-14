@@ -34,7 +34,7 @@ export default function ViewSwitcher({ productViews, activeViewId, setActiveView
               key={view.id}
               onClick={() => setActiveViewId(view.id)}
               className={cn(
-                "rounded-md border-2 p-1.5 transition-all hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 flex flex-col items-start text-left w-[70px]", // Adjusted width for better fit
+                "rounded-md border-2 p-1.5 transition-all hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 flex flex-col items-center text-center w-[70px]", // Added items-center and text-center
                 activeViewId === view.id
                   ? "border-primary opacity-100 ring-1 ring-primary ring-offset-background shadow-sm"
                   : "border-transparent opacity-70 hover:border-muted-foreground/30 bg-muted/30 hover:bg-muted/50"
@@ -66,3 +66,4 @@ export default function ViewSwitcher({ productViews, activeViewId, setActiveView
     </div>
   );
 }
+

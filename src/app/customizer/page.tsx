@@ -317,7 +317,7 @@ function CustomizerLayoutAndLogic() {
     if (!productDetails || !viewBaseImages) {
       return;
     }
-    if (productDetails.type === 'variable' && !productVariations && Object.keys(selectedVariationOptions).length > 0) { // Added check for selectedVariationOptions
+    if (productDetails.type === 'variable' && !productVariations && Object.keys(selectedVariationOptions).length > 0) {
         return;
     }
 
@@ -358,7 +358,7 @@ function CustomizerLayoutAndLogic() {
           finalImageUrl = currentVariantViewImages[view.id].imageUrl;
           finalAiHint = currentVariantViewImages[view.id].aiHint || baseAiHint; 
         } 
-        else if (primaryVariationImageSrc && view.id === activeViewId) { // Only apply primary variation image to the active view if no specific variant view image exists for it
+        else if (primaryVariationImageSrc && view.id === activeViewId) { 
           finalImageUrl = primaryVariationImageSrc;
           finalAiHint = primaryVariationImageAiHint || baseAiHint;
         }
@@ -366,42 +366,46 @@ function CustomizerLayoutAndLogic() {
           finalImageUrl = baseImageUrl;
           finalAiHint = baseAiHint;
         }
-        // Ensure price is always part of the view object being returned
+        
         return { ...view, imageUrl: finalImageUrl!, aiHint: finalAiHint, price: view.price ?? 0 };
       });
       
-      // Always return a new object to ensure React detects the change
       return { ...prevProductDetails, views: updatedViews };
     });
 
   }, [
     selectedVariationOptions, 
     productVariations, 
-    productDetails?.id, // Changed from productDetails to productDetails.id to be more specific or consider productDetails if its reference changes meaningfully
+    productDetails?.id,
     activeViewId, 
     viewBaseImages, 
     loadedOptionsByColor, 
     loadedGroupingAttributeName,
-    configurableAttributes, // Added as it influences matchingVariation
-    productDetails?.type // Added as it influences matchingVariation logic
+    configurableAttributes, 
+    productDetails?.type 
   ]);
 
   useEffect(() => {
-    const usedViewIds = new Set<string>();
+    const usedViewIdsWithElements = new Set<string>();
 
     canvasImages.forEach(item => {
-      if (item.viewId) usedViewIds.add(item.viewId);
+      if (item.viewId) usedViewIdsWithElements.add(item.viewId);
     });
     canvasTexts.forEach(item => {
-      if (item.viewId) usedViewIds.add(item.viewId);
+      if (item.viewId) usedViewIdsWithElements.add(item.viewId);
     });
     canvasShapes.forEach(item => {
-      if (item.viewId) usedViewIds.add(item.viewId);
+      if (item.viewId) usedViewIdsWithElements.add(item.viewId);
     });
+
+    const viewsToPrice = new Set<string>(usedViewIdsWithElements);
+    if (activeViewId) {
+      viewsToPrice.add(activeViewId); // Add the currently active view to be priced
+    }
 
     let newTotal = 0;
     if (productDetails?.views) {
-        usedViewIds.forEach(viewId => {
+        viewsToPrice.forEach(viewId => {
             const view = productDetails.views.find(v => v.id === viewId);
             newTotal += view?.price ?? 0;
         });
