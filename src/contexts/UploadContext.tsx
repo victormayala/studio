@@ -65,8 +65,7 @@ export interface CanvasText {
   shadowBlur: number; // In px
 
   // Arch Effect
-  isArchText: boolean;
-  archAmount: number; // e.g., 0-100 for curvature intensity
+  archAmount: number; // e.g., 0-100 for curvature intensity (0 means no arch)
 
   movedFromDefault?: boolean;
 }
@@ -267,46 +266,52 @@ export function UploadProvider({ children }: { children: ReactNode }) {
     const sourceImage = uploadedImages.find(img => img.id === sourceImageId);
     if (!sourceImage) return;
     
-    if (!isInteractiveOperationInProgressRef.current) {
-      pushToUndoStack(createSnapshot());
-    }
-    const currentMaxZIndex = getMaxZIndexForView(viewId);
-    const newCanvasImage: CanvasImage = {
-      id: crypto.randomUUID(), sourceImageId: sourceImage.id, viewId, name: sourceImage.name,
-      dataUrl: sourceImage.dataUrl, type: sourceImage.type, scale: 1, rotation: 0, 
-      x: 50, y: 50, zIndex: currentMaxZIndex + 1, isLocked: false, itemType: 'image',
-      movedFromDefault: false,
-    };
-    setCanvasImages(prev => [...prev, newCanvasImage]);
-    setSelectedCanvasImageId(newCanvasImage.id);
-    setSelectedCanvasTextId(null); setSelectedCanvasShapeId(null);
+    queueMicrotask(() => {
+      if (!isInteractiveOperationInProgressRef.current) {
+        pushToUndoStack(createSnapshot());
+      }
+      const currentMaxZIndex = getMaxZIndexForView(viewId);
+      const newCanvasImage: CanvasImage = {
+        id: crypto.randomUUID(), sourceImageId: sourceImage.id, viewId, name: sourceImage.name,
+        dataUrl: sourceImage.dataUrl, type: sourceImage.type, scale: 1, rotation: 0, 
+        x: 50, y: 50, zIndex: currentMaxZIndex + 1, isLocked: false, itemType: 'image',
+        movedFromDefault: false,
+      };
+      setCanvasImages(prev => [...prev, newCanvasImage]);
+      setSelectedCanvasImageId(newCanvasImage.id);
+      setSelectedCanvasTextId(null); setSelectedCanvasShapeId(null);
+    });
   }, [uploadedImages, getMaxZIndexForView, createSnapshot, pushToUndoStack]);
 
   const addCanvasImageFromUrl = useCallback((name: string, dataUrl: string, type: string, viewId: string, sourceId?: string) => {
     if (!viewId) { console.error("addCanvasImageFromUrl: viewId is required"); return; }
 
-    if (!isInteractiveOperationInProgressRef.current) {
-      pushToUndoStack(createSnapshot());
-    }
-    const currentMaxZIndex = getMaxZIndexForView(viewId);
-    const newCanvasImage: CanvasImage = {
-      id: crypto.randomUUID(), sourceImageId: sourceId || `url-${crypto.randomUUID()}`, viewId,
-      name: name, dataUrl: dataUrl, type: type, scale: 1, rotation: 0, 
-      x: 50, y: 50, zIndex: currentMaxZIndex + 1, isLocked: false, itemType: 'image',
-      movedFromDefault: false,
-    };
-    setCanvasImages(prev => [...prev, newCanvasImage]);
-    setSelectedCanvasImageId(newCanvasImage.id);
-    setSelectedCanvasTextId(null); setSelectedCanvasShapeId(null);
+    queueMicrotask(() => {
+      if (!isInteractiveOperationInProgressRef.current) {
+        pushToUndoStack(createSnapshot());
+      }
+      const currentMaxZIndex = getMaxZIndexForView(viewId);
+      const newCanvasImage: CanvasImage = {
+        id: crypto.randomUUID(), sourceImageId: sourceId || `url-${crypto.randomUUID()}`, viewId,
+        name: name, dataUrl: dataUrl, type: type, scale: 1, rotation: 0, 
+        x: 50, y: 50, zIndex: currentMaxZIndex + 1, isLocked: false, itemType: 'image',
+        movedFromDefault: false,
+      };
+      setCanvasImages(prev => [...prev, newCanvasImage]);
+      setSelectedCanvasImageId(newCanvasImage.id);
+      setSelectedCanvasTextId(null); setSelectedCanvasShapeId(null);
+    });
   }, [getMaxZIndexForView, createSnapshot, pushToUndoStack]);
 
 
   const removeCanvasImage = useCallback((canvasImageId: string) => {
-    if (!isInteractiveOperationInProgressRef.current) {
-      pushToUndoStack(createSnapshot());
-    }
-    setCanvasImages(prev => prev.filter(img => img.id !== canvasImageId));
-    if (selectedCanvasImageId === canvasImageId) setSelectedCanvasImageId(null);
+    queueMicrotask(() => {
+      if (!isInteractiveOperationInProgressRef.current) {
+        pushToUndoStack(createSnapshot());
+      }
+      setCanvasImages(prev => prev.filter(img => img.id !== canvasImageId));
+      if (selectedCanvasImageId === canvasImageId) setSelectedCanvasImageId(null);
+    });
   }, [selectedCanvasImageId, createSnapshot, pushToUndoStack]);
 
   const selectCanvasImage = useCallback((canvasImageId: string | null) => {
@@ -329,80 +334,86 @@ export function UploadProvider({ children }: { children: ReactNode }) {
     const originalImage = canvasImages.find(img => img.id === canvasImageId);
     if (!originalImage) return;
 
-    if (!isInteractiveOperationInProgressRef.current) {
-      pushToUndoStack(createSnapshot());
-    }
-    const currentMaxZIndex = getMaxZIndexForView(originalImage.viewId);
-    const newCanvasImage: CanvasImage = {
-      ...originalImage, id: crypto.randomUUID(), x: originalImage.x + 2, y: originalImage.y + 2, 
-      zIndex: currentMaxZIndex + 1, isLocked: false, movedFromDefault: true,
-    };
-    setCanvasImages(prev => [...prev, newCanvasImage]);
-    setSelectedCanvasImageId(newCanvasImage.id); 
-    setSelectedCanvasTextId(null); setSelectedCanvasShapeId(null);
+    queueMicrotask(() => {
+      if (!isInteractiveOperationInProgressRef.current) {
+        pushToUndoStack(createSnapshot());
+      }
+      const currentMaxZIndex = getMaxZIndexForView(originalImage.viewId);
+      const newCanvasImage: CanvasImage = {
+        ...originalImage, id: crypto.randomUUID(), x: originalImage.x + 2, y: originalImage.y + 2, 
+        zIndex: currentMaxZIndex + 1, isLocked: false, movedFromDefault: true,
+      };
+      setCanvasImages(prev => [...prev, newCanvasImage]);
+      setSelectedCanvasImageId(newCanvasImage.id); 
+      setSelectedCanvasTextId(null); setSelectedCanvasShapeId(null);
+    });
   }, [canvasImages, getMaxZIndexForView, createSnapshot, pushToUndoStack]);
 
   const toggleLockCanvasImage = useCallback((canvasImageId: string) => {
-    if (!isInteractiveOperationInProgressRef.current) {
-      pushToUndoStack(createSnapshot());
-    }
-    setCanvasImages(prevImages =>
-      prevImages.map(img => {
-        if (img.id === canvasImageId) {
-          const isNowLocked = !img.isLocked;
-          if (isNowLocked && selectedCanvasImageId === canvasImageId) setSelectedCanvasImageId(null);
-          return { ...img, isLocked: isNowLocked };
-        }
-        return img;
-      })
-    );
+    queueMicrotask(() => {
+      if (!isInteractiveOperationInProgressRef.current) {
+        pushToUndoStack(createSnapshot());
+      }
+      setCanvasImages(prevImages =>
+        prevImages.map(img => {
+          if (img.id === canvasImageId) {
+            const isNowLocked = !img.isLocked;
+            if (isNowLocked && selectedCanvasImageId === canvasImageId) setSelectedCanvasImageId(null);
+            return { ...img, isLocked: isNowLocked };
+          }
+          return img;
+        })
+      );
+    });
   }, [selectedCanvasImageId, createSnapshot, pushToUndoStack]);
 
   // Text Functions
   const addCanvasText = useCallback((content: string, viewId: string, initialStyle?: Partial<CanvasText>) => {
     if (!viewId) { console.error("addCanvasText: viewId is required"); return; }
-
-    if (!isInteractiveOperationInProgressRef.current) {
-      pushToUndoStack(createSnapshot());
-    }
-    const currentMaxZIndex = getMaxZIndexForView(viewId);
-    const defaultFont = googleFonts.find(f => f.name === 'Arial');
-    
-    const newText: CanvasText = {
-      id: crypto.randomUUID(), viewId, content, x: 50, y: 50, rotation: 0, scale: 1, 
-      zIndex: currentMaxZIndex + 1, isLocked: false, itemType: 'text',
-      fontFamily: initialStyle?.fontFamily || (defaultFont ? defaultFont.family : 'Arial, sans-serif'),
-      fontSize: initialStyle?.fontSize || 24, 
-      textTransform: initialStyle?.textTransform || 'none',
-      fontWeight: initialStyle?.fontWeight || 'normal', fontStyle: initialStyle?.fontStyle || 'normal',
-      textDecoration: initialStyle?.textDecoration || 'none', lineHeight: initialStyle?.lineHeight || 1.2, 
-      letterSpacing: initialStyle?.letterSpacing || 0,
-      color: initialStyle?.color || '#333333',
-      outlineEnabled: (initialStyle?.outlineWidth ?? 0) > 0,
-      outlineColor: initialStyle?.outlineColor || '#000000',
-      outlineWidth: initialStyle?.outlineWidth || 0,
-      shadowEnabled: (initialStyle?.shadowOffsetX ?? 0) !== 0 ||
-                     (initialStyle?.shadowOffsetY ?? 0) !== 0 ||
-                     (initialStyle?.shadowBlur ?? 0) !== 0,
-      shadowColor: initialStyle?.shadowColor || '#000000',
-      shadowOffsetX: initialStyle?.shadowOffsetX || 0,
-      shadowOffsetY: initialStyle?.shadowOffsetY || 0,
-      shadowBlur: initialStyle?.shadowBlur || 0,
-      isArchText: initialStyle?.isArchText || false,
-      archAmount: initialStyle?.archAmount || 50,
-      movedFromDefault: false,
-    };
-    setCanvasTexts(prev => [...prev, newText]);
-    setSelectedCanvasTextId(newText.id);
-    setSelectedCanvasImageId(null); setSelectedCanvasShapeId(null);
+    queueMicrotask(() => {
+      if (!isInteractiveOperationInProgressRef.current) {
+        pushToUndoStack(createSnapshot());
+      }
+      const currentMaxZIndex = getMaxZIndexForView(viewId);
+      const defaultFont = googleFonts.find(f => f.name === 'Arial');
+      
+      const newText: CanvasText = {
+        id: crypto.randomUUID(), viewId, content, x: 50, y: 50, rotation: 0, scale: 1, 
+        zIndex: currentMaxZIndex + 1, isLocked: false, itemType: 'text',
+        fontFamily: initialStyle?.fontFamily || (defaultFont ? defaultFont.family : 'Arial, sans-serif'),
+        fontSize: initialStyle?.fontSize || 24, 
+        textTransform: initialStyle?.textTransform || 'none',
+        fontWeight: initialStyle?.fontWeight || 'normal', fontStyle: initialStyle?.fontStyle || 'normal',
+        textDecoration: initialStyle?.textDecoration || 'none', lineHeight: initialStyle?.lineHeight || 1.2, 
+        letterSpacing: initialStyle?.letterSpacing || 0,
+        color: initialStyle?.color || '#333333',
+        outlineEnabled: (initialStyle?.outlineWidth ?? 0) > 0,
+        outlineColor: initialStyle?.outlineColor || '#000000',
+        outlineWidth: initialStyle?.outlineWidth || 0,
+        shadowEnabled: (initialStyle?.shadowOffsetX ?? 0) !== 0 ||
+                      (initialStyle?.shadowOffsetY ?? 0) !== 0 ||
+                      (initialStyle?.shadowBlur ?? 0) !== 0,
+        shadowColor: initialStyle?.shadowColor || '#000000',
+        shadowOffsetX: initialStyle?.shadowOffsetX || 0,
+        shadowOffsetY: initialStyle?.shadowOffsetY || 0,
+        shadowBlur: initialStyle?.shadowBlur || 0,
+        archAmount: initialStyle?.archAmount || 0, // Default archAmount to 0
+        movedFromDefault: false,
+      };
+      setCanvasTexts(prev => [...prev, newText]);
+      setSelectedCanvasTextId(newText.id);
+      setSelectedCanvasImageId(null); setSelectedCanvasShapeId(null);
+    });
   }, [getMaxZIndexForView, createSnapshot, pushToUndoStack]);
 
   const removeCanvasText = useCallback((canvasTextId: string) => {
-    if (!isInteractiveOperationInProgressRef.current) {
-      pushToUndoStack(createSnapshot());
-    }
-    setCanvasTexts(prev => prev.filter(txt => txt.id !== canvasTextId));
-    if (selectedCanvasTextId === canvasTextId) setSelectedCanvasTextId(null);
+    queueMicrotask(() => {
+      if (!isInteractiveOperationInProgressRef.current) {
+        pushToUndoStack(createSnapshot());
+      }
+      setCanvasTexts(prev => prev.filter(txt => txt.id !== canvasTextId));
+      if (selectedCanvasTextId === canvasTextId) setSelectedCanvasTextId(null);
+    });
   }, [selectedCanvasTextId, createSnapshot, pushToUndoStack]);
 
   const selectCanvasText = useCallback((canvasTextId: string | null) => {
@@ -442,64 +453,72 @@ export function UploadProvider({ children }: { children: ReactNode }) {
     const originalText = canvasTexts.find(txt => txt.id === canvasTextId);
     if (!originalText) return;
 
-    if (!isInteractiveOperationInProgressRef.current) {
-      pushToUndoStack(createSnapshot());
-    }
-    const currentMaxZIndex = getMaxZIndexForView(originalText.viewId);
-    const newText: CanvasText = {
-      ...originalText, id: crypto.randomUUID(), x: originalText.x + 2, y: originalText.y + 2,
-      zIndex: currentMaxZIndex + 1, isLocked: false, movedFromDefault: true,
-    };
-    setCanvasTexts(prev => [...prev, newText]);
-    setSelectedCanvasTextId(newText.id);
-    setSelectedCanvasImageId(null); setSelectedCanvasShapeId(null);
+    queueMicrotask(() => {
+      if (!isInteractiveOperationInProgressRef.current) {
+        pushToUndoStack(createSnapshot());
+      }
+      const currentMaxZIndex = getMaxZIndexForView(originalText.viewId);
+      const newText: CanvasText = {
+        ...originalText, id: crypto.randomUUID(), x: originalText.x + 2, y: originalText.y + 2,
+        zIndex: currentMaxZIndex + 1, isLocked: false, movedFromDefault: true,
+      };
+      setCanvasTexts(prev => [...prev, newText]);
+      setSelectedCanvasTextId(newText.id);
+      setSelectedCanvasImageId(null); setSelectedCanvasShapeId(null);
+    });
   }, [canvasTexts, getMaxZIndexForView, createSnapshot, pushToUndoStack]);
 
   const toggleLockCanvasText = useCallback((canvasTextId: string) => {
-    if (!isInteractiveOperationInProgressRef.current) {
-      pushToUndoStack(createSnapshot());
-    }
-    setCanvasTexts(prevTexts =>
-      prevTexts.map(txt => {
-        if (txt.id === canvasTextId) {
-          const isNowLocked = !txt.isLocked;
-          if (isNowLocked && selectedCanvasTextId === canvasTextId) setSelectedCanvasTextId(null);
-          return { ...txt, isLocked: isNowLocked };
-        }
-        return txt;
-      })
-    );
+    queueMicrotask(() => {
+      if (!isInteractiveOperationInProgressRef.current) {
+        pushToUndoStack(createSnapshot());
+      }
+      setCanvasTexts(prevTexts =>
+        prevTexts.map(txt => {
+          if (txt.id === canvasTextId) {
+            const isNowLocked = !txt.isLocked;
+            if (isNowLocked && selectedCanvasTextId === canvasTextId) setSelectedCanvasTextId(null);
+            return { ...txt, isLocked: isNowLocked };
+          }
+          return txt;
+        })
+      );
+    });
   }, [selectedCanvasTextId, createSnapshot, pushToUndoStack]);
 
   // Shape Functions
   const addCanvasShape = useCallback((shapeType: ShapeType, viewId: string, initialProps?: Partial<CanvasShape>) => {
     if (!viewId) { console.error("addCanvasShape: viewId is required"); return; }
 
-    if (!isInteractiveOperationInProgressRef.current) {
-      pushToUndoStack(createSnapshot());
-    }
-    const currentMaxZIndex = getMaxZIndexForView(viewId);
-    const defaultProps: CanvasShape = {
-      id: crypto.randomUUID(), viewId, shapeType, x: 50, y: 50,
-      width: 100, height: 100, rotation: 0, scale: 1,
-      color: initialProps?.color || '#468189', strokeColor: initialProps?.strokeColor || '#000000',
-      strokeWidth: initialProps?.strokeWidth || 0, zIndex: currentMaxZIndex + 1,
-      isLocked: false, itemType: 'shape',
-      movedFromDefault: false, ...initialProps,
-    };
-    if (shapeType === 'circle') { defaultProps.height = defaultProps.width; }
+    queueMicrotask(() => {
+      if (!isInteractiveOperationInProgressRef.current) {
+        pushToUndoStack(createSnapshot());
+      }
+      const currentMaxZIndex = getMaxZIndexForView(viewId);
+      const defaultProps: CanvasShape = {
+        id: crypto.randomUUID(), viewId, shapeType, x: 50, y: 50,
+        width: 100, height: 100, rotation: 0, scale: 1,
+        color: initialProps?.color || '#468189', strokeColor: initialProps?.strokeColor || '#000000',
+        strokeWidth: initialProps?.strokeWidth || 0, zIndex: currentMaxZIndex + 1,
+        isLocked: false, itemType: 'shape',
+        movedFromDefault: false, ...initialProps,
+      };
+      if (shapeType === 'circle') { defaultProps.height = defaultProps.width; }
 
-    setCanvasShapes(prev => [...prev, defaultProps]);
-    setSelectedCanvasShapeId(defaultProps.id);
-    setSelectedCanvasImageId(null); setSelectedCanvasTextId(null);
+      setCanvasShapes(prev => [...prev, defaultProps]);
+      setSelectedCanvasShapeId(defaultProps.id);
+      setSelectedCanvasImageId(null); setSelectedCanvasTextId(null);
+    });
   }, [getMaxZIndexForView, createSnapshot, pushToUndoStack]);
 
   const removeCanvasShape = useCallback((shapeId: string) => {
-    if (!isInteractiveOperationInProgressRef.current) {
-      pushToUndoStack(createSnapshot());
-    }
-    setCanvasShapes(prev => prev.filter(shp => shp.id !== shapeId));
-    if (selectedCanvasShapeId === shapeId) setSelectedCanvasShapeId(null);
+    queueMicrotask(() => {
+      if (!isInteractiveOperationInProgressRef.current) {
+        pushToUndoStack(createSnapshot());
+      }
+      setCanvasShapes(prev => prev.filter(shp => shp.id !== shapeId));
+      if (selectedCanvasShapeId === shapeId) setSelectedCanvasShapeId(null);
+    });
   }, [selectedCanvasShapeId, createSnapshot, pushToUndoStack]);
 
   const selectCanvasShape = useCallback((shapeId: string | null) => {
@@ -522,33 +541,37 @@ export function UploadProvider({ children }: { children: ReactNode }) {
     const originalShape = canvasShapes.find(shp => shp.id === shapeId);
     if (!originalShape) return;
 
-    if (!isInteractiveOperationInProgressRef.current) {
-      pushToUndoStack(createSnapshot());
-    }
-    const currentMaxZIndex = getMaxZIndexForView(originalShape.viewId);
-    const newShape: CanvasShape = {
-      ...originalShape, id: crypto.randomUUID(), x: originalShape.x + 2, y: originalShape.y + 2,
-      zIndex: currentMaxZIndex + 1, isLocked: false, movedFromDefault: true,
-    };
-    setCanvasShapes(prev => [...prev, newShape]);
-    setSelectedCanvasShapeId(newShape.id);
-    setSelectedCanvasImageId(null); setSelectedCanvasTextId(null);
+    queueMicrotask(() => {
+      if (!isInteractiveOperationInProgressRef.current) {
+        pushToUndoStack(createSnapshot());
+      }
+      const currentMaxZIndex = getMaxZIndexForView(originalShape.viewId);
+      const newShape: CanvasShape = {
+        ...originalShape, id: crypto.randomUUID(), x: originalShape.x + 2, y: originalShape.y + 2,
+        zIndex: currentMaxZIndex + 1, isLocked: false, movedFromDefault: true,
+      };
+      setCanvasShapes(prev => [...prev, newShape]);
+      setSelectedCanvasShapeId(newShape.id);
+      setSelectedCanvasImageId(null); setSelectedCanvasTextId(null);
+    });
   }, [canvasShapes, getMaxZIndexForView, createSnapshot, pushToUndoStack]);
 
   const toggleLockCanvasShape = useCallback((shapeId: string) => {
-    if (!isInteractiveOperationInProgressRef.current) {
-      pushToUndoStack(createSnapshot());
-    }
-    setCanvasShapes(prevShapes =>
-      prevShapes.map(shp => {
-        if (shp.id === shapeId) {
-          const isNowLocked = !shp.isLocked;
-          if (isNowLocked && selectedCanvasShapeId === shapeId) setSelectedCanvasShapeId(null);
-          return { ...shp, isLocked: isNowLocked };
-        }
-        return shp;
-      })
-    );
+    queueMicrotask(() => {
+      if (!isInteractiveOperationInProgressRef.current) {
+        pushToUndoStack(createSnapshot());
+      }
+      setCanvasShapes(prevShapes =>
+        prevShapes.map(shp => {
+          if (shp.id === shapeId) {
+            const isNowLocked = !shp.isLocked;
+            if (isNowLocked && selectedCanvasShapeId === shapeId) setSelectedCanvasShapeId(null);
+            return { ...shp, isLocked: isNowLocked };
+          }
+          return shp;
+        })
+      );
+    });
   }, [selectedCanvasShapeId, createSnapshot, pushToUndoStack]);
 
   // Generic Layer Reordering
@@ -561,60 +584,61 @@ export function UploadProvider({ children }: { children: ReactNode }) {
     if (!sourceItem || sourceItem.isLocked) return;
     const currentViewId = sourceItem.viewId;
     
-    if (!isInteractiveOperationInProgressRef.current) {
-        pushToUndoStack(createSnapshot());
-    }
-
-    let itemsInCurrentView: CanvasItem[] = [
-      ...canvasImages.filter(img => img.viewId === currentViewId).map(img => ({ ...img, itemType: 'image' as const })),
-      ...canvasTexts.filter(txt => txt.viewId === currentViewId).map(txt => ({ ...txt, itemType: 'text' as const })),
-      ...canvasShapes.filter(shp => shp.viewId === currentViewId).map(shp => ({ ...shp, itemType: 'shape' as const })),
-    ];
-    itemsInCurrentView.sort((a, b) => a.zIndex - b.zIndex);
-
-    const currentIndexInView = itemsInCurrentView.findIndex(item => item.id === itemId && item.itemType === itemType);
-    if (currentIndexInView === -1) {
-      console.warn("reorderLayers: Item not found in current view for z-index operations.");
+    queueMicrotask(() => {
       if (!isInteractiveOperationInProgressRef.current) {
-         setUndoStack(prev => prev.slice(1)); 
+          pushToUndoStack(createSnapshot());
       }
-      return;
-    }
 
-    let targetIndexInView = -1;
-    if (direction === 'forward') {
-      if (currentIndexInView < itemsInCurrentView.length - 1) {
-        for (let i = currentIndexInView + 1; i < itemsInCurrentView.length; i++) {
-          if (!itemsInCurrentView[i].isLocked) { targetIndexInView = i; break; }
-        }
-        if (targetIndexInView === -1) { if (!isInteractiveOperationInProgressRef.current) setUndoStack(prev => prev.slice(1)); return; } 
-      } else { if (!isInteractiveOperationInProgressRef.current) setUndoStack(prev => prev.slice(1)); return; } 
-    } else { 
-      if (currentIndexInView > 0) {
-        for (let i = currentIndexInView - 1; i >= 0; i--) {
-          if (!itemsInCurrentView[i].isLocked) { targetIndexInView = i; break; }
-        }
-        if (targetIndexInView === -1) { if (!isInteractiveOperationInProgressRef.current) setUndoStack(prev => prev.slice(1)); return; } 
-      } else { if (!isInteractiveOperationInProgressRef.current) setUndoStack(prev => prev.slice(1)); return; } 
-    }
-    
-    const tempZIndex = itemsInCurrentView[currentIndexInView].zIndex;
-    itemsInCurrentView[currentIndexInView].zIndex = itemsInCurrentView[targetIndexInView].zIndex;
-    itemsInCurrentView[targetIndexInView].zIndex = tempZIndex;
-    
-    setCanvasImages(prevImages => prevImages.map(img => {
-      const updatedImgInView = itemsInCurrentView.find(i => i.id === img.id && i.itemType === 'image' && i.viewId === currentViewId);
-      return updatedImgInView ? { ...img, zIndex: updatedImgInView.zIndex } : img;
-    }));
-    setCanvasTexts(prevTexts => prevTexts.map(txt => {
-      const updatedTxtInView = itemsInCurrentView.find(i => i.id === txt.id && i.itemType === 'text' && i.viewId === currentViewId);
-      return updatedTxtInView ? { ...txt, zIndex: updatedTxtInView.zIndex } : txt;
-    }));
-    setCanvasShapes(prevShapes => prevShapes.map(shp => {
-      const updatedShpInView = itemsInCurrentView.find(i => i.id === shp.id && i.itemType === 'shape' && i.viewId === currentViewId);
-      return updatedShpInView ? { ...shp, zIndex: updatedShpInView.zIndex } : shp;
-    }));
+      let itemsInCurrentView: CanvasItem[] = [
+        ...canvasImages.filter(img => img.viewId === currentViewId).map(img => ({ ...img, itemType: 'image' as const })),
+        ...canvasTexts.filter(txt => txt.viewId === currentViewId).map(txt => ({ ...txt, itemType: 'text' as const })),
+        ...canvasShapes.filter(shp => shp.viewId === currentViewId).map(shp => ({ ...shp, itemType: 'shape' as const })),
+      ];
+      itemsInCurrentView.sort((a, b) => a.zIndex - b.zIndex);
 
+      const currentIndexInView = itemsInCurrentView.findIndex(item => item.id === itemId && item.itemType === itemType);
+      if (currentIndexInView === -1) {
+        console.warn("reorderLayers: Item not found in current view for z-index operations.");
+        if (!isInteractiveOperationInProgressRef.current) {
+          setUndoStack(prev => prev.slice(1)); 
+        }
+        return;
+      }
+
+      let targetIndexInView = -1;
+      if (direction === 'forward') {
+        if (currentIndexInView < itemsInCurrentView.length - 1) {
+          for (let i = currentIndexInView + 1; i < itemsInCurrentView.length; i++) {
+            if (!itemsInCurrentView[i].isLocked) { targetIndexInView = i; break; }
+          }
+          if (targetIndexInView === -1) { if (!isInteractiveOperationInProgressRef.current) setUndoStack(prev => prev.slice(1)); return; } 
+        } else { if (!isInteractiveOperationInProgressRef.current) setUndoStack(prev => prev.slice(1)); return; } 
+      } else { 
+        if (currentIndexInView > 0) {
+          for (let i = currentIndexInView - 1; i >= 0; i--) {
+            if (!itemsInCurrentView[i].isLocked) { targetIndexInView = i; break; }
+          }
+          if (targetIndexInView === -1) { if (!isInteractiveOperationInProgressRef.current) setUndoStack(prev => prev.slice(1)); return; } 
+        } else { if (!isInteractiveOperationInProgressRef.current) setUndoStack(prev => prev.slice(1)); return; } 
+      }
+      
+      const tempZIndex = itemsInCurrentView[currentIndexInView].zIndex;
+      itemsInCurrentView[currentIndexInView].zIndex = itemsInCurrentView[targetIndexInView].zIndex;
+      itemsInCurrentView[targetIndexInView].zIndex = tempZIndex;
+      
+      setCanvasImages(prevImages => prevImages.map(img => {
+        const updatedImgInView = itemsInCurrentView.find(i => i.id === img.id && i.itemType === 'image' && i.viewId === currentViewId);
+        return updatedImgInView ? { ...img, zIndex: updatedImgInView.zIndex } : img;
+      }));
+      setCanvasTexts(prevTexts => prevTexts.map(txt => {
+        const updatedTxtInView = itemsInCurrentView.find(i => i.id === txt.id && i.itemType === 'text' && i.viewId === currentViewId);
+        return updatedTxtInView ? { ...txt, zIndex: updatedTxtInView.zIndex } : txt;
+      }));
+      setCanvasShapes(prevShapes => prevShapes.map(shp => {
+        const updatedShpInView = itemsInCurrentView.find(i => i.id === shp.id && i.itemType === 'shape' && i.viewId === currentViewId);
+        return updatedShpInView ? { ...shp, zIndex: updatedShpInView.zIndex } : shp;
+      }));
+    });
   }, [canvasImages, canvasTexts, canvasShapes, createSnapshot, pushToUndoStack]);
 
   const bringLayerForward = useCallback((id: string) => reorderLayers(id, 'image', 'forward'), [reorderLayers]);

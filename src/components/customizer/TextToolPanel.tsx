@@ -7,7 +7,6 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
 import { Input } from '@/components/ui/input';
-import { Switch } from '@/components/ui/switch';
 import {
   Select,
   SelectContent,
@@ -17,7 +16,7 @@ import {
 } from '@/components/ui/select';
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
-import { Bold, Italic, Underline, CaseUpper, CaseLower, Type, Palette, Settings2, Pilcrow, TextCursorInput, Pipette, Waves } from 'lucide-react'; // Added Waves
+import { Bold, Italic, Underline, CaseUpper, CaseLower, Type, Palette, Settings2, Pilcrow, TextCursorInput, Pipette, Waves } from 'lucide-react';
 import { useUploads, type CanvasText } from '@/contexts/UploadContext';
 import { googleFonts } from '@/lib/google-fonts';
 import { useToast } from '@/hooks/use-toast';
@@ -62,8 +61,7 @@ const initialTextToolPanelDefaultStyle: Omit<CanvasText, 'id' | 'viewId' | 'zInd
   shadowOffsetX: 0,
   shadowOffsetY: 0,
   shadowBlur: 0,
-  isArchText: false,
-  archAmount: 50,
+  archAmount: 0, // Default archAmount to 0
 };
 
 
@@ -529,20 +527,9 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
 
       <AccordionItem value="text-arch">
         <AccordionTrigger className="font-medium text-sm py-3 px-1">
-          <Waves className="mr-2 h-4 w-4 text-secondary" /> Arch Effect
+          <Waves className="mr-2 h-4 w-4 text-secondary" /> Arch Effect <span className="text-muted-foreground/70 ml-1">(Visual Only)</span>
         </AccordionTrigger>
         <AccordionContent className="space-y-4 pt-3 pb-1 px-1">
-          <div className="flex items-center justify-between">
-            <Label htmlFor="archTextSwitch" className="text-xs">
-              Enable Arch Text <span className="text-muted-foreground/70">(Visual Only)</span>
-            </Label>
-            <Switch
-              id="archTextSwitch"
-              checked={currentStyle.isArchText}
-              onCheckedChange={(checked) => handleStyleChange('isArchText', checked)}
-            />
-          </div>
-          {currentStyle.isArchText && (
             <div className="mt-6 mb-6">
               <div className="flex justify-between items-center">
                 <Label htmlFor="archAmountInput" className="text-xs">Arch Amount</Label>
@@ -568,7 +555,6 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
                 className="mt-6"
               />
             </div>
-          )}
         </AccordionContent>
       </AccordionItem>
     </Accordion>
