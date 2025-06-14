@@ -134,7 +134,7 @@ export default function AiAssistant({ activeViewId }: AiAssistantProps) {
   };
 
   return (
-    <div className="space-y-4">
+    <div className="p-4 space-y-4">
       <form onSubmit={handleSubmit} className="space-y-3">
         <div>
           <Label htmlFor="designIdeaPrompt" className="block text-sm font-medium text-foreground mb-1">
