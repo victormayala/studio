@@ -75,8 +75,8 @@ export default function DesignCanvas({
     initialY?: number;
     itemCenterX?: number; 
     itemCenterY?: number;
-    itemInitialWidth?: number; 
-    itemInitialHeight?: number; 
+    itemInitialWidth: number; // Guaranteed to be > 0
+    itemInitialHeight: number; // Guaranteed to be > 0
   } | null>(null);
 
   const canvasRef = useRef<HTMLDivElement>(null); 
@@ -94,21 +94,25 @@ export default function DesignCanvas({
         const canvasRect = canvasRef.current?.getBoundingClientRect();
         if (!canvasRect || canvasRect.width === 0 || canvasRect.height === 0) return;
 
+        // Calculate position relative to the centered square container first
         const parentW = canvasRect.width;
         const parentH = canvasRect.height;
-        const squareSide = Math.min(parentW, parentH);
+        const squareSide = Math.min(parentW, parentH); // Assuming square is based on smaller dimension
         const squareOffsetX = (parentW - squareSide) / 2;
         const squareOffsetY = (parentH - squareSide) / 2;
 
+        // Center of the boundary box in pixels, relative to the top-left of the square container
         const boxCenterXpx_sq = (firstBox.x + firstBox.width / 2) / 100 * squareSide;
         const boxCenterYpx_sq = (firstBox.y + firstBox.height / 2) / 100 * squareSide;
         
+        // Convert these square-relative pixel coordinates to canvas-relative percentages
         const newXpercent_canvas = ((squareOffsetX + boxCenterXpx_sq) / parentW) * 100;
         const newYpercent_canvas = ((squareOffsetY + boxCenterYpx_sq) / parentH) * 100;
         
         updateFunc(item.id, { x: newXpercent_canvas, y: newYpercent_canvas, movedFromDefault: true });
         setLastAddedItemId(null); 
       } else if (item.id === lastAddedItemId) {
+        // If it was already moved or not at default, just clear the flag
         setLastAddedItemId(null);
       }
     };
@@ -134,6 +138,7 @@ export default function DesignCanvas({
     if (itemToMove && updateFunction) {
       autoMoveItem(itemToMove, updateFunction);
     } else if (lastAddedItemId) {
+      // If item was removed before auto-move could happen
       setLastAddedItemId(null);
     }
 
@@ -141,8 +146,10 @@ export default function DesignCanvas({
 
 
   useEffect(() => {
+    // Logic to set lastAddedItemId for new images
     if (canvasImages.length > 0 && activeViewId) {
       const latestImage = canvasImages[canvasImages.length - 1];
+      // Check if this is a truly new item intended for auto-positioning
       if (lastAddedItemId === null && latestImage && latestImage.x === 50 && latestImage.y === 50 && !latestImage.movedFromDefault && latestImage.viewId === activeViewId) {
         setLastAddedItemId(latestImage.id);
       }
@@ -150,6 +157,7 @@ export default function DesignCanvas({
   }, [canvasImages, activeViewId, lastAddedItemId]);
 
   useEffect(() => {
+    // Logic to set lastAddedItemId for new texts
     if (canvasTexts.length > 0 && activeViewId) {
       const latestText = canvasTexts[canvasTexts.length - 1];
       if (lastAddedItemId === null && latestText && latestText.x === 50 && latestText.y === 50 && !latestText.movedFromDefault && latestText.viewId === activeViewId) {
@@ -159,6 +167,7 @@ export default function DesignCanvas({
   }, [canvasTexts, activeViewId, lastAddedItemId]);
 
   useEffect(() => {
+    // Logic to set lastAddedItemId for new shapes
     if (canvasShapes.length > 0 && activeViewId) {
       const latestShape = canvasShapes[canvasShapes.length - 1];
       if (lastAddedItemId === null && latestShape && latestShape.x === 50 && latestShape.y === 50 && !latestShape.movedFromDefault && latestShape.viewId === activeViewId) {
@@ -177,10 +186,11 @@ export default function DesignCanvas({
 
   const handleCanvasClick = (e: ReactMouseEvent<HTMLDivElement>) => {
     const target = e.target as HTMLElement;
+    // Check if the click is on the canvas itself or the direct product image container, not on an interactive item
     if (target === canvasRef.current || target.classList.contains('centered-square-container') ||
-        target === canvasRef.current?.parentElement ||
+        target === canvasRef.current?.parentElement || // product-canvas-wrapper
         target.classList.contains('product-image-outer-container') ||
-        target.classList.contains('product-canvas-wrapper')) {
+        target.classList.contains('product-canvas-wrapper')) { // Check direct parent as well
         selectCanvasImage(null);
         selectCanvasText(null);
         selectCanvasShape(null);
@@ -243,17 +253,23 @@ export default function DesignCanvas({
     } else if (itemType === 'text') {
         const textEl = document.getElementById(`canvas-text-${item.id}`);
         if (textEl) {
-            itemInitialUnscaledWidth = textEl.offsetWidth / item.scale; 
-            itemInitialUnscaledHeight = textEl.offsetHeight / item.scale; 
+            const currentScaledWidth = textEl.offsetWidth;
+            const currentScaledHeight = textEl.offsetHeight;
+            itemInitialUnscaledWidth = (item.scale && item.scale !== 0) ? currentScaledWidth / item.scale : BASE_TEXT_DIMENSION_APPROX_WIDTH;
+            itemInitialUnscaledHeight = (item.scale && item.scale !== 0) ? currentScaledHeight / item.scale : BASE_TEXT_DIMENSION_APPROX_HEIGHT;
         } else {
             itemInitialUnscaledWidth = BASE_TEXT_DIMENSION_APPROX_WIDTH;
             itemInitialUnscaledHeight = BASE_TEXT_DIMENSION_APPROX_HEIGHT;
         }
     } else if (itemType === 'shape') {
-        const shapeItem = item as CanvasShape;
-        itemInitialUnscaledWidth = shapeItem.width; 
+        const shapeItem = item as CanvasShape; // Already has unscaled width/height
+        itemInitialUnscaledWidth = shapeItem.width;
         itemInitialUnscaledHeight = shapeItem.height;
     }
+
+    // Ensure these are always positive for calculations
+    const finalItemInitialWidth = itemInitialUnscaledWidth > 0 ? itemInitialUnscaledWidth : (itemType === 'image' ? BASE_IMAGE_DIMENSION : (itemType === 'text' ? BASE_TEXT_DIMENSION_APPROX_WIDTH : BASE_SHAPE_DIMENSION));
+    const finalItemInitialHeight = itemInitialUnscaledHeight > 0 ? itemInitialUnscaledHeight : (itemType === 'image' ? BASE_IMAGE_DIMENSION : (itemType === 'text' ? BASE_TEXT_DIMENSION_APPROX_HEIGHT : BASE_SHAPE_DIMENSION));
 
     startInteractiveOperation(); 
 
@@ -263,7 +279,8 @@ export default function DesignCanvas({
       initialRotation: item.rotation, initialScale: item.scale,
       initialX: item.x, initialY: item.y,
       itemCenterX: itemCenterXInCanvasPx, itemCenterY: itemCenterYInCanvasPx,
-      itemInitialWidth: itemInitialUnscaledWidth, itemInitialHeight: itemInitialUnscaledHeight,
+      itemInitialWidth: finalItemInitialWidth, 
+      itemInitialHeight: finalItemInitialHeight,
     });
   };
 
@@ -283,10 +300,10 @@ export default function DesignCanvas({
       const {
           type, itemId, itemType, startX, startY,
           initialRotation, initialScale, initialX, initialY,
-          itemCenterX, itemCenterY, itemInitialWidth, itemInitialHeight
+          itemCenterX, itemCenterY, itemInitialWidth, itemInitialHeight // These are now guaranteed > 0
       } = activeDrag;
 
-      if (initialRotation === undefined || initialScale === undefined || initialX === undefined || initialY === undefined || itemCenterX === undefined || itemCenterY === undefined || itemInitialWidth === undefined || itemInitialHeight === undefined) {
+      if (initialRotation === undefined || initialScale === undefined || initialX === undefined || initialY === undefined || itemCenterX === undefined || itemCenterY === undefined) {
           console.warn("Dragging with undefined initial values", activeDrag);
           return;
       }
@@ -303,7 +320,9 @@ export default function DesignCanvas({
       } else if (type === 'resize') {
         const distFromCenter = Math.sqrt(Math.pow(coords.x - (canvasRect.left + itemCenterX), 2) + Math.pow(coords.y - (canvasRect.top + itemCenterY), 2));
         const initialDistFromCenter = Math.sqrt(Math.pow(startX - (canvasRect.left + itemCenterX), 2) + Math.pow(startY - (canvasRect.top + itemCenterY), 2));
-        if (initialDistFromCenter === 0) return;
+        
+        if (initialDistFromCenter === 0) return; // Guard against division by zero
+
         const scaleRatio = distFromCenter / initialDistFromCenter;
         let newScale = initialScale * scaleRatio;
         newScale = Math.max(0.1, Math.min(newScale, itemType === 'text' ? 20 : 10)); 
@@ -331,7 +350,7 @@ export default function DesignCanvas({
           const distToBoxLeftEdge_sq = itemCenterXpercent_sq - boxMinXPercent_sq;
           const distToBoxRightEdge_sq = boxMaxXPercent_sq - itemCenterXpercent_sq;
           const distToBoxTopEdge_sq = itemCenterYpercent_sq - boxMinYPercent_sq;
-          const distToBoxBottomEdge_sq = boxMaxYpercent_sq - itemCenterYpercent_sq;
+          const distToBoxBottomEdge_sq = boxMaxYPercent_sq - itemCenterYpercent_sq;
 
           const maxAllowedHalfWidthPercent_sq = Math.min(distToBoxLeftEdge_sq, distToBoxRightEdge_sq);
           const maxAllowedHalfHeightPercent_sq = Math.min(distToBoxTopEdge_sq, distToBoxBottomEdge_sq);
@@ -344,8 +363,8 @@ export default function DesignCanvas({
               const maxAllowedWidthPx_sq = (maxAllowedHalfWidthPercent_sq * 2 / 100) * squareSide;
               const maxAllowedHeightPx_sq = (maxAllowedHalfHeightPercent_sq * 2 / 100) * squareSide;
 
-              const maxScaleBasedOnWidth = maxAllowedWidthPx_sq / itemInitialWidth;
-              const maxScaleBasedOnHeight = maxAllowedHeightPx_sq / itemInitialHeight;
+              const maxScaleBasedOnWidth = itemInitialWidth > 0 ? maxAllowedWidthPx_sq / itemInitialWidth : Infinity;
+              const maxScaleBasedOnHeight = itemInitialHeight > 0 ? maxAllowedHeightPx_sq / itemInitialHeight : Infinity;
               
               newScale = Math.min(newScale, maxScaleBasedOnWidth, maxScaleBasedOnHeight);
           }
@@ -364,8 +383,9 @@ export default function DesignCanvas({
           let newY_canvas = initialY + dyPercent_canvas;
           
           const currentItemScaleFactor = activeItemData?.scale || initialScale;
-          const scaledItemWidthPx = itemInitialWidth > 0 ? itemInitialWidth * currentItemScaleFactor : 0;
-          const scaledItemHeightPx = itemInitialHeight > 0 ? itemInitialHeight * currentItemScaleFactor : 0;
+          // itemInitialWidth and itemInitialHeight are unscaled base dimensions.
+          const scaledItemWidthPx = itemInitialWidth * currentItemScaleFactor;
+          const scaledItemHeightPx = itemInitialHeight * currentItemScaleFactor;
 
           const itemHalfWidthPercent_canvas = canvasRect.width > 0 ? (scaledItemWidthPx / 2 / canvasRect.width) * 100 : 0;
           const itemHalfHeightPercent_canvas = canvasRect.height > 0 ? (scaledItemHeightPx / 2 / canvasRect.height) * 100 : 0;
@@ -398,6 +418,7 @@ export default function DesignCanvas({
                   Math.min(newY_canvas, boxMaxYpercent_canvas - itemHalfHeightPercent_canvas)
               );
 
+              // If item is wider/taller than the box, center it in the box
               if (itemHalfWidthPercent_canvas * 2 > (boxMaxXpercent_canvas - boxMinXpercent_canvas)) { 
                   clampedX_canvas = boxMinXpercent_canvas + (boxMaxXpercent_canvas - boxMinXpercent_canvas) / 2; 
               }
@@ -407,14 +428,15 @@ export default function DesignCanvas({
               newX_canvas = clampedX_canvas;
               newY_canvas = clampedY_canvas;
           } else {
+              // Default canvas boundary clamping if no specific boxes are defined
               newX_canvas = Math.max(itemHalfWidthPercent_canvas, Math.min(newX_canvas, 100 - itemHalfWidthPercent_canvas));
               newY_canvas = Math.max(itemHalfHeightPercent_canvas, Math.min(newY_canvas, 100 - itemHalfHeightPercent_canvas));
           }
           
           if (isNaN(newX_canvas) || isNaN(newY_canvas)) return;
-          if (itemType === 'image') updateCanvasImage(itemId, { x: newX_canvas, y: newY_canvas });
-          else if (itemType === 'text') updateCanvasText(itemId, { x: newX_canvas, y: newY_canvas });
-          else if (itemType === 'shape') updateCanvasShape(itemId, { x: newX_canvas, y: newY_canvas });
+          if (itemType === 'image') updateCanvasImage(itemId, { x: newX_canvas, y: newY_canvas, movedFromDefault: true });
+          else if (itemType === 'text') updateCanvasText(itemId, { x: newX_canvas, y: newY_canvas, movedFromDefault: true });
+          else if (itemType === 'shape') updateCanvasShape(itemId, { x: newX_canvas, y: newY_canvas, movedFromDefault: true });
       }
     });
   }, [activeDrag, updateCanvasImage, canvasImages, updateCanvasText, canvasTexts, updateCanvasShape, canvasShapes, productDefinedBoundaryBoxes]);
@@ -459,28 +481,30 @@ export default function DesignCanvas({
       <div className="relative w-full flex-1 flex items-center justify-center product-canvas-wrapper min-h-0">
         <div
           ref={canvasRef} 
-          className="relative product-image-canvas-area bg-muted/10 w-full h-full flex items-center justify-center"
+          className="relative product-image-canvas-area bg-muted/10 w-full h-full flex items-center justify-center" // Added flex items-center justify-center
           onClick={handleCanvasClick} 
-          onTouchStart={handleCanvasClick as any} 
+          onTouchStart={handleCanvasClick as any} // Cast for touch event type consistency
         >
+          {/* Centered Square Container for Product Image and Boundary Boxes */}
           <div
-            className="relative centered-square-container"
+            className="relative centered-square-container" // This is the new square container
             style={{
-              width: 'min(100%, calc(100svh - 10rem))', 
+              width: 'min(100%, calc(100svh - 10rem))', // Example: try to fit in viewport, adjust 10rem based on header/footer
               height: 'min(100%, calc(100svh - 10rem))',
-              aspectRatio: '1 / 1',
+              aspectRatio: '1 / 1', // Enforce square aspect ratio
             }}
           >
             <Image
               src={productToDisplay.imageUrl}
               alt={productToDisplay.imageAlt}
               fill 
-              style={{ objectFit: 'contain' }} 
+              style={{ objectFit: 'contain' }} // Ensures the image fits within the square
               className="rounded-md pointer-events-none select-none" 
               data-ai-hint={productToDisplay.aiHint}
               priority
             />
 
+            {/* Boundary boxes are now positioned relative to this square container */}
             {productDefinedBoundaryBoxes && productDefinedBoundaryBoxes.length > 0 && showGrid && (
               <div
                 style={{
@@ -491,12 +515,12 @@ export default function DesignCanvas({
                   height: `${productDefinedBoundaryBoxes[0].height}%`,
                   pointerEvents: 'none',
                   zIndex: 0, 
-                  overflow: 'hidden',
+                  overflow: 'hidden', // Keep grid within the box
                   backgroundImage: `
                     repeating-linear-gradient(to right, hsla(var(--primary) / 0.8) 0, hsla(var(--primary) / 0.8) 1px, transparent 1px, transparent 100%),
                     repeating-linear-gradient(to bottom, hsla(var(--primary) / 0.8) 0, hsla(var(--primary) / 0.8) 1px, transparent 1px, transparent 100%)
                   `,
-                  backgroundSize: '10% 10%', 
+                  backgroundSize: '10% 10%', // Grid density
                 }}
                 className="grid-overlay"
               />
@@ -509,7 +533,7 @@ export default function DesignCanvas({
                 style={{
                   left: `${box.x}%`, top: `${box.y}%`,
                   width: `${box.width}%`, height: `${box.height}%`,
-                  zIndex: 1, 
+                  zIndex: 1, // Above image, below interactive items if needed (adjust if items go under)
                 }}
                 title={box.name}
               >
@@ -518,7 +542,9 @@ export default function DesignCanvas({
                 </span>
               </div>
             ))}
-          </div>
+          </div> {/* End of CenteredSquareContainer */}
+
+          {/* Interactive items are still positioned relative to canvasRef (product-image-canvas-area) */}
           {visibleImages.map((img) => (
             <InteractiveCanvasImage
               key={`${img.id}-${img.zIndex}`} image={img}
@@ -570,4 +596,6 @@ export default function DesignCanvas({
     </div>
   );
 }
+    
+
     
