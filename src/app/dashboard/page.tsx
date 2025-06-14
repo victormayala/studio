@@ -100,7 +100,11 @@ export default function DashboardPage() {
   }, [user, toast]);
 
 
-  const loadProductsWithCredentials = useCallback(async (creds?: { storeUrl: string; consumerKey: string; consumerSecret: string }, isManualRefresh?: boolean) => {
+  const loadProductsWithCredentials = useCallback(async (
+    creds?: { storeUrl: string; consumerKey: string; consumerSecret: string },
+    isManualRefresh?: boolean,
+    ignoreHiddenList: boolean = false // New parameter
+  ) => {
     setIsLoadingProducts(true);
     setError(null);
     const startTime = Date.now();
@@ -118,7 +122,7 @@ export default function DashboardPage() {
         });
         setProducts([]);
       } else if (fetchedProducts) {
-        const hiddenProductIds = getLocallyHiddenProductIds();
+        const hiddenProductIds = ignoreHiddenList ? [] : getLocallyHiddenProductIds();
         const filteredFetchedProducts = fetchedProducts.filter(p => !hiddenProductIds.includes(p.id.toString()));
         
         const displayProducts = filteredFetchedProducts.map(p => ({
@@ -133,7 +137,7 @@ export default function DashboardPage() {
         if (isManualRefresh) {
             toast({
             title: "Products Refreshed",
-            description: `Fetched ${displayProducts.length} products in ${duration}ms. ${creds ? 'Used user credentials.' : 'Used global credentials.'}`,
+            description: `Fetched ${displayProducts.length} products in ${duration}ms. ${creds ? 'Used user credentials.' : 'Used global credentials.'} ${ignoreHiddenList ? 'Hidden items temporarily shown.' : ''}`,
             });
         }
       } else {
@@ -194,7 +198,7 @@ export default function DashboardPage() {
       });
       
       if (activeTab === 'products') {
-         loadProductsWithCredentials({ storeUrl, consumerKey, consumerSecret }, true);
+         loadProductsWithCredentials({ storeUrl, consumerKey, consumerSecret }, true, false); // false for ignoreHiddenList
       }
     } catch (error) {
       toast({
@@ -223,7 +227,7 @@ export default function DashboardPage() {
         description: "Your WooCommerce credentials have been removed from this browser.",
       });
        if (activeTab === 'products') {
-        loadProductsWithCredentials(undefined, true); 
+        loadProductsWithCredentials(undefined, true, false); // false for ignoreHiddenList
       }
     } catch (error) {
       toast({
@@ -244,20 +248,27 @@ export default function DashboardPage() {
       const userConsumerSecret = localStorage.getItem(`wc_consumer_secret_${user.id}`);
 
       if (userStoreUrl && userConsumerKey && userConsumerSecret) {
-        loadProductsWithCredentials({ storeUrl: userStoreUrl, consumerKey: userConsumerKey, consumerSecret: userConsumerSecret }, true);
+        loadProductsWithCredentials({ storeUrl: userStoreUrl, consumerKey: userConsumerKey, consumerSecret: userConsumerSecret }, true, true); // true for ignoreHiddenList
       } else {
-        loadProductsWithCredentials(undefined, true);
+        loadProductsWithCredentials(undefined, true, true); // true for ignoreHiddenList
       }
     } else if (!user && !isLoadingCredentials) {
-      loadProductsWithCredentials(undefined, true); 
+      loadProductsWithCredentials(undefined, true, true); // true for ignoreHiddenList
     }
   }, [user, isLoadingCredentials, loadProductsWithCredentials]);
 
   useEffect(() => {
     if (activeTab === 'products' && user && !isLoadingCredentials && products.length === 0 && !isLoadingProducts && !error) {
-      handleRefreshDashboardData();
+      const userStoreUrl = localStorage.getItem(`wc_store_url_${user.id}`);
+      const userConsumerKey = localStorage.getItem(`wc_consumer_key_${user.id}`);
+      const userConsumerSecret = localStorage.getItem(`wc_consumer_secret_${user.id}`);
+      if (userStoreUrl && userConsumerKey && userConsumerSecret) {
+        loadProductsWithCredentials({ storeUrl: userStoreUrl, consumerKey: userConsumerKey, consumerSecret: userConsumerSecret }, false, false); // Initial load respects hidden list
+      } else {
+        loadProductsWithCredentials(undefined, false, false); // Initial load respects hidden list
+      }
     }
-  }, [activeTab, user, isLoadingCredentials, products.length, isLoadingProducts, error, handleRefreshDashboardData]);
+  }, [activeTab, user, isLoadingCredentials, products.length, isLoadingProducts, error, loadProductsWithCredentials]);
 
   const handleDeleteProduct = (product: DisplayProduct) => {
     setProductToDelete({ id: product.id, name: product.name });
@@ -274,7 +285,7 @@ export default function DashboardPage() {
 
     toast({
       title: "Product Hidden",
-      description: `${productToDelete.name} has been hidden from your dashboard. It is not deleted from your store.`,
+      description: `${productToDelete.name} has been hidden from your dashboard. It is not deleted from your store. Click "Refresh Product Data" to see it again.`,
     });
     setProducts(prev => prev.filter(p => p.id !== productToDelete.id)); 
     setIsDeleteDialogOpen(false);
@@ -566,7 +577,7 @@ export default function DashboardPage() {
             <AlertDialogTitle>Are you sure?</AlertDialogTitle>
             <AlertDialogDescription>
               This action will hide the product "{productToDelete?.name}" from your dashboard in this browser. 
-              It will not be deleted from your WooCommerce store.
+              It will not be deleted from your WooCommerce store. Clicking "Refresh Product Data" will show it again.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
