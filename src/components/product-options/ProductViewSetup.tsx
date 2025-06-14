@@ -7,7 +7,7 @@ import { Button, buttonVariants } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { PlusCircle, Trash2, Image as ImageIcon, Maximize2, LayersIcon, Edit3 } from 'lucide-react';
+import { PlusCircle, Trash2, Image as ImageIcon, Maximize2, LayersIcon, Edit3, DollarSign } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
@@ -37,10 +37,11 @@ interface ProductView {
   imageUrl: string;
   aiHint?: string;
   boundaryBoxes: BoundaryBox[];
+  price?: number; // Added price
 }
 
 interface ProductViewSetupData {
-  views: ProductView[]; // Represents productOptions.defaultViews from parent
+  views: ProductView[]; 
 }
 
 interface ActiveDragState {
@@ -65,7 +66,7 @@ interface ProductViewSetupProps {
   selectedBoundaryBoxId: string | null;
   setSelectedBoundaryBoxId: (id: string | null) => void;
   handleSelectView: (viewId: string) => void;
-  handleViewDetailChange: (viewId: string, field: keyof Pick<ProductView, 'name' | 'imageUrl' | 'aiHint'>, value: string) => void;
+  handleViewDetailChange: (viewId: string, field: keyof Pick<ProductView, 'name' | 'imageUrl' | 'aiHint' | 'price'>, value: string | number) => void;
   handleDeleteView: (viewId: string) => void;
   handleAddNewView: () => void;
   handleAddBoundaryBox: () => void;
@@ -164,6 +165,22 @@ export default function ProductViewSetup({
                   <div><Label htmlFor={`viewName-${currentView.id}`} className="text-xs mb-1 block">View Name</Label><Input id={`viewName-${currentView.id}`} value={currentView.name} onChange={(e) => handleViewDetailChange(currentView.id, 'name', e.target.value)} className="mt-1 h-8 bg-background"/></div>
                   <div><Label htmlFor={`viewImageUrl-${currentView.id}`} className="text-xs mb-1 block">Image URL</Label><Input id={`viewImageUrl-${currentView.id}`} value={currentView.imageUrl} onChange={(e) => handleViewDetailChange(currentView.id, 'imageUrl', e.target.value)} placeholder="https://placehold.co/600x600.png" className="mt-1 h-8 bg-background"/></div>
                   <div><Label htmlFor={`viewAiHint-${currentView.id}`} className="text-xs mb-1 block">AI Hint <span className="text-muted-foreground/70">(for Unsplash search)</span></Label><Input id={`viewAiHint-${currentView.id}`} value={currentView.aiHint || ''} onChange={(e) => handleViewDetailChange(currentView.id, 'aiHint', e.target.value)} placeholder="e.g., t-shirt back" className="mt-1 h-8 bg-background"/></div>
+                  <div>
+                    <Label htmlFor={`viewPrice-${currentView.id}`} className="text-xs mb-1 block">View Price ($)</Label>
+                    <div className="relative">
+                        <DollarSign className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
+                        <Input 
+                            id={`viewPrice-${currentView.id}`} 
+                            type="number"
+                            value={currentView.price ?? 0} 
+                            onChange={(e) => handleViewDetailChange(currentView.id, 'price', e.target.value === '' ? 0 : parseFloat(e.target.value))} 
+                            placeholder="0.00" 
+                            className="mt-1 h-8 bg-background pl-7"
+                            min="0"
+                            step="0.01"
+                        />
+                    </div>
+                  </div>
                   {productOptions.views.length > 1 && (<Button variant="destructive" onClick={() => handleDeleteView(currentView!.id)} size="sm" className="w-full mt-2"><Trash2 className="mr-2 h-4 w-4" />Delete This Default View</Button>)}
               </div>)}
               {!currentView && productOptions.views.length > 0 && (<p className="text-sm text-muted-foreground text-center py-2">Select a default view to edit or add new.</p>)}
@@ -204,5 +221,4 @@ export default function ProductViewSetup({
     </Card>
   );
 }
-
       

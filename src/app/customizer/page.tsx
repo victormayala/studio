@@ -45,14 +45,15 @@ export interface ProductView {
   imageUrl: string;
   aiHint?: string;
   boundaryBoxes: BoundaryBox[];
+  price?: number; // Added price per view
 }
 
-interface ColorGroupOptionsForCustomizer { // Renamed from OptionsPage's ColorGroupOptions
+interface ColorGroupOptionsForCustomizer { 
   selectedVariationIds: string[]; 
-  variantViewImages: Record<string, { imageUrl: string; aiHint?: string }>; // Key: defaultView.id
+  variantViewImages: Record<string, { imageUrl: string; aiHint?: string }>; 
 }
 
-interface LocalStorageCustomizerOptions { // Updated to match Product Options page
+interface LocalStorageCustomizerOptions { 
   defaultViews: ProductView[];
   optionsByColor: Record<string, ColorGroupOptionsForCustomizer>;
   groupingAttributeName: string | null;
@@ -61,7 +62,7 @@ interface LocalStorageCustomizerOptions { // Updated to match Product Options pa
 export interface ProductForCustomizer {
   id: string;
   name: string;
-  views: ProductView[]; // These will be the dynamically updated views for display
+  views: ProductView[]; 
   type?: 'simple' | 'variable' | 'grouped' | 'external'; 
 }
 
@@ -82,6 +83,7 @@ const defaultFallbackProduct: ProductForCustomizer = {
       boundaryBoxes: [
         { id: 'fallback_area_1', name: 'Default Area', x: 25, y: 25, width: 50, height: 50 },
       ],
+      price: 0,
     }
   ],
   type: 'simple',
@@ -97,7 +99,6 @@ const toolItems: CustomizerTool[] = [
   { id: "premium-designs", label: "Premium Designs", icon: GemIcon },
 ];
 
-const FEE_PER_VIEW = 5.00; // Define the fee per used view
 
 // Inner component that uses the context
 function CustomizerLayoutAndLogic() {
@@ -124,7 +125,7 @@ function CustomizerLayoutAndLogic() {
   
   const [loadedOptionsByColor, setLoadedOptionsByColor] = useState<Record<string, ColorGroupOptionsForCustomizer> | null>(null);
   const [loadedGroupingAttributeName, setLoadedGroupingAttributeName] = useState<string | null>(null);
-  const [viewBaseImages, setViewBaseImages] = useState<Record<string, {url: string, aiHint?: string}>>({});
+  const [viewBaseImages, setViewBaseImages] = useState<Record<string, {url: string, aiHint?: string, price?: number}>>({});
   const [totalCustomizationPrice, setTotalCustomizationPrice] = useState<number>(0);
 
 
@@ -153,8 +154,8 @@ function CustomizerLayoutAndLogic() {
     if (!productId) {
       setError("No product ID provided. Displaying default customizer.");
       const defaultViews = defaultFallbackProduct.views;
-      const baseImagesMap: Record<string, {url: string, aiHint?: string}> = {};
-      defaultViews.forEach(view => { baseImagesMap[view.id] = { url: view.imageUrl, aiHint: view.aiHint }; });
+      const baseImagesMap: Record<string, {url: string, aiHint?: string, price?: number}> = {};
+      defaultViews.forEach(view => { baseImagesMap[view.id] = { url: view.imageUrl, aiHint: view.aiHint, price: view.price ?? 0 }; });
       setViewBaseImages(baseImagesMap);
       setProductDetails(defaultFallbackProduct);
       setActiveViewId(defaultViews[0]?.id || null);
@@ -188,8 +189,8 @@ function CustomizerLayoutAndLogic() {
     if (fetchError || !wcProduct) {
       setError(fetchError || `Failed to load product (ID: ${productId}). Displaying default.`);
       const defaultViewsError = defaultFallbackProduct.views;
-      const baseImagesMapError: Record<string, {url: string, aiHint?: string}> = {};
-      defaultViewsError.forEach(view => { baseImagesMapError[view.id] = { url: view.imageUrl, aiHint: view.aiHint }; });
+      const baseImagesMapError: Record<string, {url: string, aiHint?: string, price?: number}> = {};
+      defaultViewsError.forEach(view => { baseImagesMapError[view.id] = { url: view.imageUrl, aiHint: view.aiHint, price: view.price ?? 0 }; });
       setViewBaseImages(baseImagesMapError);
       setProductDetails(defaultFallbackProduct);
       setActiveViewId(defaultViewsError[0]?.id || null);
@@ -211,12 +212,12 @@ function CustomizerLayoutAndLogic() {
       if (savedOptionsString) {
         const parsedOptions = JSON.parse(savedOptionsString) as LocalStorageCustomizerOptions;
         if (parsedOptions.defaultViews && parsedOptions.optionsByColor) { 
-          finalDefaultViews = parsedOptions.defaultViews || [];
+          finalDefaultViews = parsedOptions.defaultViews.map(v => ({...v, price: v.price ?? 0})) || [];
           tempLoadedOptionsByColor = parsedOptions.optionsByColor || {};
           tempLoadedGroupingAttributeName = parsedOptions.groupingAttributeName || null;
         } else if ((parsedOptions as any).views && (parsedOptions as any).cstmzrSelectedVariationIds) { 
           console.warn("Customizer: Found old CSTMZR options format. Using basic views.");
-          finalDefaultViews = (parsedOptions as any).views || [];
+          finalDefaultViews = (parsedOptions as any).views.map((v:any) => ({...v, price: v.price ?? 0})) || [];
         }
       }
     } catch (e) {
@@ -232,6 +233,7 @@ function CustomizerLayoutAndLogic() {
                 imageUrl: wcProduct.images && wcProduct.images.length > 0 ? wcProduct.images[0].src : defaultFallbackProduct.views[0].imageUrl,
                 aiHint: wcProduct.images && wcProduct.images.length > 0 && wcProduct.images[0].alt ? wcProduct.images[0].alt.split(" ").slice(0,2).join(" ") : defaultFallbackProduct.views[0].aiHint,
                 boundaryBoxes: defaultFallbackProduct.views[0].boundaryBoxes,
+                price: defaultFallbackProduct.views[0].price ?? 0,
             }
         ];
     }
@@ -239,8 +241,8 @@ function CustomizerLayoutAndLogic() {
     setLoadedOptionsByColor(tempLoadedOptionsByColor);
     setLoadedGroupingAttributeName(tempLoadedGroupingAttributeName);
 
-    const baseImagesMapFinal: Record<string, {url: string, aiHint?: string}> = {};
-    finalDefaultViews.forEach(view => { baseImagesMapFinal[view.id] = { url: view.imageUrl, aiHint: view.aiHint }; });
+    const baseImagesMapFinal: Record<string, {url: string, aiHint?: string, price?:number}> = {};
+    finalDefaultViews.forEach(view => { baseImagesMapFinal[view.id] = { url: view.imageUrl, aiHint: view.aiHint, price: view.price ?? 0 }; });
     setViewBaseImages(baseImagesMapFinal);
     
     setProductDetails({
@@ -316,12 +318,10 @@ function CustomizerLayoutAndLogic() {
       return;
     }
     if (productDetails.type === 'variable' && !productVariations) {
-        // If it's a variable product but variations haven't loaded yet (or errored), don't proceed.
         return;
     }
 
     const matchingVariation = productDetails.type === 'variable' && productVariations ? productVariations.find(variation => {
-      // If no variation options are selected yet, but there are configurable attributes, then no variation matches by default.
       if (Object.keys(selectedVariationOptions).length === 0 && configurableAttributes && configurableAttributes.length > 0) return false; 
       return variation.attributes.every(
         attr => selectedVariationOptions[attr.name] === attr.option
@@ -336,13 +336,11 @@ function CustomizerLayoutAndLogic() {
       primaryVariationImageAiHint = matchingVariation.image.alt?.split(" ").slice(0, 2).join(" ") || undefined;
     }
 
-    // Determine the current color key based on the grouping attribute
     let currentColorKey: string | null = null;
     if (loadedGroupingAttributeName && selectedVariationOptions[loadedGroupingAttributeName]) {
       currentColorKey = selectedVariationOptions[loadedGroupingAttributeName];
     }
     
-    // Get the variant-specific images for the current color group
     const currentVariantViewImages = currentColorKey && loadedOptionsByColor ? loadedOptionsByColor[currentColorKey]?.variantViewImages : null;
 
     setProductDetails(prevProductDetails => {
@@ -353,48 +351,39 @@ function CustomizerLayoutAndLogic() {
         let finalAiHint: string | undefined = undefined;
         
         const baseImageInfo = viewBaseImages[view.id];
-        const baseImageUrl = baseImageInfo?.url || defaultFallbackProduct.views[0].imageUrl; // Fallback to absolute default if base not found
+        const baseImageUrl = baseImageInfo?.url || defaultFallbackProduct.views[0].imageUrl; 
         const baseAiHint = baseImageInfo?.aiHint || defaultFallbackProduct.views[0].aiHint;
 
-        // Priority 1: Variant-specific image for this view ID and current color group
         if (currentVariantViewImages && currentVariantViewImages[view.id]?.imageUrl) {
           finalImageUrl = currentVariantViewImages[view.id].imageUrl;
-          finalAiHint = currentVariantViewImages[view.id].aiHint || baseAiHint; // Use base hint if variant specific hint is missing
+          finalAiHint = currentVariantViewImages[view.id].aiHint || baseAiHint; 
         } 
-        // Priority 2: Primary image of the matching variation (if this view is the active one)
         else if (primaryVariationImageSrc && view.id === activeViewId) {
           finalImageUrl = primaryVariationImageSrc;
           finalAiHint = primaryVariationImageAiHint || baseAiHint;
         }
-        // Priority 3: Fallback to the base image for this view
         else {
           finalImageUrl = baseImageUrl;
           finalAiHint = baseAiHint;
         }
-
-        // Always return a new object if the effect runs, to ensure React detects changes
-        // especially when activeViewId influences the image URL.
-        return { ...view, imageUrl: finalImageUrl!, aiHint: finalAiHint };
+        return { ...view, imageUrl: finalImageUrl!, aiHint: finalAiHint, price: view.price ?? 0 };
       });
       
-      // Since this effect runs when activeViewId (or other dependencies) changes,
-      // we assume updatedViews might be different and force the update.
       return { ...prevProductDetails, views: updatedViews };
     });
 
   }, [
     selectedVariationOptions, 
     productVariations, 
-    productDetails?.id, // Re-run if product ID changes (though unlikely within same page)
+    productDetails?.id, 
     activeViewId, 
     viewBaseImages, 
     loadedOptionsByColor, 
     loadedGroupingAttributeName,
-    configurableAttributes, // Added as it's used in matchingVariation logic check
-    productDetails?.type // Added as it's used in matchingVariation logic check
+    configurableAttributes, 
+    productDetails?.type 
   ]);
 
-  // Effect to calculate customization price based on used views
   useEffect(() => {
     const usedViewIds = new Set<string>();
 
@@ -408,10 +397,16 @@ function CustomizerLayoutAndLogic() {
       if (item.viewId) usedViewIds.add(item.viewId);
     });
 
-    const newTotal = usedViewIds.size * FEE_PER_VIEW;
+    let newTotal = 0;
+    if (productDetails?.views) {
+        usedViewIds.forEach(viewId => {
+            const view = productDetails.views.find(v => v.id === viewId);
+            newTotal += view?.price ?? 0;
+        });
+    }
     setTotalCustomizationPrice(newTotal);
 
-  }, [canvasImages, canvasTexts, canvasShapes]);
+  }, [canvasImages, canvasTexts, canvasShapes, productDetails?.views]);
 
 
   const getToolPanelTitle = (toolId: string): string => {
@@ -477,7 +472,7 @@ function CustomizerLayoutAndLogic() {
       userId: user?.id, 
       activeViewId: activeViewId, 
       selectedVariationOptions: selectedVariationOptions, 
-      customizationPrice: totalCustomizationPrice, // Include the customization price
+      customizationPrice: totalCustomizationPrice, 
     };
 
     let targetOrigin = '*'; 
@@ -657,6 +652,5 @@ export default function CustomizerPage() {
     </UploadProvider>
   );
 }
-
-
     
+

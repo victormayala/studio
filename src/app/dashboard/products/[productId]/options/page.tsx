@@ -11,7 +11,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, Shirt, RefreshCcw, ExternalLink, Loader2, AlertTriangle, LayersIcon, Tag, Image as ImageIconLucide, Edit2 } from 'lucide-react';
+import { ArrowLeft, Shirt, RefreshCcw, ExternalLink, Loader2, AlertTriangle, LayersIcon, Tag, Image as ImageIconLucide, Edit2, DollarSign } from 'lucide-react';
 import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
@@ -37,6 +37,7 @@ interface ProductView {
   imageUrl: string;
   aiHint?: string;
   boundaryBoxes: BoundaryBox[];
+  price?: number; // Added price per view
 }
 
 interface ColorGroupOptions {
@@ -48,16 +49,16 @@ interface ProductOptionsData {
   id: string;
   name: string;
   description: string;
-  price: number;
+  price: number; // Base product price from WC
   type: 'simple' | 'variable' | 'grouped' | 'external';
-  defaultViews: ProductView[]; // Renamed from 'views'
-  optionsByColor: Record<string, ColorGroupOptions>; // Key: color option value (e.g., "Red")
+  defaultViews: ProductView[]; 
+  optionsByColor: Record<string, ColorGroupOptions>; 
   groupingAttributeName: string | null;
 }
 
 interface LocalStorageData_Old { // For migration
-  views: ProductView[]; // This was the old name for defaultViews
-  cstmzrSelectedVariationIds: string[]; // This was the old global list
+  views: ProductView[]; 
+  cstmzrSelectedVariationIds: string[]; 
 }
 
 interface LocalStorageData_New { // New structure for saving
@@ -181,7 +182,7 @@ export default function ProductOptionsPage() {
 
     const defaultImageUrl = wcProduct.images && wcProduct.images.length > 0 ? wcProduct.images[0].src : 'https://placehold.co/600x600.png';
     const defaultAiHint = wcProduct.images && wcProduct.images.length > 0 && wcProduct.images[0].alt ? wcProduct.images[0].alt.split(" ").slice(0,2).join(" ") : 'product image';
-    const initialDefaultViews: ProductView[] = [{ id: crypto.randomUUID(), name: "Front", imageUrl: defaultImageUrl, aiHint: defaultAiHint, boundaryBoxes: [] }];
+    const initialDefaultViews: ProductView[] = [{ id: crypto.randomUUID(), name: "Front", imageUrl: defaultImageUrl, aiHint: defaultAiHint, boundaryBoxes: [], price: 0 }];
     
     let plainTextDescription = 'No description available.';
     if (typeof window !== 'undefined' && (wcProduct.description || wcProduct.short_description)) {
@@ -203,12 +204,12 @@ export default function ProductOptionsPage() {
       if (savedOptionsString) {
         const parsedOptions = JSON.parse(savedOptionsString);
         if (parsedOptions.optionsByColor && parsedOptions.defaultViews) { // New format
-          loadedDefaultViews = parsedOptions.defaultViews || [];
+          loadedDefaultViews = parsedOptions.defaultViews.map((view: any) => ({ ...view, price: view.price ?? 0 })) || []; // Ensure price exists
           loadedOptionsByColor = parsedOptions.optionsByColor || {};
           loadedGroupingAttributeName = parsedOptions.groupingAttributeName || null;
           localDataFoundAndParsed = true;
         } else if (parsedOptions.views) { // Old format, needs migration
-          loadedDefaultViews = parsedOptions.views || [];
+          loadedDefaultViews = parsedOptions.views.map((view: any) => ({ ...view, price: view.price ?? 0 })) || []; // Ensure price exists
           const migratedSelectedVariationIds = (parsedOptions as LocalStorageData_Old).cstmzrSelectedVariationIds || [];
           
           if (identifiedGroupingAttr && tempGroupedVariationsData && Object.keys(tempGroupedVariationsData).length > 0) {
@@ -248,7 +249,7 @@ export default function ProductOptionsPage() {
     setProductOptions({
       id: wcProduct.id.toString(), name: wcProduct.name || `Product ${productId}`, description: plainTextDescription,
       price: parseFloat(wcProduct.price) || 0, type: wcProduct.type,
-      defaultViews: finalDefaultViews, 
+      defaultViews: finalDefaultViews.map(view => ({...view, price: view.price ?? 0})), // Ensure price on final assignment
       optionsByColor: finalOptionsByColor,
       groupingAttributeName: loadedGroupingAttributeName || identifiedGroupingAttr,
     });
@@ -345,7 +346,7 @@ export default function ProductOptionsPage() {
     }
     return () => {
       window.removeEventListener('mousemove', handleDragging); window.removeEventListener('touchmove', handleDragging);
-      window.removeEventListener('mouseup', handleDragging); window.removeEventListener('touchend', handleInteractionEnd);
+      window.removeEventListener('mouseup', handleInteractionEnd); window.removeEventListener('touchend', handleInteractionEnd);
       cancelAnimationFrame(dragUpdateRef.current);
     };
   }, [activeDrag, handleDragging, handleInteractionEnd]);
@@ -392,7 +393,7 @@ export default function ProductOptionsPage() {
     const newView: ProductView = {
       id: crypto.randomUUID(), name: `View ${productOptions.defaultViews.length + 1}`,
       imageUrl: 'https://placehold.co/600x600/eee/ccc.png?text=New+View', aiHint: 'product view',
-      boundaryBoxes: [],
+      boundaryBoxes: [], price: 0, // Initialize price
     };
     setProductOptions(prev => prev ? { ...prev, defaultViews: [...prev.defaultViews, newView] } : null);
     setActiveViewIdForSetup(newView.id); setSelectedBoundaryBoxId(null); setHasUnsavedChanges(true);
@@ -427,9 +428,18 @@ export default function ProductOptionsPage() {
     toast({title: "View Deleted"}); setHasUnsavedChanges(true);
   };
 
-  const handleDefaultViewDetailChange = (viewId: string, field: keyof Pick<ProductView, 'name' | 'imageUrl' | 'aiHint'>, value: string) => { 
+  const handleDefaultViewDetailChange = (viewId: string, field: keyof Pick<ProductView, 'name' | 'imageUrl' | 'aiHint' | 'price'>, value: string | number) => { 
     if (!productOptions) return;
-    setProductOptions(prev => prev ? { ...prev, defaultViews: prev.defaultViews.map(v => v.id === viewId ? { ...v, [field]: value } : v)} : null);
+    setProductOptions(prev => prev ? { ...prev, defaultViews: prev.defaultViews.map(v => {
+      if (v.id === viewId) {
+        if (field === 'price') {
+          const newPrice = typeof value === 'number' ? value : parseFloat(value.toString());
+          return { ...v, price: isNaN(newPrice) ? (v.price ?? 0) : Math.max(0, newPrice) };
+        }
+        return { ...v, [field]: value };
+      }
+      return v;
+    })} : null);
     setHasUnsavedChanges(true);
   };
 
@@ -569,10 +579,7 @@ export default function ProductOptionsPage() {
       updatedOptionsByColor[colorKey].variantViewImages[viewId][field] = value;
 
       if (field === 'imageUrl' && !value && updatedOptionsByColor[colorKey].variantViewImages[viewId]) {
-          // If imageUrl is cleared, also clear aiHint for that view
           updatedOptionsByColor[colorKey].variantViewImages[viewId].aiHint = '';
-          // Optionally, if you want to remove the viewId entry entirely when imageUrl is empty:
-          // delete updatedOptionsByColor[colorKey].variantViewImages[viewId];
       }
       
       return { ...prev, optionsByColor: updatedOptionsByColor };
@@ -588,7 +595,7 @@ export default function ProductOptionsPage() {
   const currentSetupView = productOptions.defaultViews.find(v => v.id === activeViewIdForSetup);
   
   const allVariationsSelectedOverall = productOptions.type === 'variable' && variations.length > 0 && 
-    Object.keys(groupedVariations || {}).length > 0 && // Ensure groupedVariations is populated
+    Object.keys(groupedVariations || {}).length > 0 && 
     Object.entries(groupedVariations || {}).every(([groupKey, variationsInGroup]) => {
       const groupOpts = productOptions.optionsByColor[groupKey];
       return groupOpts && variationsInGroup.every(v => groupOpts.selectedVariationIds.includes(v.id.toString()));
@@ -774,7 +781,7 @@ export default function ProductOptionsPage() {
             isDeleteViewDialogOpen={isDeleteViewDialogOpen}
             setIsDeleteViewDialogOpen={setIsDeleteViewDialogOpen}
             viewIdToDelete={viewIdToDelete}
-            setViewIdToDelete={setViewIdToDelete}
+            setViewIdToDelete={setViewIdToDelete} 
             confirmDeleteView={confirmDeleteDefaultView}
           />
 
