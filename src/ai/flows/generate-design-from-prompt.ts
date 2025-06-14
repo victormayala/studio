@@ -45,7 +45,7 @@ const generateDesignFromPromptFlow = ai.defineFlow(
       prompt: `User's design idea: "${input.userPrompt}"
 
       Based on the user's design idea provided above:
-      1. Generate a visually appealing image that represents this idea. The image MUST have a transparent background to allow it to be placed on various products. If the subject is complex, focus on making the main subject's background transparent.
+      1. Generate a visually appealing image that represents this idea. The image *MUST* have a transparent background (e.g., like a PNG with an alpha channel) to allow it to be placed on various products. Do NOT generate a solid white or any other color background unless that color is part of the design requested by the user. If the subject of the design is complex, focus on making the background immediately surrounding the main subject transparent.
       2. Provide a concise, one-sentence textual description of the generated image. This description will be used as alt text.
 
       Example of desired text output if user asks for "a happy cat":
@@ -54,7 +54,7 @@ const generateDesignFromPromptFlow = ai.defineFlow(
       Return ONLY the image and the textual description. Do not add any other conversational text or markdown.`,
       config: {
         responseModalities: ['TEXT', 'IMAGE'],
-         safetySettings: [ 
+         safetySettings: [
           { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
           { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
           { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
