@@ -28,6 +28,7 @@ import ShapesPanel from '@/components/customizer/ShapesPanel';
 import ClipartPanel from '@/components/customizer/ClipartPanel';
 import FreeDesignsPanel from '@/components/customizer/FreeDesignsPanel';
 import PremiumDesignsPanel from '@/components/customizer/PremiumDesignsPanel';
+import VariantSelector from '@/components/customizer/VariantSelector';
 
 interface BoundaryBox {
   id: string;
@@ -129,8 +130,8 @@ function CustomizerLayoutAndLogic() {
     setIsLoading(true); 
     setError(null);
     setProductVariations(null);
-    setConfigurableAttributes(null); // Reset configurable attributes
-    setSelectedVariationOptions({}); // Reset selected options
+    setConfigurableAttributes(null); 
+    setSelectedVariationOptions({}); 
     
     if (!productId) {
       setError("No product ID provided. Displaying default customizer.");
@@ -141,6 +142,7 @@ function CustomizerLayoutAndLogic() {
     }
 
     if (authLoading) { 
+      // Still waiting for auth state, defer loading
       return;
     }
     
@@ -167,6 +169,8 @@ function CustomizerLayoutAndLogic() {
       setError(fetchError || `Failed to load product (ID: ${productId}). Displaying default.`);
       setProductDetails(defaultFallbackProduct);
       setActiveViewId(defaultFallbackProduct.views[0]?.id || null);
+      setConfigurableAttributes([]); // Ensure reset
+      setSelectedVariationOptions({}); // Ensure reset
       setIsLoading(false);
       toast({ title: "Product Load Error", description: fetchError || `Product ${productId} not found.`, variant: "destructive"});
       return;
@@ -207,16 +211,15 @@ function CustomizerLayoutAndLogic() {
 
     setActiveViewId(finalViews[0]?.id || null);
 
-    // Fetch and process variations if it's a variable product and has selected variations for customization
     if (wcProduct.type === 'variable' && cstmzrSelectedVariationIds.length > 0) {
       const { variations: fetchedVariations, error: variationsError } = await fetchWooCommerceProductVariations(productId, userCredentials);
       if (variationsError) {
         toast({ title: "Variations Load Error", description: variationsError, variant: "destructive" });
-      } else if (fetchedVariations) {
-        // Filter fetched variations to only those selected in Product Options page
+        setConfigurableAttributes([]); // Reset on error
+        setSelectedVariationOptions({});
+      } else if (fetchedVariations && fetchedVariations.length > 0) {
         const relevantVariations = fetchedVariations.filter(v => cstmzrSelectedVariationIds.includes(v.id.toString()));
-        setProductVariations(relevantVariations);
-
+        
         if (relevantVariations.length > 0) {
           const attributesMap: Record<string, Set<string>> = {};
           relevantVariations.forEach(variation => {
@@ -233,31 +236,44 @@ function CustomizerLayoutAndLogic() {
             options: Array.from(optionsSet),
           }));
           setConfigurableAttributes(finalConfigurableAttributes);
+          
+          if (finalConfigurableAttributes.length > 0) {
+            const initialSelectedOptions: Record<string, string> = {};
+            finalConfigurableAttributes.forEach(attr => {
+              if (attr.options.length > 0) {
+                initialSelectedOptions[attr.name] = attr.options[0];
+              }
+            });
+            setSelectedVariationOptions(initialSelectedOptions);
+          } else {
+            setSelectedVariationOptions({});
+          }
 
-          // Initialize selected options with the first available option for each attribute
-          const initialSelectedOptions: Record<string, string> = {};
-          finalConfigurableAttributes.forEach(attr => {
-            if (attr.options.length > 0) {
-              initialSelectedOptions[attr.name] = attr.options[0];
-            }
-          });
-          setSelectedVariationOptions(initialSelectedOptions);
         } else {
-           setConfigurableAttributes([]); // No relevant variations, so no configurable attributes
+           setConfigurableAttributes([]); 
+           setSelectedVariationOptions({});
         }
       } else {
-         setConfigurableAttributes([]);
+         setConfigurableAttributes([]); 
+         setSelectedVariationOptions({});
       }
     } else {
-        setConfigurableAttributes([]); // Not a variable product or no variations selected for CSTMZR
+        setConfigurableAttributes([]); 
+        setSelectedVariationOptions({});
     }
 
     setIsLoading(false);
-  }, [productId, user?.id, authLoading, toast]);
+  }, [productId, user?.id, authLoading, toast]); // user?.id to avoid re-renders if user object reference changes but ID doesn't
 
   useEffect(() => {
-    loadCustomizerData();
-  }, [loadCustomizerData]);
+    if (productId && !authLoading) { // Only load if productId is present and auth check is done
+        loadCustomizerData();
+    } else if (!productId) { // If no productId, show default immediately without auth check delay
+        loadCustomizerData();
+    }
+    // The dependency on loadCustomizerData will handle re-runs if its deps change (like user?.id)
+  }, [productId, authLoading, loadCustomizerData]);
+
 
   const getToolPanelTitle = (toolId: string): string => {
     const tool = toolItems.find(item => item.id === toolId);
@@ -346,7 +362,7 @@ function CustomizerLayoutAndLogic() {
   };
 
 
-  if (isLoading || authLoading) {
+  if (isLoading || authLoading) { // Keep authLoading check for initial load sequence
     return (
       <div className="flex min-h-svh h-screen w-full items-center justify-center bg-background">
         <Loader2 className="h-10 w-10 animate-spin text-primary" />
@@ -401,7 +417,7 @@ function CustomizerLayoutAndLogic() {
             </div>
             <div className={cn(
               "flex-1 h-full overflow-y-auto overflow-x-hidden pb-20 [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:rounded-full [&::-webkit-scrollbar-track]:bg-gray-100 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-gray-300 dark:[&::-webkit-scrollbar-track]:bg-neutral-700 dark:[&::-webkit-scrollbar-thumb]:bg-neutral-500",
-              !isToolPanelOpen && "invisible opacity-0"
+              !isToolPanelOpen && "invisible opacity-0" 
             )}>
                {renderActiveToolPanelContent()}
             </div>
@@ -430,7 +446,7 @@ function CustomizerLayoutAndLogic() {
                </div>
             )}
             
-             <div className="w-full flex flex-col flex-1 min-h-0 pb-20">
+             <div className="w-full flex flex-col flex-1 min-h-0 pb-20"> {/* Added pb-20 for footer overlap */}
               <DesignCanvas 
                 productImageUrl={currentProductImage}
                 productImageAlt={`${currentProductName} - ${currentProductAlt}`}
