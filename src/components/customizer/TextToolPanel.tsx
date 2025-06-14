@@ -42,17 +42,8 @@ interface TextToolPanelProps {
 }
 
 const DEFAULT_FONT_FAMILY = googleFonts.find(f => f.name === 'Arial')?.family || 'Arial, sans-serif';
-const initialTextToolPanelDefaultStyle: CanvasText = {
-  id: '', 
-  viewId: '', 
-  content: '', // Changed from "New Text" to empty string
-  x: 50,
-  y: 50,
-  rotation: 0,
-  scale: 1,
-  zIndex: 0,
-  isLocked: false,
-  itemType: 'text', 
+const initialTextToolPanelDefaultStyle: Omit<CanvasText, 'id' | 'viewId' | 'zIndex' | 'isLocked' | 'itemType' | 'movedFromDefault' | 'x' | 'y' | 'rotation' | 'scale'> = {
+  content: '',
   fontFamily: DEFAULT_FONT_FAMILY,
   fontSize: 24,
   textTransform: 'none',
@@ -61,7 +52,6 @@ const initialTextToolPanelDefaultStyle: CanvasText = {
   textDecoration: 'none',
   lineHeight: 1.2,
   letterSpacing: 0,
-  isArchText: false,
   color: '#333333',
   outlineEnabled: false,
   outlineColor: '#000000',
@@ -88,7 +78,7 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
   const selectedText = canvasTexts.find(t => t.id === selectedCanvasTextId && t.viewId === activeViewId);
 
   const [textValue, setTextValue] = useState(initialTextToolPanelDefaultStyle.content);
-  const [currentStyle, setCurrentStyle] = useState<CanvasText>({...initialTextToolPanelDefaultStyle, viewId: activeViewId || ''});
+  const [currentStyle, setCurrentStyle] = useState<Omit<CanvasText, 'id' | 'viewId' | 'zIndex' | 'isLocked' | 'itemType' | 'movedFromDefault' | 'x' | 'y' | 'rotation' | 'scale'>>({...initialTextToolPanelDefaultStyle});
   const [localTextColorHex, setLocalTextColorHex] = useState(initialTextToolPanelDefaultStyle.color);
   const [localOutlineColorHex, setLocalOutlineColorHex] = useState(initialTextToolPanelDefaultStyle.outlineColor);
   const [localShadowColorHex, setLocalShadowColorHex] = useState(initialTextToolPanelDefaultStyle.shadowColor);
@@ -96,17 +86,16 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
 
   useEffect(() => {
     if (selectedText) {
-      const newStyleCandidate = { ...initialTextToolPanelDefaultStyle, ...selectedText };
-      setCurrentStyle(newStyleCandidate);
+      const { id, viewId, zIndex, isLocked, itemType, movedFromDefault, x, y, rotation, scale, ...styleProps } = selectedText;
+      setCurrentStyle(styleProps);
       setTextValue(selectedText.content);
       setLocalTextColorHex(selectedText.color);
       setLocalOutlineColorHex(selectedText.outlineColor);
       setLocalShadowColorHex(selectedText.shadowColor);
     } else {
-      // Reset panel to defaults if no text is selected or activeViewId changes
-      const resetStyle = { ...initialTextToolPanelDefaultStyle, viewId: activeViewId || '', content: '' }; // Ensure content is empty for placeholder
+      const resetStyle = { ...initialTextToolPanelDefaultStyle, content: '' };
       setCurrentStyle(resetStyle);
-      setTextValue(resetStyle.content); // Reset textValue to empty for placeholder
+      setTextValue(resetStyle.content); 
       setLocalTextColorHex(resetStyle.color);
       setLocalOutlineColorHex(resetStyle.outlineColor);
       setLocalShadowColorHex(resetStyle.shadowColor);
@@ -114,21 +103,21 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
   }, [selectedText, activeViewId]);
 
 
-  const handleStyleChange = useCallback(<K extends keyof CanvasText>(property: K, value: CanvasText[K]) => {
+  const handleStyleChange = useCallback(<K extends keyof typeof currentStyle>(property: K, value: (typeof currentStyle)[K]) => {
     setCurrentStyle(prev => {
       const newState = { ...prev, [property]: value };
       if (selectedCanvasTextId && selectedText) {
-        updateCanvasText(selectedCanvasTextId, { [property]: value });
+        updateCanvasText(selectedCanvasTextId, { [property]: value } as Partial<CanvasText>);
       }
       return newState;
     });
   }, [selectedCanvasTextId, updateCanvasText, selectedText]);
 
-  const handleBulkStyleChange = useCallback((updates: Partial<CanvasText>) => {
+  const handleBulkStyleChange = useCallback((updates: Partial<typeof currentStyle>) => {
     setCurrentStyle(prev => {
       const newState = { ...prev, ...updates };
       if (selectedCanvasTextId && selectedText) {
-        updateCanvasText(selectedCanvasTextId, updates);
+        updateCanvasText(selectedCanvasTextId, updates as Partial<CanvasText>);
       }
       return newState;
     });
@@ -140,7 +129,7 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
       toast({ title: "No Active View", description: "Please select a product view first.", variant: "info" });
       return;
     }
-    const contentToAdd = textValue.trim() || "Your Text"; // Use "Your Text" if textValue is empty
+    const contentToAdd = textValue.trim() || "Your Text"; 
     const styleForNewText: Partial<CanvasText> = {
       ...currentStyle, 
       content: contentToAdd, 
@@ -148,7 +137,7 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
     addCanvasText(contentToAdd, activeViewId, styleForNewText);
     
     if (!selectedText) { 
-        setTextValue(''); // Reset to empty string for placeholder
+        setTextValue(''); 
         setCurrentStyle(prev => ({...prev, content: ''}));
     }
   };
@@ -527,17 +516,6 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
               </div>
             </div>
         </div>
-
-        <Separator className="my-3" />
-        <div className="flex items-center space-x-2 pt-1">
-          <Switch
-            id="archTextSwitch"
-            className="scale-[0.8] origin-left"
-            checked={currentStyle.isArchText} 
-            onCheckedChange={(checked) => handleStyleChange('isArchText', checked)}
-          />
-          <Label htmlFor="archTextSwitch" className="text-xs">Arch Text <span className="text-muted-foreground/80 text-[10px]">(Visual Only)</span></Label>
-        </div>
       </section>
     </div>
   );
@@ -566,12 +544,6 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
           </Button>
           {renderControls()}
         </>
-      )}
-      {selectedText && (
-         <Button onClick={handleAddText} variant="outline" className="w-full mt-auto">
-            <Type className="mr-2 h-4 w-4" />
-            Add as New Text
-        </Button>
       )}
     </div>
   );

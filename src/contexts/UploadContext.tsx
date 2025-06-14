@@ -52,7 +52,6 @@ export interface CanvasText {
   textDecoration: 'none' | 'underline';
   lineHeight: number; // Multiplier, e.g., 1.2
   letterSpacing: number; // In px
-  isArchText: boolean;
 
   // Color Settings
   color: string; // Text fill color
@@ -370,7 +369,7 @@ export function UploadProvider({ children }: { children: ReactNode }) {
       textTransform: initialStyle?.textTransform || 'none',
       fontWeight: initialStyle?.fontWeight || 'normal', fontStyle: initialStyle?.fontStyle || 'normal',
       textDecoration: initialStyle?.textDecoration || 'none', lineHeight: initialStyle?.lineHeight || 1.2, 
-      letterSpacing: initialStyle?.letterSpacing || 0, isArchText: initialStyle?.isArchText || false,
+      letterSpacing: initialStyle?.letterSpacing || 0,
       color: initialStyle?.color || '#333333',
       outlineEnabled: (initialStyle?.outlineWidth ?? 0) > 0,
       outlineColor: initialStyle?.outlineColor || '#000000',
