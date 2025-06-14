@@ -45,7 +45,7 @@ const DEFAULT_FONT_FAMILY = googleFonts.find(f => f.name === 'Arial')?.family ||
 const initialTextToolPanelDefaultStyle: CanvasText = {
   id: '', 
   viewId: '', 
-  content: 'New Text',
+  content: '', // Changed from "New Text" to empty string
   x: 50,
   y: 50,
   rotation: 0,
@@ -104,9 +104,9 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
       setLocalShadowColorHex(selectedText.shadowColor);
     } else {
       // Reset panel to defaults if no text is selected or activeViewId changes
-      const resetStyle = { ...initialTextToolPanelDefaultStyle, viewId: activeViewId || '' };
+      const resetStyle = { ...initialTextToolPanelDefaultStyle, viewId: activeViewId || '', content: '' }; // Ensure content is empty for placeholder
       setCurrentStyle(resetStyle);
-      setTextValue(initialTextToolPanelDefaultStyle.content);
+      setTextValue(resetStyle.content); // Reset textValue to empty for placeholder
       setLocalTextColorHex(resetStyle.color);
       setLocalOutlineColorHex(resetStyle.outlineColor);
       setLocalShadowColorHex(resetStyle.shadowColor);
@@ -140,17 +140,16 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
       toast({ title: "No Active View", description: "Please select a product view first.", variant: "info" });
       return;
     }
-    const contentToAdd = textValue.trim() || "New Text"; // Uses the current textValue
+    const contentToAdd = textValue.trim() || "Your Text"; // Use "Your Text" if textValue is empty
     const styleForNewText: Partial<CanvasText> = {
-      ...currentStyle, // currentStyle should have the typed content if no item is selected
-      content: contentToAdd, // Explicitly set contentToAdd here
+      ...currentStyle, 
+      content: contentToAdd, 
     };
     addCanvasText(contentToAdd, activeViewId, styleForNewText);
     
-    // If no item was selected before adding, reset the input field and currentStyle.content for the next new text
     if (!selectedText) { 
-        setTextValue(initialTextToolPanelDefaultStyle.content); 
-        setCurrentStyle(prev => ({...prev, content: initialTextToolPanelDefaultStyle.content}));
+        setTextValue(''); // Reset to empty string for placeholder
+        setCurrentStyle(prev => ({...prev, content: ''}));
     }
   };
 
@@ -159,7 +158,6 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
     if (selectedCanvasTextId && selectedText) {
        handleStyleChange('content', newContent);
     } else {
-        // If no item is selected, update currentStyle.content so new items get this text
         setCurrentStyle(prev => ({...prev, content: newContent}));
     }
   };
@@ -578,6 +576,4 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
     </div>
   );
 }
-
-
     
