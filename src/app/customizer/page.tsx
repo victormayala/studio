@@ -142,7 +142,7 @@ function CustomizerLayoutAndLogic() {
       return;
     }
 
-    if (authLoading) {
+    if (authLoading) { // Only return if auth is loading, allow anonymous to proceed
       return;
     }
     
@@ -177,23 +177,20 @@ function CustomizerLayoutAndLogic() {
     let loadedViews: ProductView[] = [];
     let cstmzrSelectedVariationIds: string[] = [];
 
-    if (user) {
-      const localStorageKey = `cstmzr_product_options_${user.id}_${productId}`;
-      try {
-        const savedOptions = localStorage.getItem(localStorageKey);
-        if (savedOptions) {
-          const parsedOptions = JSON.parse(savedOptions) as LocalStorageCustomizerOptions;
-          loadedViews = parsedOptions.views || [];
-          cstmzrSelectedVariationIds = parsedOptions.cstmzrSelectedVariationIds || [];
-        }
-      } catch (e) {
-        console.warn("Customizer: Error parsing CSTMZR options from localStorage:", e);
-        toast({ title: "Local Settings Error", description: "Could not load saved CSTMZR settings. Using defaults.", variant: "info"});
+    // Load CSTMZR specific options if user is logged in OR if anonymous but data exists (less likely for anonymous)
+    const localStorageKey = user ? `cstmzr_product_options_${user.id}_${productId}` : `cstmzr_product_options_anonymous_${productId}`;
+    try {
+      const savedOptions = localStorage.getItem(localStorageKey);
+      if (savedOptions) {
+        const parsedOptions = JSON.parse(savedOptions) as LocalStorageCustomizerOptions;
+        loadedViews = parsedOptions.views || [];
+        cstmzrSelectedVariationIds = parsedOptions.cstmzrSelectedVariationIds || [];
       }
-    } else {
-        console.info("Customizer: No CSTMZR user logged in. Views will default.");
+    } catch (e) {
+      console.warn("Customizer: Error parsing CSTMZR options from localStorage:", e);
+      toast({ title: "Local Settings Error", description: "Could not load saved CSTMZR settings. Using defaults.", variant: "info"});
     }
-
+    
     const finalViews = loadedViews.length > 0 ? loadedViews : [
       { 
         id: `default_view_wc_${wcProduct.id}`,
