@@ -63,6 +63,11 @@ export interface CanvasText {
   shadowOffsetX: number; // In px
   shadowOffsetY: number; // In px
   shadowBlur: number; // In px
+
+  // Arch Effect (Visual Only for now)
+  isArchText: boolean;
+  archAmount: number; // e.g., 0-100 for curvature intensity
+
   movedFromDefault?: boolean;
 }
 
@@ -381,6 +386,8 @@ export function UploadProvider({ children }: { children: ReactNode }) {
       shadowOffsetX: initialStyle?.shadowOffsetX || 0,
       shadowOffsetY: initialStyle?.shadowOffsetY || 0,
       shadowBlur: initialStyle?.shadowBlur || 0,
+      isArchText: initialStyle?.isArchText || false,
+      archAmount: initialStyle?.archAmount || 50,
       movedFromDefault: false,
     };
     setCanvasTexts(prev => [...prev, newText]);

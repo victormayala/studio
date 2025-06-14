@@ -16,7 +16,8 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
-import { Bold, Italic, Underline, CaseUpper, CaseLower, Type, Palette, Settings2, Pilcrow, TextCursorInput, Pipette, AlignJustify } from 'lucide-react';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import { Bold, Italic, Underline, CaseUpper, CaseLower, Type, Palette, Settings2, Pilcrow, TextCursorInput, Pipette, Waves } from 'lucide-react'; // Added Waves
 import { useUploads, type CanvasText } from '@/contexts/UploadContext';
 import { googleFonts } from '@/lib/google-fonts';
 import { useToast } from '@/hooks/use-toast';
@@ -61,6 +62,8 @@ const initialTextToolPanelDefaultStyle: Omit<CanvasText, 'id' | 'viewId' | 'zInd
   shadowOffsetX: 0,
   shadowOffsetY: 0,
   shadowBlur: 0,
+  isArchText: false,
+  archAmount: 50,
 };
 
 
@@ -161,363 +164,414 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
 
 
   const renderControls = () => (
-    <div className="space-y-6 py-2">
-
-      <section className="space-y-4">
-        <h3 className="text-sm font-medium text-muted-foreground flex items-center"><Pilcrow className="mr-2 h-4 w-4 text-secondary" />Font</h3>
-        <div>
-          <Label htmlFor="fontFamilySelect" className="text-xs mb-1 block">Font Family</Label>
-          <Select
-            value={currentStyle.fontFamily} 
-            onValueChange={(value) => handleStyleChange('fontFamily', value)}
-          >
-            <SelectTrigger id="fontFamilySelect" className="h-9">
-              <SelectValue placeholder="Select font" />
-            </SelectTrigger>
-            <SelectContent>
-              {googleFonts.map((font) => (
-                <SelectItem key={font.name} value={font.family} style={{ fontFamily: font.family }}>
-                  {font.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        
-        <div className="grid grid-cols-2 gap-x-4 gap-y-3">
-             <div>
-             <Label className="text-xs mb-1 block">Style</Label>
-             <ToggleGroup
-                type="multiple"
-                variant="outline"
-                className="w-full grid grid-cols-3 gap-px"
-                value={toggleGroupValue}
-                onValueChange={(styles) => {
-                    handleBulkStyleChange({
-                        fontWeight: styles.includes('bold') ? 'bold' : 'normal',
-                        fontStyle: styles.includes('italic') ? 'italic' : 'normal',
-                        textDecoration: styles.includes('underline') ? 'underline' : 'none',
-                    });
-                }}
-             >
-                <ToggleGroupItem value="bold" aria-label="Toggle bold" className="h-9 w-full px-1 rounded-l-md rounded-r-none border-r-0"><Bold size={18}/></ToggleGroupItem>
-                <ToggleGroupItem value="italic" aria-label="Toggle italic" className="h-9 w-full px-1 rounded-none border-r-0"><Italic size={18} /></ToggleGroupItem>
-                <ToggleGroupItem value="underline" aria-label="Toggle underline" className="h-9 w-full px-1 rounded-r-md rounded-l-none"><Underline size={18}/></ToggleGroupItem>
-            </ToggleGroup>
-          </div>
+    <Accordion type="multiple" defaultValue={['text-font', 'text-spacing', 'text-color', 'text-effects', 'text-arch']} className="w-full">
+      <AccordionItem value="text-font">
+        <AccordionTrigger className="font-medium text-sm py-3 px-1">
+          <Pilcrow className="mr-2 h-4 w-4 text-secondary" />Font
+        </AccordionTrigger>
+        <AccordionContent className="space-y-4 pt-3 pb-1 px-1">
           <div>
-            <Label htmlFor="textTransform" className="text-xs mb-1 block">Case</Label>
+            <Label htmlFor="fontFamilySelect" className="text-xs mb-1 block">Font Family</Label>
             <Select
-              value={currentStyle.textTransform} 
-              onValueChange={(value: 'none' | 'uppercase' | 'lowercase') => handleStyleChange('textTransform', value)}
+              value={currentStyle.fontFamily} 
+              onValueChange={(value) => handleStyleChange('fontFamily', value)}
             >
-              <SelectTrigger id="textTransform" className="h-9"><SelectValue/></SelectTrigger>
+              <SelectTrigger id="fontFamilySelect" className="h-9">
+                <SelectValue placeholder="Select font" />
+              </SelectTrigger>
               <SelectContent>
-                <SelectItem value="none">Normal</SelectItem>
-                <SelectItem value="uppercase"><CaseUpper className="inline h-4 w-4 mr-1"/>Uppercase</SelectItem>
-                <SelectItem value="lowercase"><CaseLower className="inline h-4 w-4 mr-1"/>Lowercase</SelectItem>
+                {googleFonts.map((font) => (
+                  <SelectItem key={font.name} value={font.family} style={{ fontFamily: font.family }}>
+                    {font.name}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
-        </div>
-        <div>
+          
+          <div className="grid grid-cols-2 gap-x-4 gap-y-3">
+              <div>
+              <Label className="text-xs mb-1 block">Style</Label>
+              <ToggleGroup
+                  type="multiple"
+                  variant="outline"
+                  className="w-full grid grid-cols-3 gap-px"
+                  value={toggleGroupValue}
+                  onValueChange={(styles) => {
+                      handleBulkStyleChange({
+                          fontWeight: styles.includes('bold') ? 'bold' : 'normal',
+                          fontStyle: styles.includes('italic') ? 'italic' : 'normal',
+                          textDecoration: styles.includes('underline') ? 'underline' : 'none',
+                      });
+                  }}
+              >
+                  <ToggleGroupItem value="bold" aria-label="Toggle bold" className="h-9 w-full px-1 rounded-l-md rounded-r-none border-r-0"><Bold size={18}/></ToggleGroupItem>
+                  <ToggleGroupItem value="italic" aria-label="Toggle italic" className="h-9 w-full px-1 rounded-none border-r-0"><Italic size={18} /></ToggleGroupItem>
+                  <ToggleGroupItem value="underline" aria-label="Toggle underline" className="h-9 w-full px-1 rounded-r-md rounded-l-none"><Underline size={18}/></ToggleGroupItem>
+              </ToggleGroup>
+            </div>
+            <div>
+              <Label htmlFor="textTransform" className="text-xs mb-1 block">Case</Label>
+              <Select
+                value={currentStyle.textTransform} 
+                onValueChange={(value: 'none' | 'uppercase' | 'lowercase') => handleStyleChange('textTransform', value)}
+              >
+                <SelectTrigger id="textTransform" className="h-9"><SelectValue/></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Normal</SelectItem>
+                  <SelectItem value="uppercase"><CaseUpper className="inline h-4 w-4 mr-1"/>Uppercase</SelectItem>
+                  <SelectItem value="lowercase"><CaseLower className="inline h-4 w-4 mr-1"/>Lowercase</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <div>
+              <div className="flex justify-between items-center">
+                  <Label htmlFor="fontSizeInput" className="text-xs">Font Size (px)</Label>
+                  <Input
+                  id="fontSizeInput"
+                  type="number"
+                  min={8} max={128} step={1}
+                  value={currentStyle.fontSize} 
+                  onChange={(e) => {
+                      const val = parseFloat(e.target.value);
+                      if (!isNaN(val)) handleStyleChange('fontSize', Math.max(8, Math.min(val, 128)));
+                  }}
+                  className="h-8 w-20 text-xs"
+                  />
+              </div>
+              <Slider
+                  id="fontSizeSlider"
+                  min={8} max={128} step={1}
+                  value={[currentStyle.fontSize]} 
+                  onValueChange={([value]) => handleStyleChange('fontSize', value)}
+                  onPointerDownCapture={startInteractiveOperation}
+                  onPointerUpCapture={endInteractiveOperation}
+                  className="mt-6" 
+              />
+          </div>
+        </AccordionContent>
+      </AccordionItem>
+      
+      <AccordionItem value="text-spacing">
+        <AccordionTrigger className="font-medium text-sm py-3 px-1">
+          <TextCursorInput className="mr-2 h-4 w-4 text-secondary" />Spacing
+        </AccordionTrigger>
+        <AccordionContent className="space-y-4 pt-3 pb-1 px-1">
+          <div className="mt-6 mb-6">
             <div className="flex justify-between items-center">
-                <Label htmlFor="fontSizeInput" className="text-xs">Font Size (px)</Label>
-                <Input
-                id="fontSizeInput"
+              <Label htmlFor="lineHeightInput" className="text-xs">Line Height</Label>
+              <Input
+                id="lineHeightInput"
                 type="number"
-                min={8} max={128} step={1}
-                value={currentStyle.fontSize} 
+                min={0.5} max={3} step={0.1}
+                value={currentStyle.lineHeight} 
                 onChange={(e) => {
-                    const val = parseFloat(e.target.value);
-                    if (!isNaN(val)) handleStyleChange('fontSize', Math.max(8, Math.min(val, 128)));
+                  const val = parseFloat(e.target.value);
+                  if (!isNaN(val)) handleStyleChange('lineHeight', Math.max(0.5, Math.min(val, 3)));
                 }}
                 className="h-8 w-20 text-xs"
-                />
+              />
             </div>
             <Slider
-                id="fontSizeSlider"
-                min={8} max={128} step={1}
-                value={[currentStyle.fontSize]} 
-                onValueChange={([value]) => handleStyleChange('fontSize', value)}
-                onPointerDownCapture={startInteractiveOperation}
-                onPointerUpCapture={endInteractiveOperation}
-                className="mt-6" 
-            />
-        </div>
-      </section>
-
-      <Separator />
-
-      <section className="space-y-4">
-        <h3 className="text-sm font-medium text-muted-foreground flex items-center"><TextCursorInput className="mr-2 h-4 w-4 text-secondary" />Spacing</h3>
-        <div className="mt-6 mb-6">
-          <div className="flex justify-between items-center">
-            <Label htmlFor="lineHeightInput" className="text-xs">Line Height</Label>
-            <Input
-              id="lineHeightInput"
-              type="number"
+              id="lineHeightSlider"
               min={0.5} max={3} step={0.1}
-              value={currentStyle.lineHeight} 
-              onChange={(e) => {
-                const val = parseFloat(e.target.value);
-                if (!isNaN(val)) handleStyleChange('lineHeight', Math.max(0.5, Math.min(val, 3)));
-              }}
-              className="h-8 w-20 text-xs"
+              value={[currentStyle.lineHeight]} 
+              onValueChange={([value]) => handleStyleChange('lineHeight', value)}
+              onPointerDownCapture={startInteractiveOperation}
+              onPointerUpCapture={endInteractiveOperation}
+              className="mt-6"
             />
           </div>
-          <Slider
-            id="lineHeightSlider"
-            min={0.5} max={3} step={0.1}
-            value={[currentStyle.lineHeight]} 
-            onValueChange={([value]) => handleStyleChange('lineHeight', value)}
-            onPointerDownCapture={startInteractiveOperation}
-            onPointerUpCapture={endInteractiveOperation}
-            className="mt-6"
-          />
-        </div>
-        <div className="mt-6 mb-6">
-          <div className="flex justify-between items-center">
-            <Label htmlFor="letterSpacingInput" className="text-xs">Letter Spacing (px)</Label>
-            <Input
-              id="letterSpacingInput"
-              type="number"
+          <div className="mt-6 mb-6">
+            <div className="flex justify-between items-center">
+              <Label htmlFor="letterSpacingInput" className="text-xs">Letter Spacing (px)</Label>
+              <Input
+                id="letterSpacingInput"
+                type="number"
+                min={-5} max={20} step={0.5}
+                value={currentStyle.letterSpacing} 
+                onChange={(e) => {
+                  const val = parseFloat(e.target.value);
+                  if (!isNaN(val)) handleStyleChange('letterSpacing', Math.max(-5, Math.min(val, 20)));
+                }}
+                className="h-8 w-20 text-xs"
+              />
+            </div>
+            <Slider
+              id="letterSpacingSlider"
               min={-5} max={20} step={0.5}
-              value={currentStyle.letterSpacing} 
-              onChange={(e) => {
-                const val = parseFloat(e.target.value);
-                if (!isNaN(val)) handleStyleChange('letterSpacing', Math.max(-5, Math.min(val, 20)));
-              }}
-              className="h-8 w-20 text-xs"
+              value={[currentStyle.letterSpacing]} 
+              onValueChange={([value]) => handleStyleChange('letterSpacing', value)}
+              onPointerDownCapture={startInteractiveOperation}
+              onPointerUpCapture={endInteractiveOperation}
+              className="mt-6"
             />
           </div>
-          <Slider
-            id="letterSpacingSlider"
-            min={-5} max={20} step={0.5}
-            value={[currentStyle.letterSpacing]} 
-            onValueChange={([value]) => handleStyleChange('letterSpacing', value)}
-            onPointerDownCapture={startInteractiveOperation}
-            onPointerUpCapture={endInteractiveOperation}
-            className="mt-6"
-          />
-        </div>
-      </section>
+        </AccordionContent>
+      </AccordionItem>
 
-      <Separator />
+      <AccordionItem value="text-color">
+        <AccordionTrigger className="font-medium text-sm py-3 px-1">
+          <Pipette className="mr-2 h-4 w-4 text-secondary" />Color
+        </AccordionTrigger>
+        <AccordionContent className="space-y-4 pt-3 pb-1 px-1">
+          <div className="flex items-center space-x-2">
+            <Label htmlFor="textColorSwatch" className="text-xs shrink-0">Fill Color</Label>
+            <Input
+              type="color"
+              id="textColorSwatch"
+              className="h-8 w-10 p-0.5 border-none rounded-md"
+              value={localTextColorHex}
+              onPointerDownCapture={startInteractiveOperation}
+              onPointerUpCapture={endInteractiveOperation}
+              onChange={(e) => {
+                  setLocalTextColorHex(e.target.value);
+                  handleStyleChange('color', e.target.value);
+              }}
+            />
+            <Input
+              id="textColorHex"
+              className="h-8 text-xs flex-grow max-w-[100px]"
+              value={localTextColorHex}
+              onChange={(e) => setLocalTextColorHex(e.target.value)}
+              onBlur={(e) => {
+                  const finalColor = sanitizeHex(e.target.value);
+                  setLocalTextColorHex(finalColor);
+                  handleStyleChange('color', finalColor);
+              }}
+              maxLength={7}
+            />
+          </div>
+        </AccordionContent>
+      </AccordionItem>
 
-      <section className="space-y-4">
-        <h3 className="text-sm font-medium text-muted-foreground flex items-center"><Pipette className="mr-2 h-4 w-4 text-secondary" />Color</h3>
-        <div className="flex items-center space-x-2">
-          <Label htmlFor="textColorSwatch" className="text-xs shrink-0">Fill Color</Label>
-          <Input
-            type="color"
-            id="textColorSwatch"
-            className="h-8 w-10 p-0.5 border-none rounded-md"
-            value={localTextColorHex}
-            onPointerDownCapture={startInteractiveOperation}
-            onPointerUpCapture={endInteractiveOperation}
-            onChange={(e) => {
-                setLocalTextColorHex(e.target.value);
-                handleStyleChange('color', e.target.value);
-            }}
-          />
-          <Input
-            id="textColorHex"
-            className="h-8 text-xs flex-grow max-w-[100px]"
-            value={localTextColorHex}
-            onChange={(e) => setLocalTextColorHex(e.target.value)}
-            onBlur={(e) => {
-                const finalColor = sanitizeHex(e.target.value);
-                setLocalTextColorHex(finalColor);
-                handleStyleChange('color', finalColor);
-            }}
-            maxLength={7}
-          />
-        </div>
-      </section>
-
-      <Separator />
-
-      <section className="space-y-4">
-        <h3 className="text-sm font-medium text-muted-foreground flex items-center mb-2">
-          Effects
-        </h3>
-
-        <div className="space-y-3 pt-2">
-            <h4 className="text-xs font-medium text-foreground">Text Outline</h4>
-            <div className="pt-2 space-y-3">
-              <div className="flex items-center space-x-2">
-                <Label htmlFor="outlineColorSwatch" className="text-xs shrink-0">Outline Color</Label>
-                <Input
-                    type="color"
-                    id="outlineColorSwatch"
-                    className="h-8 w-10 p-0.5 border-none rounded-md"
-                    value={localOutlineColorHex}
-                    onPointerDownCapture={startInteractiveOperation}
-                    onPointerUpCapture={endInteractiveOperation}
-                    onChange={(e) => {
-                        setLocalOutlineColorHex(e.target.value);
-                        handleStyleChange('outlineColor', e.target.value);
-                    }}
-                    disabled={currentStyle.outlineWidth === 0 && !selectedText} 
-                />
-                <Input
-                    id="outlineColorHex"
-                    className="h-8 text-xs flex-grow max-w-[100px]"
-                    value={localOutlineColorHex}
-                    onChange={(e) => setLocalOutlineColorHex(e.target.value)}
-                    onBlur={(e) => {
-                        const finalColor = sanitizeHex(e.target.value);
-                        setLocalOutlineColorHex(finalColor);
-                        handleStyleChange('outlineColor', finalColor);
-                    }}
-                    maxLength={7}
-                    disabled={currentStyle.outlineWidth === 0 && !selectedText} 
-                />
-              </div>
-              <div className="mt-6 mb-6">
-                <div className="flex justify-between items-center">
-                  <Label htmlFor="outlineWidthInput" className="text-xs">Outline Width (px)</Label>
+      <AccordionItem value="text-effects">
+        <AccordionTrigger className="font-medium text-sm py-3 px-1">
+          <Palette className="mr-2 h-4 w-4 text-secondary" /> Effects
+        </AccordionTrigger>
+        <AccordionContent className="space-y-3 pt-3 pb-1 px-1">
+          <div className="space-y-3 pt-2">
+              <h4 className="text-xs font-medium text-foreground">Text Outline</h4>
+              <div className="pt-2 space-y-3">
+                <div className="flex items-center space-x-2">
+                  <Label htmlFor="outlineColorSwatch" className="text-xs shrink-0">Outline Color</Label>
                   <Input
-                    id="outlineWidthInput"
-                    type="number"
-                    min={0} max={10} step={0.5}
-                    value={currentStyle.outlineWidth} 
-                    onChange={(e) => {
-                      const val = parseFloat(e.target.value);
-                      if (!isNaN(val)) handleStyleChange('outlineWidth', Math.max(0, Math.min(val, 10)));
-                    }}
-                    className="h-8 w-20 text-xs"
+                      type="color"
+                      id="outlineColorSwatch"
+                      className="h-8 w-10 p-0.5 border-none rounded-md"
+                      value={localOutlineColorHex}
+                      onPointerDownCapture={startInteractiveOperation}
+                      onPointerUpCapture={endInteractiveOperation}
+                      onChange={(e) => {
+                          setLocalOutlineColorHex(e.target.value);
+                          handleStyleChange('outlineColor', e.target.value);
+                      }}
+                      disabled={currentStyle.outlineWidth === 0 && !selectedText} 
+                  />
+                  <Input
+                      id="outlineColorHex"
+                      className="h-8 text-xs flex-grow max-w-[100px]"
+                      value={localOutlineColorHex}
+                      onChange={(e) => setLocalOutlineColorHex(e.target.value)}
+                      onBlur={(e) => {
+                          const finalColor = sanitizeHex(e.target.value);
+                          setLocalOutlineColorHex(finalColor);
+                          handleStyleChange('outlineColor', finalColor);
+                      }}
+                      maxLength={7}
+                      disabled={currentStyle.outlineWidth === 0 && !selectedText} 
                   />
                 </div>
-                <Slider
-                    id="outlineWidthSlider"
-                    min={0} max={10} step={0.5}
-                    value={[currentStyle.outlineWidth]} 
-                    onValueChange={([value]) => handleStyleChange('outlineWidth', value)}
-                    onPointerDownCapture={startInteractiveOperation}
-                    onPointerUpCapture={endInteractiveOperation}
-                    className="mt-6"
-                />
-              </div>
-            </div>
-        </div>
-
-        <Separator className="my-3" />
-
-        <div className="space-y-3 pt-2">
-           <h4 className="text-xs font-medium text-foreground">Text Shadow</h4>
-            <div className={cn("pt-2 space-y-3")}>
-              <div className="flex items-center space-x-2">
-                <Label htmlFor="shadowColorSwatch" className="text-xs shrink-0">Shadow Color</Label>
-                <Input
-                    type="color"
-                    id="shadowColorSwatch"
-                    className="h-8 w-10 p-0.5 border-none rounded-md"
-                    value={localShadowColorHex}
-                    onPointerDownCapture={startInteractiveOperation}
-                    onPointerUpCapture={endInteractiveOperation}
-                    onChange={(e) => {
-                        setLocalShadowColorHex(e.target.value);
-                        handleStyleChange('shadowColor', e.target.value);
-                    }}
-                     disabled={currentStyle.shadowOffsetX === 0 && currentStyle.shadowOffsetY === 0 && currentStyle.shadowBlur === 0 && !selectedText}
-                />
-                <Input
-                    id="shadowColorHex"
-                    className="h-8 text-xs flex-grow max-w-[100px]"
-                    value={localShadowColorHex}
-                    onChange={(e) => setLocalShadowColorHex(e.target.value)}
-                    onBlur={(e) => {
-                        const finalColor = sanitizeHex(e.target.value);
-                        setLocalShadowColorHex(finalColor);
-                        handleStyleChange('shadowColor', finalColor);
-                    }}
-                    maxLength={7}
-                    disabled={currentStyle.shadowOffsetX === 0 && currentStyle.shadowOffsetY === 0 && currentStyle.shadowBlur === 0 && !selectedText}
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-x-4 gap-y-3">
                 <div className="mt-6 mb-6">
-                    <div className="flex justify-between items-center">
-                        <Label htmlFor="shadowOffsetXInput" className="text-xs">Shadow Offset X (px)</Label>
-                        <Input
-                            id="shadowOffsetXInput"
-                            type="number"
-                            min={-20} max={20} step={1}
-                            value={currentStyle.shadowOffsetX} 
-                            onChange={(e) => {
-                                const val = parseFloat(e.target.value);
-                                if (!isNaN(val)) handleStyleChange('shadowOffsetX', Math.max(-20, Math.min(val, 20)));
-                            }}
-                            className="h-8 w-20 text-xs"
-                        />
-                    </div>
-                    <Slider
-                        id="shadowOffsetXSlider"
-                        min={-20} max={20} step={1}
-                        value={[currentStyle.shadowOffsetX]} 
-                        onValueChange={([value]) => handleStyleChange('shadowOffsetX', value)}
-                        onPointerDownCapture={startInteractiveOperation}
-                        onPointerUpCapture={endInteractiveOperation}
-                        className="mt-6"
-                    />
-                </div>
-                <div className="mt-6 mb-6">
-                    <div className="flex justify-between items-center">
-                        <Label htmlFor="shadowOffsetYInput" className="text-xs">Shadow Offset Y (px)</Label>
-                        <Input
-                            id="shadowOffsetYInput"
-                            type="number"
-                            min={-20} max={20} step={1}
-                            value={currentStyle.shadowOffsetY} 
-                            onChange={(e) => {
-                                const val = parseFloat(e.target.value);
-                                if (!isNaN(val)) handleStyleChange('shadowOffsetY', Math.max(-20, Math.min(val, 20)));
-                            }}
-                            className="h-8 w-20 text-xs"
-                        />
-                    </div>
-                    <Slider
-                        id="shadowOffsetYSlider"
-                        min={-20} max={20} step={1}
-                        value={[currentStyle.shadowOffsetY]} 
-                        onValueChange={([value]) => handleStyleChange('shadowOffsetY', value)}
-                        onPointerDownCapture={startInteractiveOperation}
-                        onPointerUpCapture={endInteractiveOperation}
-                        className="mt-6"
-                    />
-                </div>
-              </div>
-              <div className="mt-6 mb-6">
-                <div className="flex justify-between items-center">
-                    <Label htmlFor="shadowBlurInput" className="text-xs">Shadow Blur (px)</Label>
+                  <div className="flex justify-between items-center">
+                    <Label htmlFor="outlineWidthInput" className="text-xs">Outline Width (px)</Label>
                     <Input
-                        id="shadowBlurInput"
-                        type="number"
-                        min={0} max={30} step={1}
-                        value={currentStyle.shadowBlur} 
-                        onChange={(e) => {
-                            const val = parseFloat(e.target.value);
-                            if (!isNaN(val)) handleStyleChange('shadowBlur', Math.max(0, Math.min(val, 30)));
-                        }}
-                        className="h-8 w-20 text-xs"
+                      id="outlineWidthInput"
+                      type="number"
+                      min={0} max={10} step={0.5}
+                      value={currentStyle.outlineWidth} 
+                      onChange={(e) => {
+                        const val = parseFloat(e.target.value);
+                        if (!isNaN(val)) handleStyleChange('outlineWidth', Math.max(0, Math.min(val, 10)));
+                      }}
+                      className="h-8 w-20 text-xs"
                     />
+                  </div>
+                  <Slider
+                      id="outlineWidthSlider"
+                      min={0} max={10} step={0.5}
+                      value={[currentStyle.outlineWidth]} 
+                      onValueChange={([value]) => handleStyleChange('outlineWidth', value)}
+                      onPointerDownCapture={startInteractiveOperation}
+                      onPointerUpCapture={endInteractiveOperation}
+                      className="mt-6"
+                  />
                 </div>
-                <Slider
-                    id="shadowBlurSlider"
-                    min={0} max={30} step={1}
-                    value={[currentStyle.shadowBlur]} 
-                    onValueChange={([value]) => handleStyleChange('shadowBlur', value)}
-                    onPointerDownCapture={startInteractiveOperation}
-                    onPointerUpCapture={endInteractiveOperation}
-                    className="mt-6"
+              </div>
+          </div>
+
+          <Separator className="my-3" />
+
+          <div className="space-y-3 pt-2">
+            <h4 className="text-xs font-medium text-foreground">Text Shadow</h4>
+              <div className={cn("pt-2 space-y-3")}>
+                <div className="flex items-center space-x-2">
+                  <Label htmlFor="shadowColorSwatch" className="text-xs shrink-0">Shadow Color</Label>
+                  <Input
+                      type="color"
+                      id="shadowColorSwatch"
+                      className="h-8 w-10 p-0.5 border-none rounded-md"
+                      value={localShadowColorHex}
+                      onPointerDownCapture={startInteractiveOperation}
+                      onPointerUpCapture={endInteractiveOperation}
+                      onChange={(e) => {
+                          setLocalShadowColorHex(e.target.value);
+                          handleStyleChange('shadowColor', e.target.value);
+                      }}
+                      disabled={currentStyle.shadowOffsetX === 0 && currentStyle.shadowOffsetY === 0 && currentStyle.shadowBlur === 0 && !selectedText}
+                  />
+                  <Input
+                      id="shadowColorHex"
+                      className="h-8 text-xs flex-grow max-w-[100px]"
+                      value={localShadowColorHex}
+                      onChange={(e) => setLocalShadowColorHex(e.target.value)}
+                      onBlur={(e) => {
+                          const finalColor = sanitizeHex(e.target.value);
+                          setLocalShadowColorHex(finalColor);
+                          handleStyleChange('shadowColor', finalColor);
+                      }}
+                      maxLength={7}
+                      disabled={currentStyle.shadowOffsetX === 0 && currentStyle.shadowOffsetY === 0 && currentStyle.shadowBlur === 0 && !selectedText}
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-x-4 gap-y-3">
+                  <div className="mt-6 mb-6">
+                      <div className="flex justify-between items-center">
+                          <Label htmlFor="shadowOffsetXInput" className="text-xs">Shadow Offset X (px)</Label>
+                          <Input
+                              id="shadowOffsetXInput"
+                              type="number"
+                              min={-20} max={20} step={1}
+                              value={currentStyle.shadowOffsetX} 
+                              onChange={(e) => {
+                                  const val = parseFloat(e.target.value);
+                                  if (!isNaN(val)) handleStyleChange('shadowOffsetX', Math.max(-20, Math.min(val, 20)));
+                              }}
+                              className="h-8 w-20 text-xs"
+                          />
+                      </div>
+                      <Slider
+                          id="shadowOffsetXSlider"
+                          min={-20} max={20} step={1}
+                          value={[currentStyle.shadowOffsetX]} 
+                          onValueChange={([value]) => handleStyleChange('shadowOffsetX', value)}
+                          onPointerDownCapture={startInteractiveOperation}
+                          onPointerUpCapture={endInteractiveOperation}
+                          className="mt-6"
+                      />
+                  </div>
+                  <div className="mt-6 mb-6">
+                      <div className="flex justify-between items-center">
+                          <Label htmlFor="shadowOffsetYInput" className="text-xs">Shadow Offset Y (px)</Label>
+                          <Input
+                              id="shadowOffsetYInput"
+                              type="number"
+                              min={-20} max={20} step={1}
+                              value={currentStyle.shadowOffsetY} 
+                              onChange={(e) => {
+                                  const val = parseFloat(e.target.value);
+                                  if (!isNaN(val)) handleStyleChange('shadowOffsetY', Math.max(-20, Math.min(val, 20)));
+                              }}
+                              className="h-8 w-20 text-xs"
+                          />
+                      </div>
+                      <Slider
+                          id="shadowOffsetYSlider"
+                          min={-20} max={20} step={1}
+                          value={[currentStyle.shadowOffsetY]} 
+                          onValueChange={([value]) => handleStyleChange('shadowOffsetY', value)}
+                          onPointerDownCapture={startInteractiveOperation}
+                          onPointerUpCapture={endInteractiveOperation}
+                          className="mt-6"
+                      />
+                  </div>
+                </div>
+                <div className="mt-6 mb-6">
+                  <div className="flex justify-between items-center">
+                      <Label htmlFor="shadowBlurInput" className="text-xs">Shadow Blur (px)</Label>
+                      <Input
+                          id="shadowBlurInput"
+                          type="number"
+                          min={0} max={30} step={1}
+                          value={currentStyle.shadowBlur} 
+                          onChange={(e) => {
+                              const val = parseFloat(e.target.value);
+                              if (!isNaN(val)) handleStyleChange('shadowBlur', Math.max(0, Math.min(val, 30)));
+                          }}
+                          className="h-8 w-20 text-xs"
+                      />
+                  </div>
+                  <Slider
+                      id="shadowBlurSlider"
+                      min={0} max={30} step={1}
+                      value={[currentStyle.shadowBlur]} 
+                      onValueChange={([value]) => handleStyleChange('shadowBlur', value)}
+                      onPointerDownCapture={startInteractiveOperation}
+                      onPointerUpCapture={endInteractiveOperation}
+                      className="mt-6"
+                  />
+                </div>
+              </div>
+          </div>
+        </AccordionContent>
+      </AccordionItem>
+
+      <AccordionItem value="text-arch">
+        <AccordionTrigger className="font-medium text-sm py-3 px-1">
+          <Waves className="mr-2 h-4 w-4 text-secondary" /> Arch Effect
+        </AccordionTrigger>
+        <AccordionContent className="space-y-4 pt-3 pb-1 px-1">
+          <div className="flex items-center justify-between">
+            <Label htmlFor="archTextSwitch" className="text-xs">
+              Enable Arch Text <span className="text-muted-foreground/70">(Visual Only)</span>
+            </Label>
+            <Switch
+              id="archTextSwitch"
+              checked={currentStyle.isArchText}
+              onCheckedChange={(checked) => handleStyleChange('isArchText', checked)}
+            />
+          </div>
+          {currentStyle.isArchText && (
+            <div className="mt-6 mb-6">
+              <div className="flex justify-between items-center">
+                <Label htmlFor="archAmountInput" className="text-xs">Arch Amount</Label>
+                <Input
+                  id="archAmountInput"
+                  type="number"
+                  min={-100} max={100} step={1}
+                  value={currentStyle.archAmount}
+                  onChange={(e) => {
+                    const val = parseFloat(e.target.value);
+                    if (!isNaN(val)) handleStyleChange('archAmount', Math.max(-100, Math.min(val, 100)));
+                  }}
+                  className="h-8 w-20 text-xs"
                 />
               </div>
+              <Slider
+                id="archAmountSlider"
+                min={-100} max={100} step={1}
+                value={[currentStyle.archAmount]}
+                onValueChange={([value]) => handleStyleChange('archAmount', value)}
+                onPointerDownCapture={startInteractiveOperation}
+                onPointerUpCapture={endInteractiveOperation}
+                className="mt-6"
+              />
             </div>
-        </div>
-      </section>
-    </div>
+          )}
+        </AccordionContent>
+      </AccordionItem>
+    </Accordion>
   );
 
   return (
@@ -533,18 +587,16 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
           className="bg-background mt-1 text-base"
         />
       </div>
+      
+      <Button onClick={handleAddText} className="w-full bg-primary text-primary-foreground hover:bg-primary/80">
+        <Type className="mr-2 h-4 w-4" />
+        {selectedText ? "Update Selected Text" : "Add Text to Canvas"}
+      </Button>
+      
+      <Separator />
+      
+      {renderControls()}
 
-      {selectedText ? (
-        renderControls()
-      ) : (
-        <>
-          <Button onClick={handleAddText} className="w-full bg-primary text-primary-foreground hover:bg-primary/80">
-            <Type className="mr-2 h-4 w-4" />
-            Add Text to Canvas
-          </Button>
-          {renderControls()}
-        </>
-      )}
     </div>
   );
 }
