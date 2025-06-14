@@ -78,7 +78,7 @@ export default function AiAssistant({ activeViewId }: AiAssistantProps) {
     // Reset after using
     setGeneratedImageDataUrl(null);
     setGeneratedImageDescription(null);
-    // Optionally clear prompt: setPromptText(''); 
+    setPromptText(''); // Clear the input box
   };
 
   const handleTryAgain = () => {
