@@ -186,7 +186,7 @@ function CustomizerLayoutAndLogic() {
 
     setActiveViewId(finalViews[0]?.id || null);
     setIsLoading(false);
-  }, [productId, user, authLoading, toast]);
+  }, [productId, user?.id, authLoading, toast]); // Changed user to user?.id
 
   useEffect(() => {
     loadCustomizerData();
