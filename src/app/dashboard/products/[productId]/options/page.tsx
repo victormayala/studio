@@ -1,5 +1,5 @@
 
-      "use client";
+"use client";
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
@@ -11,7 +11,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, Shirt, RefreshCcw, ExternalLink, Loader2, AlertTriangle, LayersIcon, Tag } from 'lucide-react';
+import { ArrowLeft, Shirt, RefreshCcw, ExternalLink, Loader2, AlertTriangle, LayersIcon, Tag, Image as ImageIconLucide, Edit2 } from 'lucide-react';
 import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
@@ -22,7 +22,6 @@ import { Alert as ShadCnAlert, AlertDescription as ShadCnAlertDescription, Alert
 import ProductViewSetup from '@/components/product-options/ProductViewSetup'; 
 import { Separator } from '@/components/ui/separator';
 
-// Interfaces (BoundaryBox, ProductView, ProductOptionsData, LocalStorageData, ActiveDragState) remain the same
 interface BoundaryBox {
   id: string;
   name: string;
@@ -40,19 +39,31 @@ interface ProductView {
   boundaryBoxes: BoundaryBox[];
 }
 
+interface ColorGroupOptions {
+  selectedVariationIds: string[];
+  variantViewImages: Record<string, { imageUrl: string; aiHint?: string }>; // Key: defaultView.id
+}
+
 interface ProductOptionsData {
   id: string;
   name: string;
   description: string;
   price: number;
   type: 'simple' | 'variable' | 'grouped' | 'external';
-  views: ProductView[];
-  selectedVariationIdsForCstmzr: string[];
+  defaultViews: ProductView[]; // Renamed from 'views'
+  optionsByColor: Record<string, ColorGroupOptions>; // Key: color option value (e.g., "Red")
+  groupingAttributeName: string | null;
 }
 
-interface LocalStorageData {
-  views: ProductView[];
-  cstmzrSelectedVariationIds: string[];
+interface LocalStorageData_Old { // For migration
+  views: ProductView[]; // This was the old name for defaultViews
+  cstmzrSelectedVariationIds: string[]; // This was the old global list
+}
+
+interface LocalStorageData_New { // New structure for saving
+  defaultViews: ProductView[];
+  optionsByColor: Record<string, ColorGroupOptions>;
+  groupingAttributeName: string | null;
 }
 
 interface ActiveDragState {
@@ -79,7 +90,7 @@ export default function ProductOptionsPage() {
   const { user } = useAuth();
 
   const [productOptions, setProductOptions] = useState<ProductOptionsData | null>(null);
-  const [activeViewId, setActiveViewId] = useState<string | null>(null);
+  const [activeViewIdForSetup, setActiveViewIdForSetup] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -97,24 +108,20 @@ export default function ProductOptionsPage() {
 
   const [isDeleteViewDialogOpen, setIsDeleteViewDialogOpen] = useState(false);
   const [viewIdToDelete, setViewIdToDelete] = useState<string | null>(null);
-
-  const [groupingAttributeName, setGroupingAttributeName] = useState<string | null>(null);
+  
   const [groupedVariations, setGroupedVariations] = useState<Record<string, WCVariation[]> | null>(null);
-  const [secondaryAttributeName, setSecondaryAttributeName] = useState<string | null>(null);
+  const [editingImagesForColor, setEditingImagesForColor] = useState<string | null>(null);
 
 
   const fetchAndSetProductData = useCallback(async () => {
     if (!productId || !user?.id) {
-      setIsLoading(false);
-      setIsRefreshing(false);
-      if (!user?.id) setError("User not authenticated. Please sign in.");
-      else setError("Product ID is missing.");
-      setHasUnsavedChanges(true);
+      setIsLoading(false); setIsRefreshing(false);
+      setError(user?.id ? "Product ID is missing." : "User not authenticated. Please sign in.");
       return;
     }
 
     setIsLoading(true); setError(null); setVariationsError(null); setVariations([]);
-    setGroupedVariations(null); setGroupingAttributeName(null); setSecondaryAttributeName(null);
+    setGroupedVariations(null); 
 
     let userCredentials;
     try {
@@ -131,59 +138,42 @@ export default function ProductOptionsPage() {
       setError(fetchError || `Product with ID ${productId} not found.`);
       setProductOptions(null); setIsLoading(false); setIsRefreshing(false);
       toast({ title: "Error Fetching Product", description: fetchError || `Product ${productId} not found.`, variant: "destructive"});
-      setHasUnsavedChanges(true);
       return;
     }
     
+    let tempGroupedVariationsData: Record<string, WCVariation[]> | null = null;
+    let identifiedGroupingAttr: string | null = null;
+
     if (wcProduct.type === 'variable') {
       setIsLoadingVariations(true);
       const { variations: fetchedVars, error: varsError } = await fetchWooCommerceProductVariations(productId, userCredentials);
       if (varsError) {
         setVariationsError(varsError);
-        setVariations([]);
-      } else if (fetchedVars) {
-        setVariations(fetchedVars);
+      } else if (fetchedVars && fetchedVars.length > 0) {
+        setVariations(fetchedVars); 
+        const firstVarAttributes = fetchedVars[0].attributes;
+        const colorAttr = firstVarAttributes.find(attr => attr.name.toLowerCase() === 'color' || attr.name.toLowerCase() === 'colour');
+        if (colorAttr) {
+          identifiedGroupingAttr = colorAttr.name;
+        } else {
+          const nonSizeAttr = firstVarAttributes.find(attr => !['size', 'talla'].includes(attr.name.toLowerCase()));
+          if (nonSizeAttr) identifiedGroupingAttr = nonSizeAttr.name;
+          else if (firstVarAttributes.length > 0) identifiedGroupingAttr = firstVarAttributes[0].name;
+        }
 
-        if (fetchedVars.length > 0) {
-          let identifiedGroupingAttr: string | null = null;
-          let identifiedSecondaryAttr: string | null = null;
-          const firstVarAttributes = fetchedVars[0].attributes;
-
-          const colorAttr = firstVarAttributes.find(attr => attr.name.toLowerCase() === 'color' || attr.name.toLowerCase() === 'colour');
-          if (colorAttr) {
-            identifiedGroupingAttr = colorAttr.name;
-          } else {
-            const nonSizeAttr = firstVarAttributes.find(attr => !['size', 'talla'].includes(attr.name.toLowerCase()));
-            if (nonSizeAttr) identifiedGroupingAttr = nonSizeAttr.name;
-            else if (firstVarAttributes.length > 0) identifiedGroupingAttr = firstVarAttributes[0].name;
-          }
-          setGroupingAttributeName(identifiedGroupingAttr);
-
-          // Identify secondary attribute (e.g., Size)
-          if (identifiedGroupingAttr) {
-            const sizeAttr = firstVarAttributes.find(attr => attr.name.toLowerCase() === 'size' || attr.name.toLowerCase() === 'talla');
-             if (sizeAttr && sizeAttr.name !== identifiedGroupingAttr) {
-                identifiedSecondaryAttr = sizeAttr.name;
-            } else {
-                // Fallback: pick the first attribute that is NOT the grouping attribute
-                const otherAttr = firstVarAttributes.find(attr => attr.name !== identifiedGroupingAttr);
-                if (otherAttr) identifiedSecondaryAttr = otherAttr.name;
-            }
-          }
-          setSecondaryAttributeName(identifiedSecondaryAttr);
-
-          if (identifiedGroupingAttr) {
-            const groups: Record<string, WCVariation[]> = {};
-            fetchedVars.forEach(v => {
-              const groupAttr = v.attributes.find(a => a.name === identifiedGroupingAttr);
-              const groupKey = groupAttr ? groupAttr.option : 'Other';
-              if (!groups[groupKey]) groups[groupKey] = [];
-              groups[groupKey].push(v);
-            });
-            setGroupedVariations(groups);
-          } else {
-            setGroupedVariations({ 'All Variations': fetchedVars }); 
-          }
+        if (identifiedGroupingAttr) {
+          const groups: Record<string, WCVariation[]> = {};
+          fetchedVars.forEach(v => {
+            const groupAttr = v.attributes.find(a => a.name === identifiedGroupingAttr);
+            const groupKey = groupAttr ? groupAttr.option : 'Other';
+            if (!groups[groupKey]) groups[groupKey] = [];
+            groups[groupKey].push(v);
+          });
+          tempGroupedVariationsData = groups;
+          setGroupedVariations(groups);
+        } else {
+          tempGroupedVariationsData = { 'All Variations': fetchedVars };
+          setGroupedVariations({ 'All Variations': fetchedVars });
         }
       }
       setIsLoadingVariations(false);
@@ -191,7 +181,7 @@ export default function ProductOptionsPage() {
 
     const defaultImageUrl = wcProduct.images && wcProduct.images.length > 0 ? wcProduct.images[0].src : 'https://placehold.co/600x600.png';
     const defaultAiHint = wcProduct.images && wcProduct.images.length > 0 && wcProduct.images[0].alt ? wcProduct.images[0].alt.split(" ").slice(0,2).join(" ") : 'product image';
-    const defaultViews: ProductView[] = [{ id: crypto.randomUUID(), name: "Front", imageUrl: defaultImageUrl, aiHint: defaultAiHint, boundaryBoxes: [] }];
+    const initialDefaultViews: ProductView[] = [{ id: crypto.randomUUID(), name: "Front", imageUrl: defaultImageUrl, aiHint: defaultAiHint, boundaryBoxes: [] }];
     
     let plainTextDescription = 'No description available.';
     if (typeof window !== 'undefined' && (wcProduct.description || wcProduct.short_description)) {
@@ -202,31 +192,70 @@ export default function ProductOptionsPage() {
         plainTextDescription = (wcProduct.description || wcProduct.short_description || '').replace(/<[^>]+>/g, '');
     }
 
-    let loadedViews: ProductView[] = [];
-    let cstmzrSelectedVariationIds: string[] = [];
-    let localDataLoadedSuccessfully = false;
+    let loadedDefaultViews: ProductView[] = [];
+    let loadedOptionsByColor: Record<string, ColorGroupOptions> = {};
+    let loadedGroupingAttributeName: string | null = null;
+    let localDataFoundAndParsed = false;
     const localStorageKey = `cstmzr_product_options_${user.id}_${productId}`;
+
     try {
-      const savedOptions = localStorage.getItem(localStorageKey);
-      if (savedOptions) {
-        const parsedOptions = JSON.parse(savedOptions) as LocalStorageData;
-        loadedViews = parsedOptions.views || [];
-        cstmzrSelectedVariationIds = parsedOptions.cstmzrSelectedVariationIds || [];
-        localDataLoadedSuccessfully = loadedViews.length > 0 || cstmzrSelectedVariationIds.length > 0;
+      const savedOptionsString = localStorage.getItem(localStorageKey);
+      if (savedOptionsString) {
+        const parsedOptions = JSON.parse(savedOptionsString);
+        if (parsedOptions.optionsByColor && parsedOptions.defaultViews) { // New format
+          loadedDefaultViews = parsedOptions.defaultViews || [];
+          loadedOptionsByColor = parsedOptions.optionsByColor || {};
+          loadedGroupingAttributeName = parsedOptions.groupingAttributeName || null;
+          localDataFoundAndParsed = true;
+        } else if (parsedOptions.views) { // Old format, needs migration
+          loadedDefaultViews = parsedOptions.views || [];
+          const migratedSelectedVariationIds = (parsedOptions as LocalStorageData_Old).cstmzrSelectedVariationIds || [];
+          
+          if (identifiedGroupingAttr && tempGroupedVariationsData && Object.keys(tempGroupedVariationsData).length > 0) {
+            const firstColorKey = Object.keys(tempGroupedVariationsData)[0];
+            loadedOptionsByColor[firstColorKey] = {
+              selectedVariationIds: migratedSelectedVariationIds,
+              variantViewImages: {}, 
+            };
+            Object.keys(tempGroupedVariationsData).forEach(key => { 
+              if (!loadedOptionsByColor[key]) {
+                loadedOptionsByColor[key] = { selectedVariationIds: [], variantViewImages: {} };
+              }
+            });
+            loadedGroupingAttributeName = identifiedGroupingAttr;
+          } else { 
+            loadedOptionsByColor['default'] = { selectedVariationIds: migratedSelectedVariationIds, variantViewImages: {} };
+          }
+          toast({title: "Settings Migrated", description: "Product options updated to new format.", variant: "info"});
+          localDataFoundAndParsed = true; // Mark as parsed even if migrated
+        }
       }
     } catch (e) { console.error("Error parsing local CSTMZR options:", e); }
 
-    const finalViews = loadedViews.length > 0 ? loadedViews : defaultViews;
+    const finalDefaultViews = loadedDefaultViews.length > 0 ? loadedDefaultViews : initialDefaultViews;
     
+    let finalOptionsByColor = loadedOptionsByColor;
+    if (!localDataFoundAndParsed && tempGroupedVariationsData) { 
+        finalOptionsByColor = {};
+        Object.keys(tempGroupedVariationsData).forEach(colorKey => {
+            finalOptionsByColor[colorKey] = { selectedVariationIds: [], variantViewImages: {} };
+        });
+    } else if (!localDataFoundAndParsed && wcProduct.type !== 'variable') { 
+        finalOptionsByColor = { 'default': { selectedVariationIds: [], variantViewImages: {} }};
+    }
+
+
     setProductOptions({
       id: wcProduct.id.toString(), name: wcProduct.name || `Product ${productId}`, description: plainTextDescription,
       price: parseFloat(wcProduct.price) || 0, type: wcProduct.type,
-      views: finalViews, selectedVariationIdsForCstmzr: cstmzrSelectedVariationIds,
+      defaultViews: finalDefaultViews, 
+      optionsByColor: finalOptionsByColor,
+      groupingAttributeName: loadedGroupingAttributeName || identifiedGroupingAttr,
     });
 
-    setActiveViewId(finalViews[0]?.id || null);
+    setActiveViewIdForSetup(finalDefaultViews[0]?.id || null);
     setSelectedBoundaryBoxId(null);
-    setHasUnsavedChanges(!localDataLoadedSuccessfully || isRefreshing);
+    setHasUnsavedChanges(isRefreshing); 
     setIsLoading(false); setIsRefreshing(false);
     if (isRefreshing) toast({ title: "Product Data Refreshed", description: "Details updated from store."});
 
@@ -253,8 +282,8 @@ export default function ProductOptionsPage() {
     type: ActiveDragState['type']
   ) => {
     e.preventDefault(); e.stopPropagation();
-    if (!productOptions || !activeViewId) return;
-    const currentView = productOptions.views.find(v => v.id === activeViewId);
+    if (!productOptions || !activeViewIdForSetup) return;
+    const currentView = productOptions.defaultViews.find(v => v.id === activeViewIdForSetup);
     const currentBox = currentView?.boundaryBoxes.find(b => b.id === boxId);
     if (!currentBox || !imageWrapperRef.current) return;
 
@@ -268,10 +297,10 @@ export default function ProductOptionsPage() {
       initialBoxWidth: currentBox.width, initialBoxHeight: currentBox.height,
       containerWidthPx: containerRect.width, containerHeightPx: containerRect.height,
     });
-  }, [productOptions, activeViewId]);
+  }, [productOptions, activeViewIdForSetup]);
 
   const handleDragging = useCallback((e: MouseEvent | TouchEvent) => {
-    if (!activeDrag || !productOptions || !activeViewId || !imageWrapperRef.current) return;
+    if (!activeDrag || !productOptions || !activeViewIdForSetup || !imageWrapperRef.current) return;
     e.preventDefault();
     cancelAnimationFrame(dragUpdateRef.current);
     dragUpdateRef.current = requestAnimationFrame(() => {
@@ -299,10 +328,10 @@ export default function ProductOptionsPage() {
       newY = Math.max(0, Math.min(newY, 100 - MIN_BOX_SIZE_PERCENT)); newHeight = Math.min(newHeight, 100 - newY); newHeight = Math.max(MIN_BOX_SIZE_PERCENT, newHeight); newY = Math.max(0, Math.min(newY, 100 - newHeight));
       if (isNaN(newX) || isNaN(newY) || isNaN(newWidth) || isNaN(newHeight)) return;
 
-      setProductOptions(prev => prev ? { ...prev, views: prev.views.map(view => view.id === activeViewId ? { ...view, boundaryBoxes: view.boundaryBoxes.map(b => b.id === activeDrag.boxId ? { ...b, x: newX, y: newY, width: newWidth, height: newHeight } : b)} : view)} : null);
+      setProductOptions(prev => prev ? { ...prev, defaultViews: prev.defaultViews.map(view => view.id === activeViewIdForSetup ? { ...view, boundaryBoxes: view.boundaryBoxes.map(b => b.id === activeDrag.boxId ? { ...b, x: newX, y: newY, width: newWidth, height: newHeight } : b)} : view)} : null);
       setHasUnsavedChanges(true);
     });
-  }, [activeDrag, productOptions, activeViewId, setProductOptions, setHasUnsavedChanges]);
+  }, [activeDrag, productOptions, activeViewIdForSetup]);
 
   const handleInteractionEnd = useCallback(() => {
     cancelAnimationFrame(dragUpdateRef.current);
@@ -327,9 +356,10 @@ export default function ProductOptionsPage() {
         return;
     }
     const localStorageKey = `cstmzr_product_options_${user.id}_${productOptions.id}`;
-    const dataToSave: LocalStorageData = {
-      views: productOptions.views,
-      selectedVariationIdsForCstmzr: productOptions.selectedVariationIdsForCstmzr,
+    const dataToSave: LocalStorageData_New = {
+      defaultViews: productOptions.defaultViews,
+      optionsByColor: productOptions.optionsByColor,
+      groupingAttributeName: productOptions.groupingAttributeName,
     };
     try {
       localStorage.setItem(localStorageKey, JSON.stringify(dataToSave));
@@ -349,29 +379,28 @@ export default function ProductOptionsPage() {
     router.push(`/customizer?productId=${productOptions.id}`);
   };
 
-  const handleSelectView = (viewId: string) => {
-    setActiveViewId(viewId); setSelectedBoundaryBoxId(null);
-    setHasUnsavedChanges(true);
+  const handleSelectViewForSetup = (viewId: string) => { 
+    setActiveViewIdForSetup(viewId); setSelectedBoundaryBoxId(null);
   };
 
-  const handleAddNewView = () => {
+  const handleAddNewDefaultView = () => { 
     if (!productOptions) return;
-    if (productOptions.views.length >= MAX_PRODUCT_VIEWS) {
+    if (productOptions.defaultViews.length >= MAX_PRODUCT_VIEWS) {
       toast({ title: "Limit Reached", description: `Max ${MAX_PRODUCT_VIEWS} views per product.`, variant: "info" });
       return;
     }
     const newView: ProductView = {
-      id: crypto.randomUUID(), name: `View ${productOptions.views.length + 1}`,
+      id: crypto.randomUUID(), name: `View ${productOptions.defaultViews.length + 1}`,
       imageUrl: 'https://placehold.co/600x600/eee/ccc.png?text=New+View', aiHint: 'product view',
       boundaryBoxes: [],
     };
-    setProductOptions(prev => prev ? { ...prev, views: [...prev.views, newView] } : null);
-    setActiveViewId(newView.id); setSelectedBoundaryBoxId(null); setHasUnsavedChanges(true);
+    setProductOptions(prev => prev ? { ...prev, defaultViews: [...prev.defaultViews, newView] } : null);
+    setActiveViewIdForSetup(newView.id); setSelectedBoundaryBoxId(null); setHasUnsavedChanges(true);
   };
 
-  const handleDeleteView = (viewId: string) => {
+  const handleDeleteDefaultView = (viewId: string) => { 
     if (!productOptions) return;
-    if (productOptions.views.length <= 1) {
+    if (productOptions.defaultViews.length <= 1) {
       toast({ title: "Cannot Delete", description: "At least one view must remain.", variant: "info" });
       return;
     }
@@ -379,26 +408,34 @@ export default function ProductOptionsPage() {
     setIsDeleteViewDialogOpen(true);
   };
 
-  const confirmDeleteView = () => {
+  const confirmDeleteDefaultView = () => { 
     if (!productOptions || !viewIdToDelete) return;
-    const updatedViews = productOptions.views.filter(v => v.id !== viewIdToDelete);
-    setProductOptions(prev => prev ? { ...prev, views: updatedViews } : null);
-    if (activeViewId === viewIdToDelete) {
-      setActiveViewId(updatedViews[0]?.id || null); setSelectedBoundaryBoxId(null);
+    const updatedViews = productOptions.defaultViews.filter(v => v.id !== viewIdToDelete);
+    
+    const updatedOptionsByColor = { ...productOptions.optionsByColor };
+    Object.keys(updatedOptionsByColor).forEach(colorKey => {
+      if (updatedOptionsByColor[colorKey].variantViewImages[viewIdToDelete]) {
+        delete updatedOptionsByColor[colorKey].variantViewImages[viewIdToDelete];
+      }
+    });
+
+    setProductOptions(prev => prev ? { ...prev, defaultViews: updatedViews, optionsByColor: updatedOptionsByColor } : null);
+    if (activeViewIdForSetup === viewIdToDelete) {
+      setActiveViewIdForSetup(updatedViews[0]?.id || null); setSelectedBoundaryBoxId(null);
     }
     setIsDeleteViewDialogOpen(false); setViewIdToDelete(null);
     toast({title: "View Deleted"}); setHasUnsavedChanges(true);
   };
 
-  const handleViewDetailChange = (viewId: string, field: keyof Pick<ProductView, 'name' | 'imageUrl' | 'aiHint'>, value: string) => {
+  const handleDefaultViewDetailChange = (viewId: string, field: keyof Pick<ProductView, 'name' | 'imageUrl' | 'aiHint'>, value: string) => { 
     if (!productOptions) return;
-    setProductOptions(prev => prev ? { ...prev, views: prev.views.map(v => v.id === viewId ? { ...v, [field]: value } : v)} : null);
+    setProductOptions(prev => prev ? { ...prev, defaultViews: prev.defaultViews.map(v => v.id === viewId ? { ...v, [field]: value } : v)} : null);
     setHasUnsavedChanges(true);
   };
 
-  const handleAddBoundaryBox = () => {
-    if (!productOptions || !activeViewId) return;
-    const currentView = productOptions.views.find(v => v.id === activeViewId);
+  const handleAddBoundaryBox = () => { 
+    if (!productOptions || !activeViewIdForSetup) return;
+    const currentView = productOptions.defaultViews.find(v => v.id === activeViewIdForSetup);
     if (!currentView || currentView.boundaryBoxes.length >= 3) {
       toast({ title: "Limit Reached", description: "Max 3 areas per view.", variant: "destructive" });
       return;
@@ -408,30 +445,30 @@ export default function ProductOptionsPage() {
       x: 10 + currentView.boundaryBoxes.length * 5, y: 10 + currentView.boundaryBoxes.length * 5,
       width: 30, height: 20,
     };
-    setProductOptions(prev => prev ? { ...prev, views: prev.views.map(v => v.id === activeViewId ? { ...v, boundaryBoxes: [...v.boundaryBoxes, newBox] } : v)} : null);
+    setProductOptions(prev => prev ? { ...prev, defaultViews: prev.defaultViews.map(v => v.id === activeViewIdForSetup ? { ...v, boundaryBoxes: [...v.boundaryBoxes, newBox] } : v)} : null);
     setSelectedBoundaryBoxId(newBox.id); setHasUnsavedChanges(true);
   };
 
-  const handleRemoveBoundaryBox = (boxId: string) => {
-    if (!productOptions || !activeViewId) return;
-    setProductOptions(prev => prev ? { ...prev, views: prev.views.map(v => v.id === activeViewId ? { ...v, boundaryBoxes: v.boundaryBoxes.filter(b => b.id !== boxId) } : v)} : null);
+  const handleRemoveBoundaryBox = (boxId: string) => { 
+    if (!productOptions || !activeViewIdForSetup) return;
+    setProductOptions(prev => prev ? { ...prev, defaultViews: prev.defaultViews.map(v => v.id === activeViewIdForSetup ? { ...v, boundaryBoxes: v.boundaryBoxes.filter(b => b.id !== boxId) } : v)} : null);
     if (selectedBoundaryBoxId === boxId) setSelectedBoundaryBoxId(null);
     setHasUnsavedChanges(true);
   };
 
-  const handleBoundaryBoxNameChange = (boxId: string, newName: string) => {
-    if (!productOptions || !activeViewId) return;
-    setProductOptions(prev => prev ? { ...prev, views: prev.views.map(view => view.id === activeViewId ? { ...view, boundaryBoxes: view.boundaryBoxes.map(box => box.id === boxId ? { ...box, name: newName } : box) } : view)} : null);
+  const handleBoundaryBoxNameChange = (boxId: string, newName: string) => { 
+    if (!productOptions || !activeViewIdForSetup) return;
+    setProductOptions(prev => prev ? { ...prev, defaultViews: prev.defaultViews.map(view => view.id === activeViewIdForSetup ? { ...view, boundaryBoxes: view.boundaryBoxes.map(box => box.id === boxId ? { ...box, name: newName } : box) } : view)} : null);
     setHasUnsavedChanges(true);
   };
 
-  const handleBoundaryBoxPropertyChange = (boxId: string, property: keyof Pick<BoundaryBox, 'x' | 'y' | 'width' | 'height'>, value: string) => {
-    if (!productOptions || !activeViewId) return;
+  const handleBoundaryBoxPropertyChange = (boxId: string, property: keyof Pick<BoundaryBox, 'x' | 'y' | 'width' | 'height'>, value: string) => { 
+    if (!productOptions || !activeViewIdForSetup) return;
     setProductOptions(prev => {
-      if (!prev || !activeViewId) return null;
+      if (!prev || !activeViewIdForSetup) return null;
       return {
-        ...prev, views: prev.views.map(view => {
-          if (view.id === activeViewId) {
+        ...prev, defaultViews: prev.defaultViews.map(view => {
+          if (view.id === activeViewIdForSetup) {
             const newBoxes = view.boundaryBoxes.map(box => {
               if (box.id === boxId) {
                 let newBox = { ...box }; const parsedValue = parseFloat(value);
@@ -455,37 +492,92 @@ export default function ProductOptionsPage() {
     setHasUnsavedChanges(true);
   };
 
-  const handleSelectAllVariations = (checked: boolean) => {
-    if (!productOptions) return;
-    setProductOptions(prev => prev ? { ...prev, selectedVariationIdsForCstmzr: checked ? variations.map(v => v.id.toString()) : [] } : null);
-    setHasUnsavedChanges(true);
-  };
-  
   const handleSelectAllVariationsInGroup = (groupKey: string, checked: boolean) => {
     if (!productOptions || !groupedVariations || !groupedVariations[groupKey]) return;
     const groupVariationIds = groupedVariations[groupKey].map(v => v.id.toString());
     
     setProductOptions(prev => {
       if (!prev) return null;
+      const updatedOptionsByColor = { ...prev.optionsByColor };
+      if (!updatedOptionsByColor[groupKey]) { 
+        updatedOptionsByColor[groupKey] = { selectedVariationIds: [], variantViewImages: {} };
+      }
+
       let newSelectedIds;
       if (checked) {
-        newSelectedIds = Array.from(new Set([...prev.selectedVariationIdsForCstmzr, ...groupVariationIds]));
+        newSelectedIds = Array.from(new Set([...updatedOptionsByColor[groupKey].selectedVariationIds, ...groupVariationIds]));
       } else {
-        newSelectedIds = prev.selectedVariationIdsForCstmzr.filter(id => !groupVariationIds.includes(id));
+        newSelectedIds = updatedOptionsByColor[groupKey].selectedVariationIds.filter(id => !groupVariationIds.includes(id));
       }
-      return { ...prev, selectedVariationIdsForCstmzr: newSelectedIds };
+      updatedOptionsByColor[groupKey].selectedVariationIds = newSelectedIds;
+      return { ...prev, optionsByColor: updatedOptionsByColor };
     });
     setHasUnsavedChanges(true);
   };
 
   const getSecondaryAttributeOptionsForGroup = (variationsInGroup: WCVariation[]): string[] => {
-    if (!secondaryAttributeName) return [];
+    if (!productOptions?.groupingAttributeName) return [];
+    
+    let sizeLikeAttributeName: string | null = null;
+    if (variationsInGroup.length > 0) {
+        const firstVarAttrs = variationsInGroup[0].attributes;
+        const sizeAttr = firstVarAttrs.find(attr => (attr.name.toLowerCase() === 'size' || attr.name.toLowerCase() === 'talla') && attr.name !== productOptions.groupingAttributeName);
+        if (sizeAttr) {
+            sizeLikeAttributeName = sizeAttr.name;
+        } else {
+            const otherAttr = firstVarAttrs.find(attr => attr.name !== productOptions!.groupingAttributeName);
+            if (otherAttr) sizeLikeAttributeName = otherAttr.name;
+        }
+    }
+    if (!sizeLikeAttributeName) return [];
+    
     const options = new Set<string>();
     variationsInGroup.forEach(variation => {
-      const attr = variation.attributes.find(a => a.name === secondaryAttributeName);
+      const attr = variation.attributes.find(a => a.name === sizeLikeAttributeName);
       if (attr) options.add(attr.option);
     });
     return Array.from(options).sort();
+  };
+  
+  const getSecondaryAttributeNameForDisplay = (variationsInGroup: WCVariation[]): string | null => {
+    if (!productOptions?.groupingAttributeName || variationsInGroup.length === 0) return null;
+    const firstVarAttrs = variationsInGroup[0].attributes;
+    const sizeAttr = firstVarAttrs.find(attr => (attr.name.toLowerCase() === 'size' || attr.name.toLowerCase() === 'talla') && attr.name !== productOptions.groupingAttributeName);
+    if (sizeAttr) return sizeAttr.name;
+    const otherAttr = firstVarAttrs.find(attr => attr.name !== productOptions!.groupingAttributeName);
+    return otherAttr ? otherAttr.name : null;
+  };
+
+  const handleVariantViewImageChange = (
+    colorKey: string,
+    viewId: string,
+    field: 'imageUrl' | 'aiHint',
+    value: string
+  ) => {
+    setProductOptions(prev => {
+      if (!prev) return null;
+      // Create a deep copy of optionsByColor to ensure nested objects are new instances
+      const updatedOptionsByColor = JSON.parse(JSON.stringify(prev.optionsByColor));
+
+      if (!updatedOptionsByColor[colorKey]) {
+        updatedOptionsByColor[colorKey] = { selectedVariationIds: [], variantViewImages: {} };
+      }
+      if (!updatedOptionsByColor[colorKey].variantViewImages[viewId]) {
+        updatedOptionsByColor[colorKey].variantViewImages[viewId] = { imageUrl: '', aiHint: '' };
+      }
+      
+      updatedOptionsByColor[colorKey].variantViewImages[viewId][field] = value;
+
+      if (field === 'imageUrl' && !value && updatedOptionsByColor[colorKey].variantViewImages[viewId]) {
+          // If imageUrl is cleared, also clear aiHint for that view
+          updatedOptionsByColor[colorKey].variantViewImages[viewId].aiHint = '';
+          // Optionally, if you want to remove the viewId entry entirely when imageUrl is empty:
+          // delete updatedOptionsByColor[colorKey].variantViewImages[viewId];
+      }
+      
+      return { ...prev, optionsByColor: updatedOptionsByColor };
+    });
+    setHasUnsavedChanges(true);
   };
 
 
@@ -493,9 +585,18 @@ export default function ProductOptionsPage() {
   if (error && !productOptions) return <div className="flex flex-col items-center justify-center min-h-screen bg-background p-4"><AlertTriangle className="h-12 w-12 text-destructive mb-4" /><h2 className="text-xl font-semibold text-destructive mb-2">Error</h2><p className="text-muted-foreground text-center mb-6">{error}</p><Button variant="outline" asChild><Link href="/dashboard"><ArrowLeft className="mr-2 h-4 w-4" />Back</Link></Button></div>;
   if (!productOptions) return <div className="flex flex-col items-center justify-center min-h-screen bg-background p-4"><AlertTriangle className="h-12 w-12 text-muted-foreground mb-4" /><h2 className="text-xl font-semibold text-muted-foreground mb-2">Not Found</h2><p className="text-muted-foreground text-center mb-6">Product could not be loaded.</p><Button variant="outline" asChild><Link href="/dashboard"><ArrowLeft className="mr-2 h-4 w-4" />Back</Link></Button></div>;
 
-  const currentView = productOptions.views.find(v => v.id === activeViewId);
-  const allVariationsSelected = variations.length > 0 && productOptions.selectedVariationIdsForCstmzr.length === variations.length;
-  const someVariationsSelected = productOptions.selectedVariationIdsForCstmzr.length > 0 && productOptions.selectedVariationIdsForCstmzr.length < variations.length;
+  const currentSetupView = productOptions.defaultViews.find(v => v.id === activeViewIdForSetup);
+  
+  const allVariationsSelectedOverall = productOptions.type === 'variable' && variations.length > 0 && 
+    Object.keys(groupedVariations || {}).length > 0 && // Ensure groupedVariations is populated
+    Object.entries(groupedVariations || {}).every(([groupKey, variationsInGroup]) => {
+      const groupOpts = productOptions.optionsByColor[groupKey];
+      return groupOpts && variationsInGroup.every(v => groupOpts.selectedVariationIds.includes(v.id.toString()));
+    });
+
+  const someVariationsSelectedOverall = productOptions.type === 'variable' && variations.length > 0 &&
+    Object.values(productOptions.optionsByColor).some(group => group.selectedVariationIds.length > 0) && !allVariationsSelectedOverall;
+
 
   return (
     <div className="container mx-auto p-4 md:p-6 lg:p-8 bg-background min-h-screen">
@@ -513,7 +614,6 @@ export default function ProductOptionsPage() {
       {error && <ShadCnAlert variant="destructive" className="mb-6"><AlertTriangle className="h-4 w-4" /><ShadCnAlertTitle>Product Data Error</ShadCnAlertTitle><ShadCnAlertDescription>{error}</ShadCnAlertDescription></ShadCnAlert>}
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-        {/* Main Content Area (Left) */}
         <div className="md:col-span-2 space-y-6">
           <Card className="shadow-md">
             <CardHeader><CardTitle className="font-headline text-lg">Base Product Information</CardTitle><CardDescription>From WooCommerce (Read-only).</CardDescription></CardHeader>
@@ -529,28 +629,38 @@ export default function ProductOptionsPage() {
 
           {productOptions.type === 'variable' && (
             <Card className="shadow-md">
-              <CardHeader><CardTitle className="font-headline text-lg">Product Variations</CardTitle><CardDescription>Select which variation groups (e.g., by color) should be available in the customizer.</CardDescription></CardHeader>
+              <CardHeader><CardTitle className="font-headline text-lg">Product Variations</CardTitle><CardDescription>Select which variation color groups should be available in the customizer. Configure view-specific images per color.</CardDescription></CardHeader>
               <CardContent>
                 {isLoadingVariations || (isRefreshing && isLoading) ? <div className="flex items-center justify-center py-6"><Loader2 className="h-6 w-6 animate-spin text-primary" /><p className="ml-2 text-muted-foreground">Loading variations...</p></div>
                 : variationsError ? <div className="text-center py-6"><AlertTriangle className="mx-auto h-10 w-10 text-destructive" /><p className="mt-3 text-destructive font-semibold">Error loading variations</p><p className="text-sm text-muted-foreground mt-1">{variationsError}</p></div>
-                : groupedVariations && Object.keys(groupedVariations).length > 0 ? (<>
+                : groupedVariations && Object.keys(groupedVariations).length > 0 && productOptions.groupingAttributeName ? (<>
                     <div className="mb-4 flex items-center space-x-2 p-2 border-b">
-                      <Checkbox id="selectAllVariations" checked={allVariationsSelected} onCheckedChange={(cs) => handleSelectAllVariations(cs === 'indeterminate' ? true : cs as boolean)} data-state={someVariationsSelected && !allVariationsSelected ? 'indeterminate' : (allVariationsSelected ? 'checked' : 'unchecked')} />
-                      <Label htmlFor="selectAllVariations" className="text-sm font-medium">{allVariationsSelected ? "Deselect All" : "Select All Variation Groups"}</Label>
+                      <Checkbox id="selectAllVariationGroups" 
+                        checked={allVariationsSelectedOverall} 
+                        onCheckedChange={(cs) => {
+                           const isChecked = cs === 'indeterminate' ? true : cs as boolean;
+                           Object.keys(groupedVariations).forEach(groupKey => handleSelectAllVariationsInGroup(groupKey, isChecked));
+                        }}
+                        data-state={someVariationsSelectedOverall && !allVariationsSelectedOverall ? 'indeterminate' : (allVariationsSelectedOverall ? 'checked' : 'unchecked')} />
+                      <Label htmlFor="selectAllVariationGroups" className="text-sm font-medium">{allVariationsSelectedOverall ? "Deselect All Color Groups" : "Select All Color Groups"}</Label>
                     </div>
-                    <div className="space-y-4 max-h-[600px] overflow-y-auto pr-2">
+                    <div className="space-y-4 max-h-[calc(100vh-300px)] overflow-y-auto pr-2">
                     {Object.entries(groupedVariations).map(([groupKey, variationsInGroup]) => {
-                      const allInGroupSelected = variationsInGroup.every(v => productOptions.selectedVariationIdsForCstmzr.includes(v.id.toString()));
-                      const someInGroupSelected = variationsInGroup.some(v => productOptions.selectedVariationIdsForCstmzr.includes(v.id.toString())) && !allInGroupSelected;
-                      const representativeImage = variationsInGroup[0]?.image?.src || currentView?.imageUrl || 'https://placehold.co/100x100.png';
+                      const groupOptions = productOptions.optionsByColor[groupKey] || { selectedVariationIds: [], variantViewImages: {} };
+                      const allInGroupSelected = variationsInGroup.every(v => groupOptions.selectedVariationIds.includes(v.id.toString()));
+                      const someInGroupSelected = variationsInGroup.some(v => groupOptions.selectedVariationIds.includes(v.id.toString())) && !allInGroupSelected;
+                      
+                      const representativeImage = variationsInGroup[0]?.image?.src || currentSetupView?.imageUrl || 'https://placehold.co/100x100.png';
                       const representativeImageAlt = variationsInGroup[0]?.image?.alt || productOptions.name;
                       const representativeImageAiHint = variationsInGroup[0]?.image?.alt ? variationsInGroup[0].image.alt.split(" ").slice(0,2).join(" ") : "variation group";
+                      
+                      const secondaryAttributeDisplayName = getSecondaryAttributeNameForDisplay(variationsInGroup);
                       const secondaryOptions = getSecondaryAttributeOptionsForGroup(variationsInGroup);
                       const stockStatusSummary = variationsInGroup.some(v => v.stock_status === 'outofstock') ? 'Some Out of Stock' : (variationsInGroup.every(v => v.stock_status === 'instock') ? 'All In Stock' : 'Mixed Stock');
                       
                       return (
-                        <div key={groupKey} className={cn("p-4 border rounded-md flex flex-col sm:flex-row items-start gap-4 transition-colors", allInGroupSelected ? "bg-primary/10 border-primary shadow-sm" : "bg-muted/30 hover:bg-muted/50")}>
-                          <div className="flex items-start gap-3 w-full sm:w-auto mb-3 sm:mb-0">
+                        <div key={groupKey} className={cn("p-4 border rounded-md flex flex-col gap-4 transition-colors", allInGroupSelected ? "bg-primary/10 border-primary shadow-sm" : "bg-muted/30 hover:bg-muted/50")}>
+                          <div className="flex items-start sm:items-center gap-4">
                             <Checkbox 
                                 id={`selectGroup-${groupKey.replace(/\s+/g, '-')}`} 
                                 checked={allInGroupSelected} 
@@ -561,23 +671,74 @@ export default function ProductOptionsPage() {
                             <div className="relative h-20 w-20 rounded-md overflow-hidden border bg-card flex-shrink-0">
                                 <NextImage src={representativeImage} alt={representativeImageAlt} fill className="object-contain" data-ai-hint={representativeImageAiHint}/>
                             </div>
-                          </div>
-                          <div className="flex-grow">
-                            <h4 className="text-md font-semibold text-foreground flex items-center mb-1">
-                              {groupingAttributeName || "Group"}: <span className="text-primary ml-1">{groupKey}</span>
-                            </h4>
-                            {secondaryAttributeName && secondaryOptions.length > 0 && (
-                              <div className="mb-2">
-                                <p className="text-xs font-medium text-muted-foreground flex items-center">
-                                  <Tag className="mr-1.5 h-3 w-3" /> {secondaryAttributeName}:
-                                </p>
-                                <div className="flex flex-wrap gap-1 mt-1">
-                                  {secondaryOptions.map(opt => <Badge key={opt} variant="secondary" className="text-xs">{opt}</Badge>)}
+                            <div className="flex-grow">
+                              <h4 className="text-md font-semibold text-foreground mb-1">
+                                {productOptions.groupingAttributeName}: <span className="text-primary">{groupKey}</span>
+                              </h4>
+                              {secondaryAttributeDisplayName && secondaryOptions.length > 0 && (
+                                <div className="mb-2">
+                                  <p className="text-xs font-medium text-muted-foreground flex items-center">
+                                    <Tag className="mr-1.5 h-3 w-3" /> {secondaryAttributeDisplayName}:
+                                  </p>
+                                  <div className="flex flex-wrap gap-1 mt-1">
+                                    {secondaryOptions.map(opt => <Badge key={opt} variant="secondary" className="text-xs">{opt}</Badge>)}
+                                  </div>
                                 </div>
-                              </div>
+                              )}
+                              <p className="text-xs text-muted-foreground">Stock: {stockStatusSummary}</p>
+                              <p className="text-xs text-muted-foreground">Variations (SKUs) in group: {variationsInGroup.length}</p>
+                            </div>
+                          </div>
+                          <div>
+                            <Button 
+                                variant="outline" 
+                                size="sm" 
+                                onClick={() => setEditingImagesForColor(editingImagesForColor === groupKey ? null : groupKey)}
+                                className="w-full sm:w-auto hover:bg-accent/20"
+                            >
+                                <Edit2 className="mr-2 h-4 w-4" />
+                                {editingImagesForColor === groupKey ? "Done Editing" : "Manage View Images for"} {groupKey}
+                            </Button>
+                            {editingImagesForColor === groupKey && (
+                                <div className="mt-4 space-y-3 p-3 border rounded-md bg-card">
+                                    <h5 className="text-sm font-medium text-foreground mb-2">Configure images for <span className="text-primary">{groupKey}</span>:</h5>
+                                    {productOptions.defaultViews.map(defaultView => (
+                                    <div key={defaultView.id} className="p-2 border-b last:border-b-0">
+                                        <Label htmlFor={`variant-view-url-${groupKey}-${defaultView.id}`} className="text-xs font-medium text-muted-foreground">
+                                        {defaultView.name} Image URL
+                                        </Label>
+                                        <Input
+                                            id={`variant-view-url-${groupKey}-${defaultView.id}`}
+                                            value={productOptions.optionsByColor[groupKey]?.variantViewImages[defaultView.id]?.imageUrl || ''}
+                                            onChange={(e) => handleVariantViewImageChange(groupKey, defaultView.id, 'imageUrl', e.target.value)}
+                                            className="h-8 text-xs mt-1 bg-background"
+                                            placeholder={`Optional override for ${defaultView.name}`}
+                                        />
+                                        <Label htmlFor={`variant-view-ai-${groupKey}-${defaultView.id}`} className="text-xs font-medium text-muted-foreground mt-2 block">
+                                        {defaultView.name} AI Hint <span className="text-muted-foreground/70">(for Unsplash search)</span>
+                                        </Label>
+                                        <Input
+                                            id={`variant-view-ai-${groupKey}-${defaultView.id}`}
+                                            value={productOptions.optionsByColor[groupKey]?.variantViewImages[defaultView.id]?.aiHint || ''}
+                                            onChange={(e) => handleVariantViewImageChange(groupKey, defaultView.id, 'aiHint', e.target.value)}
+                                            className="h-8 text-xs mt-1 bg-background"
+                                            placeholder="e.g., t-shirt back"
+                                        />
+                                        {productOptions.optionsByColor[groupKey]?.variantViewImages[defaultView.id]?.imageUrl && (
+                                        <div className="relative h-16 w-16 mt-2 border rounded-sm overflow-hidden bg-muted/10">
+                                            <NextImage
+                                            src={productOptions.optionsByColor[groupKey].variantViewImages[defaultView.id].imageUrl}
+                                            alt={`${groupKey} - ${defaultView.name}`}
+                                            fill
+                                            className="object-contain"
+                                            data-ai-hint={productOptions.optionsByColor[groupKey]?.variantViewImages[defaultView.id]?.aiHint || "variant view"}
+                                            />
+                                        </div>
+                                        )}
+                                    </div>
+                                    ))}
+                                </div>
                             )}
-                            <p className="text-xs text-muted-foreground">Stock: {stockStatusSummary}</p>
-                             <p className="text-xs text-muted-foreground">Variations in group: {variationsInGroup.length}</p>
                           </div>
                         </div>
                       );
@@ -593,17 +754,16 @@ export default function ProductOptionsPage() {
           )}
         </div>
 
-        {/* Right Sidebar Area */}
         <div className="md:col-span-1 space-y-6">
            <ProductViewSetup
-            productOptions={productOptions}
-            activeViewId={activeViewId}
+            productOptions={{views: productOptions.defaultViews}} 
+            activeViewId={activeViewIdForSetup}
             selectedBoundaryBoxId={selectedBoundaryBoxId}
             setSelectedBoundaryBoxId={setSelectedBoundaryBoxId}
-            handleSelectView={handleSelectView}
-            handleViewDetailChange={handleViewDetailChange}
-            handleDeleteView={handleDeleteView}
-            handleAddNewView={handleAddNewView}
+            handleSelectView={handleSelectViewForSetup}
+            handleViewDetailChange={handleDefaultViewDetailChange}
+            handleDeleteView={handleDeleteDefaultView}
+            handleAddNewView={handleAddNewDefaultView}
             handleAddBoundaryBox={handleAddBoundaryBox}
             handleRemoveBoundaryBox={handleRemoveBoundaryBox}
             handleBoundaryBoxNameChange={handleBoundaryBoxNameChange}
@@ -615,7 +775,7 @@ export default function ProductOptionsPage() {
             setIsDeleteViewDialogOpen={setIsDeleteViewDialogOpen}
             viewIdToDelete={viewIdToDelete}
             setViewIdToDelete={setViewIdToDelete}
-            confirmDeleteView={confirmDeleteView}
+            confirmDeleteView={confirmDeleteDefaultView}
           />
 
           <Card className="shadow-md sticky top-8">
@@ -628,19 +788,21 @@ export default function ProductOptionsPage() {
                 Editing for: <span className="font-semibold text-foreground">{productOptions.name}</span>
               </p>
               <p className="text-sm text-muted-foreground">
-                Total Views: <span className="font-semibold text-foreground">{productOptions.views.length}</span>
+                Total Default Views: <span className="font-semibold text-foreground">{productOptions.defaultViews.length}</span>
               </p>
               <p className="text-sm text-muted-foreground">
-                Active View: <span className="font-semibold text-foreground">{currentView?.name || "N/A"}</span>
+                Active Setup View: <span className="font-semibold text-foreground">{currentSetupView?.name || "N/A"}</span>
               </p>
-              {currentView && (
+              {currentSetupView && (
                 <p className="text-sm text-muted-foreground">
-                  Areas in <span className="font-semibold text-primary">{currentView.name}</span>: <span className="font-semibold text-foreground">{currentView.boundaryBoxes.length}</span>
+                  Areas in <span className="font-semibold text-primary">{currentSetupView.name}</span>: <span className="font-semibold text-foreground">{currentSetupView.boundaryBoxes.length}</span>
                 </p>
               )}
               {productOptions.type === 'variable' && (
                 <p className="text-sm text-muted-foreground">
-                  Variations Selected (Individual): <span className="font-semibold text-foreground">{productOptions.selectedVariationIdsForCstmzr.length} of {variations.length}</span>
+                  Total Variation SKUs enabled for customizer: <span className="font-semibold text-foreground">
+                    {Object.values(productOptions.optionsByColor).reduce((acc, group) => acc + group.selectedVariationIds.length, 0)}
+                    </span> of {variations.length}
                 </p>
               )}
               {hasUnsavedChanges && (<p className="mt-3 text-sm text-yellow-600 flex items-center"><AlertTriangle className="h-4 w-4 mr-1.5 text-yellow-500" />You have unsaved changes.</p>)}
@@ -655,12 +817,4 @@ export default function ProductOptionsPage() {
     </div>
   );
 }
-    
-    
-
-    
-
-
-
-
-    
+      
