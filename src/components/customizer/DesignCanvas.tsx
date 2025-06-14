@@ -584,8 +584,7 @@ export default function DesignCanvas({
           ))}
         </div>
       </div>
-      <div className="text-center pt-2 flex-shrink-0">
-        <p className="mt-2 text-muted-foreground font-medium">{productToDisplay.name}</p>
+      <div className="text-center pt-2 pb-1 flex-shrink-0">
         <p className="text-sm text-muted-foreground">
           {productDefinedBoundaryBoxes.length > 0 ? "Items will be kept within the dashed areas. " : ""}
           {visibleImages.length > 0 || visibleTexts.length > 0 || visibleShapes.length > 0 ? 

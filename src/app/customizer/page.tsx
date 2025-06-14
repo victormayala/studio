@@ -510,7 +510,7 @@ function CustomizerLayoutAndLogic() {
                </div>
             )}
             
-             <div className="w-full flex flex-col flex-1 min-h-0 pb-20"> {}
+             <div className="w-full flex flex-col flex-1 min-h-0 pb-4"> {}
               <DesignCanvas 
                 productImageUrl={currentProductImage}
                 productImageAlt={`${currentProductName} - ${currentProductAlt}`}
@@ -555,11 +555,16 @@ function CustomizerLayoutAndLogic() {
           /> 
         </div>
         
-        <footer className="fixed bottom-0 left-0 right-0 h-20 border-t bg-card shadow-md p-4 flex items-center justify-end gap-4 z-40">
-            <div className="text-lg font-semibold text-foreground">Total: $0.00</div>
-            <Button size="lg" className="bg-primary text-primary-foreground hover:bg-primary/90" onClick={handleAddToCart}>
-              <ShoppingCart className="mr-2 h-5 w-5" /> Add to Cart
-            </Button>
+        <footer className="fixed bottom-0 left-0 right-0 h-16 border-t bg-card shadow-md px-4 py-2 flex items-center justify-between gap-4 z-40">
+            <div className="text-md font-medium text-muted-foreground truncate max-w-xs sm:max-w-sm md:max-w-md" title={currentProductName}>
+                {currentProductName}
+            </div>
+            <div className="flex items-center gap-3">
+                <div className="text-lg font-semibold text-foreground">Total: $0.00</div>
+                <Button size="default" className="bg-primary text-primary-foreground hover:bg-primary/90" onClick={handleAddToCart}>
+                <ShoppingCart className="mr-2 h-5 w-5" /> Add to Cart
+                </Button>
+            </div>
         </footer>
       </div>
   );
