@@ -143,19 +143,19 @@ export default function LayersPanel({ activeViewId }: LayersPanelProps) {
                     alt={item.name}
                     width={32}
                     height={32}
-                    className="rounded-sm object-cover aspect-square bg-muted-foreground/10"
+                    className="rounded-sm object-cover aspect-square bg-muted-foreground/10 flex-shrink-0"
                   />
                 ) : item.itemType === 'text' ? (
-                  <div className="w-8 h-8 flex items-center justify-center bg-muted-foreground/10 rounded-sm">
+                  <div className="w-8 h-8 flex items-center justify-center bg-muted-foreground/10 rounded-sm flex-shrink-0">
                     <Type className="h-5 w-5 text-foreground" />
                   </div>
                 ) : item.itemType === 'shape' ? (
-                  <div className="w-8 h-8 flex items-center justify-center bg-muted-foreground/10 rounded-sm">
+                  <div className="w-8 h-8 flex items-center justify-center bg-muted-foreground/10 rounded-sm flex-shrink-0">
                     <ShapesIcon className="h-5 w-5 text-foreground" /> 
                   </div>
                 ) : null}
-                <span className="text-sm truncate flex-grow min-w-0">{displayName}</span>
-                <div className="flex gap-0.5">
+                <span className="text-sm truncate flex-1 min-w-0">{displayName}</span>
+                <div className="flex gap-0.5 flex-shrink-0">
                   <Button variant="ghost" size="icon" className="h-7 w-7" onClick={handleDuplicate} title={`Duplicate ${item.itemType}`} disabled={item.isLocked} >
                     <Copy className="h-4 w-4" />
                   </Button>
@@ -180,3 +180,4 @@ export default function LayersPanel({ activeViewId }: LayersPanelProps) {
     </div>
   );
 }
+
