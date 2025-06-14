@@ -11,13 +11,13 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, Shirt, RefreshCcw, ExternalLink, Loader2, AlertTriangle, LayersIcon, Palette } from 'lucide-react';
+import { ArrowLeft, Shirt, RefreshCcw, ExternalLink, Loader2, AlertTriangle, LayersIcon, Palette, Tag } from 'lucide-react';
 import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { fetchWooCommerceProductById, fetchWooCommerceProductVariations } from '@/app/actions/woocommerceActions';
-import type { WCCustomProduct, WCVariation } from '@/types/woocommerce';
+import type { WCCustomProduct, WCVariation, WCVariationAttribute } from '@/types/woocommerce';
 import { Alert as ShadCnAlert, AlertDescription as ShadCnAlertDescription, AlertTitle as ShadCnAlertTitle } from "@/components/ui/alert";
 import ProductViewSetup from '@/components/product-options/ProductViewSetup'; 
 import { Separator } from '@/components/ui/separator';
@@ -100,6 +100,7 @@ export default function ProductOptionsPage() {
 
   const [groupingAttributeName, setGroupingAttributeName] = useState<string | null>(null);
   const [groupedVariations, setGroupedVariations] = useState<Record<string, WCVariation[]> | null>(null);
+  const [secondaryAttributeName, setSecondaryAttributeName] = useState<string | null>(null);
 
 
   const fetchAndSetProductData = useCallback(async () => {
@@ -113,7 +114,7 @@ export default function ProductOptionsPage() {
     }
 
     setIsLoading(true); setError(null); setVariationsError(null); setVariations([]);
-    setGroupedVariations(null); setGroupingAttributeName(null);
+    setGroupedVariations(null); setGroupingAttributeName(null); setSecondaryAttributeName(null);
 
     let userCredentials;
     try {
@@ -143,39 +144,45 @@ export default function ProductOptionsPage() {
       } else if (fetchedVars) {
         setVariations(fetchedVars);
 
-        // Group variations
         if (fetchedVars.length > 0) {
           let identifiedGroupingAttr: string | null = null;
+          let identifiedSecondaryAttr: string | null = null;
           const firstVarAttributes = fetchedVars[0].attributes;
 
-          // Try to find "Color" or "Colour"
           const colorAttr = firstVarAttributes.find(attr => attr.name.toLowerCase() === 'color' || attr.name.toLowerCase() === 'colour');
           if (colorAttr) {
             identifiedGroupingAttr = colorAttr.name;
           } else {
-            // Fallback: use the first attribute that isn't "Size" or "Talla"
             const nonSizeAttr = firstVarAttributes.find(attr => !['size', 'talla'].includes(attr.name.toLowerCase()));
-            if (nonSizeAttr) {
-              identifiedGroupingAttr = nonSizeAttr.name;
-            } else if (firstVarAttributes.length > 0) {
-              identifiedGroupingAttr = firstVarAttributes[0].name; // Last resort
-            }
+            if (nonSizeAttr) identifiedGroupingAttr = nonSizeAttr.name;
+            else if (firstVarAttributes.length > 0) identifiedGroupingAttr = firstVarAttributes[0].name;
           }
           setGroupingAttributeName(identifiedGroupingAttr);
+
+          // Identify secondary attribute (e.g., Size)
+          if (identifiedGroupingAttr) {
+            const sizeAttr = firstVarAttributes.find(attr => attr.name.toLowerCase() === 'size' || attr.name.toLowerCase() === 'talla');
+             if (sizeAttr && sizeAttr.name !== identifiedGroupingAttr) {
+                identifiedSecondaryAttr = sizeAttr.name;
+            } else {
+                // Fallback: pick the first attribute that is NOT the grouping attribute
+                const otherAttr = firstVarAttributes.find(attr => attr.name !== identifiedGroupingAttr);
+                if (otherAttr) identifiedSecondaryAttr = otherAttr.name;
+            }
+          }
+          setSecondaryAttributeName(identifiedSecondaryAttr);
 
           if (identifiedGroupingAttr) {
             const groups: Record<string, WCVariation[]> = {};
             fetchedVars.forEach(v => {
               const groupAttr = v.attributes.find(a => a.name === identifiedGroupingAttr);
               const groupKey = groupAttr ? groupAttr.option : 'Other';
-              if (!groups[groupKey]) {
-                groups[groupKey] = [];
-              }
+              if (!groups[groupKey]) groups[groupKey] = [];
               groups[groupKey].push(v);
             });
             setGroupedVariations(groups);
           } else {
-            setGroupedVariations({ 'All Variations': fetchedVars }); // No clear grouping, show all under one
+            setGroupedVariations({ 'All Variations': fetchedVars }); 
           }
         }
       }
@@ -471,15 +478,16 @@ export default function ProductOptionsPage() {
     setHasUnsavedChanges(true);
   };
 
-  const handleVariationSelectionChange = (variationId: string, checked: boolean) => {
-    if (!productOptions) return;
-    setProductOptions(prev => {
-      if (!prev) return null;
-      const currentSelected = prev.selectedVariationIdsForCstmzr;
-      return { ...prev, selectedVariationIdsForCstmzr: checked ? [...currentSelected, variationId] : currentSelected.filter(id => id !== variationId) };
+  const getSecondaryAttributeOptionsForGroup = (variationsInGroup: WCVariation[]): string[] => {
+    if (!secondaryAttributeName) return [];
+    const options = new Set<string>();
+    variationsInGroup.forEach(variation => {
+      const attr = variation.attributes.find(a => a.name === secondaryAttributeName);
+      if (attr) options.add(attr.option);
     });
-    setHasUnsavedChanges(true);
+    return Array.from(options).sort();
   };
+
 
   if (isLoading && !isRefreshing) return <div className="flex items-center justify-center min-h-screen bg-background"><Loader2 className="h-10 w-10 animate-spin text-primary" /><p className="ml-3">Loading...</p></div>;
   if (error && !productOptions) return <div className="flex flex-col items-center justify-center min-h-screen bg-background p-4"><AlertTriangle className="h-12 w-12 text-destructive mb-4" /><h2 className="text-xl font-semibold text-destructive mb-2">Error</h2><p className="text-muted-foreground text-center mb-6">{error}</p><Button variant="outline" asChild><Link href="/dashboard"><ArrowLeft className="mr-2 h-4 w-4" />Back</Link></Button></div>;
@@ -521,54 +529,56 @@ export default function ProductOptionsPage() {
 
           {productOptions.type === 'variable' && (
             <Card className="shadow-md">
-              <CardHeader><CardTitle className="font-headline text-lg">Product Variations</CardTitle><CardDescription>Select which variations should be available in the customizer.</CardDescription></CardHeader>
+              <CardHeader><CardTitle className="font-headline text-lg">Product Variations</CardTitle><CardDescription>Select which variation groups (e.g., by color) should be available in the customizer.</CardDescription></CardHeader>
               <CardContent>
                 {isLoadingVariations || (isRefreshing && isLoading) ? <div className="flex items-center justify-center py-6"><Loader2 className="h-6 w-6 animate-spin text-primary" /><p className="ml-2 text-muted-foreground">Loading variations...</p></div>
                 : variationsError ? <div className="text-center py-6"><AlertTriangle className="mx-auto h-10 w-10 text-destructive" /><p className="mt-3 text-destructive font-semibold">Error loading variations</p><p className="text-sm text-muted-foreground mt-1">{variationsError}</p></div>
                 : groupedVariations && Object.keys(groupedVariations).length > 0 ? (<>
                     <div className="mb-4 flex items-center space-x-2 p-2 border-b">
                       <Checkbox id="selectAllVariations" checked={allVariationsSelected} onCheckedChange={(cs) => handleSelectAllVariations(cs === 'indeterminate' ? true : cs as boolean)} data-state={someVariationsSelected && !allVariationsSelected ? 'indeterminate' : (allVariationsSelected ? 'checked' : 'unchecked')} />
-                      <Label htmlFor="selectAllVariations" className="text-sm font-medium">{allVariationsSelected ? "Deselect All" : "Select All Variations"}</Label>
+                      <Label htmlFor="selectAllVariations" className="text-sm font-medium">{allVariationsSelected ? "Deselect All" : "Select All Variation Groups"}</Label>
                     </div>
-                    <div className="space-y-6 max-h-[600px] overflow-y-auto pr-2">
-                    {Object.entries(groupedVariations).map(([groupKey, groupItems]) => {
-                      const allInGroupSelected = groupItems.every(v => productOptions.selectedVariationIdsForCstmzr.includes(v.id.toString()));
-                      const someInGroupSelected = groupItems.some(v => productOptions.selectedVariationIdsForCstmzr.includes(v.id.toString())) && !allInGroupSelected;
+                    <div className="space-y-4 max-h-[600px] overflow-y-auto pr-2">
+                    {Object.entries(groupedVariations).map(([groupKey, variationsInGroup]) => {
+                      const allInGroupSelected = variationsInGroup.every(v => productOptions.selectedVariationIdsForCstmzr.includes(v.id.toString()));
+                      const someInGroupSelected = variationsInGroup.some(v => productOptions.selectedVariationIdsForCstmzr.includes(v.id.toString())) && !allInGroupSelected;
+                      const representativeImage = variationsInGroup[0]?.image?.src || currentView?.imageUrl || 'https://placehold.co/100x100.png';
+                      const representativeImageAlt = variationsInGroup[0]?.image?.alt || productOptions.name;
+                      const representativeImageAiHint = variationsInGroup[0]?.image?.alt ? variationsInGroup[0].image.alt.split(" ").slice(0,2).join(" ") : "variation group";
+                      const secondaryOptions = getSecondaryAttributeOptionsForGroup(variationsInGroup);
+                      const stockStatusSummary = variationsInGroup.some(v => v.stock_status === 'outofstock') ? 'Some Out of Stock' : (variationsInGroup.every(v => v.stock_status === 'instock') ? 'All In Stock' : 'Mixed Stock');
+                      
                       return (
-                        <div key={groupKey} className="space-y-3">
-                          <div className="flex justify-between items-center pt-2">
-                            <h4 className="text-md font-semibold text-foreground flex items-center">
-                              <Palette className="mr-2 h-5 w-5 text-primary/80" />
-                              {groupingAttributeName || "Group"}: <span className="text-primary">{groupKey}</span> ({groupItems.length})
-                            </h4>
-                            <div className="flex items-center space-x-2">
-                               <Checkbox 
-                                id={`selectAll-${groupKey.replace(/\s+/g, '-')}`} 
+                        <div key={groupKey} className={cn("p-4 border rounded-md flex flex-col sm:flex-row items-start gap-4 transition-colors", allInGroupSelected ? "bg-primary/10 border-primary shadow-sm" : "bg-muted/30 hover:bg-muted/50")}>
+                          <div className="flex items-start gap-3 w-full sm:w-auto mb-3 sm:mb-0">
+                            <Checkbox 
+                                id={`selectGroup-${groupKey.replace(/\s+/g, '-')}`} 
                                 checked={allInGroupSelected} 
                                 onCheckedChange={(cs) => handleSelectAllVariationsInGroup(groupKey, cs === 'indeterminate' ? true : cs as boolean)} 
                                 data-state={someInGroupSelected ? 'indeterminate' : (allInGroupSelected ? 'checked' : 'unchecked')}
-                               />
-                              <Label htmlFor={`selectAll-${groupKey.replace(/\s+/g, '-')}`} className="text-xs font-medium">
-                                Select All in {groupKey}
-                              </Label>
+                                className="mt-1 flex-shrink-0"
+                            />
+                            <div className="relative h-20 w-20 rounded-md overflow-hidden border bg-card flex-shrink-0">
+                                <NextImage src={representativeImage} alt={representativeImageAlt} fill className="object-contain" data-ai-hint={representativeImageAiHint}/>
                             </div>
                           </div>
-                          <Separator/>
-                          <div className="space-y-3 pl-2">
-                            {groupItems.map((variation) => (
-                              <div key={variation.id} className={cn("p-3 border rounded-md flex items-start gap-3 transition-colors", productOptions.selectedVariationIdsForCstmzr.includes(variation.id.toString()) ? "bg-primary/10 border-primary shadow-sm" : "bg-muted/30 hover:bg-muted/50")}>
-                                <Checkbox id={`variation-${variation.id}`} checked={productOptions.selectedVariationIdsForCstmzr.includes(variation.id.toString())} onCheckedChange={(c) => handleVariationSelectionChange(variation.id.toString(), c as boolean)} className="mt-1 flex-shrink-0" />
-                                <div className="relative h-16 w-16 rounded-md overflow-hidden border bg-card flex-shrink-0"><NextImage src={variation.image?.src || (currentView?.imageUrl) || 'https://placehold.co/100x100.png'} alt={variation.image?.alt || productOptions.name} fill className="object-contain" data-ai-hint={variation.image?.alt ? variation.image.alt.split(" ").slice(0,2).join(" ") : "variation image"}/></div>
-                                <div className="flex-grow">
-                                  <p className="text-sm font-medium text-foreground">
-                                    {variation.attributes.filter(attr => attr.name !== groupingAttributeName).map(attr => `${attr.name}: ${attr.option}`).join(' / ') || "Base"}
-                                  </p>
-                                  <p className="text-xs text-muted-foreground">SKU: {variation.sku || 'N/A'}</p>
-                                  <p className="text-xs text-muted-foreground">Price: $${parseFloat(variation.price).toFixed(2)}</p>
+                          <div className="flex-grow">
+                            <h4 className="text-md font-semibold text-foreground flex items-center mb-1">
+                              <Palette className="mr-2 h-5 w-5 text-primary/80 flex-shrink-0" />
+                              {groupingAttributeName || "Group"}: <span className="text-primary ml-1">{groupKey}</span>
+                            </h4>
+                            {secondaryAttributeName && secondaryOptions.length > 0 && (
+                              <div className="mb-2">
+                                <p className="text-xs font-medium text-muted-foreground flex items-center">
+                                  <Tag className="mr-1.5 h-3 w-3" /> {secondaryAttributeName}:
+                                </p>
+                                <div className="flex flex-wrap gap-1 mt-1">
+                                  {secondaryOptions.map(opt => <Badge key={opt} variant="secondary" className="text-xs">{opt}</Badge>)}
                                 </div>
-                                <Badge variant={variation.stock_status === 'instock' ? 'default' : (variation.stock_status === 'onbackorder' ? 'secondary' : 'destructive')} className={cn("self-start text-xs", variation.stock_status === 'instock' && 'bg-green-500/10 text-green-700 border-green-500/30', variation.stock_status === 'onbackorder' && 'bg-yellow-500/10 text-yellow-700 border-yellow-500/30', variation.stock_status === 'outofstock' && 'bg-red-500/10 text-red-700 border-red-500/30')}>{variation.stock_status === 'instock' ? 'In Stock' : variation.stock_status === 'onbackorder' ? 'On Backorder' : 'Out of Stock'}{variation.stock_quantity !== null && ` (${variation.stock_quantity})`}</Badge>
                               </div>
-                            ))}
+                            )}
+                            <p className="text-xs text-muted-foreground">Stock: {stockStatusSummary}</p>
+                             <p className="text-xs text-muted-foreground">Variations in group: {variationsInGroup.length}</p>
                           </div>
                         </div>
                       );
@@ -631,7 +641,7 @@ export default function ProductOptionsPage() {
               )}
               {productOptions.type === 'variable' && (
                 <p className="text-sm text-muted-foreground">
-                  Variations Selected: <span className="font-semibold text-foreground">{productOptions.selectedVariationIdsForCstmzr.length} of {variations.length}</span>
+                  Variations Selected (Individual): <span className="font-semibold text-foreground">{productOptions.selectedVariationIdsForCstmzr.length} of {variations.length}</span>
                 </p>
               )}
               {hasUnsavedChanges && (<p className="mt-3 text-sm text-yellow-600 flex items-center"><AlertTriangle className="h-4 w-4 mr-1.5 text-yellow-500" />You have unsaved changes.</p>)}
@@ -650,4 +660,5 @@ export default function ProductOptionsPage() {
     
 
     
+
 
