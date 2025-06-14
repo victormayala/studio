@@ -6,7 +6,7 @@ import GridControls from './GridControls';
 import HistoryControls from './HistoryControls'; 
 import ViewSwitcher from './ViewSwitcher';
 import VariantSelector from './VariantSelector'; 
-import BoundaryBoxControls from './BoundaryBoxControls'; // Import the new component
+import BoundaryBoxControls from './BoundaryBoxControls';
 import type { ProductForCustomizer, ConfigurableAttribute } from '@/app/customizer/page';
 import type { WCVariation } from '@/types/woocommerce'; 
 import { cn } from '@/lib/utils'; 
@@ -57,24 +57,24 @@ export default function RightPanel({
   
       {/* AI Assistant Section */}
       <div>
-        <div className="px-4 pt-4 pb-2"> 
+        <div className="px-4 pt-4 pb-1"> 
           <h2 className="font-headline text-lg font-semibold text-foreground">AI Design Assistant</h2>
         </div>
         <div className="border-b mx-0"></div> 
-        <div className="px-4 pt-2 pb-4"> 
-          <AiAssistant />
+        <div className="px-4 py-3"> 
+          <AiAssistant activeViewId={activeViewId} />
         </div>
       </div>
 
       {/* Product Variants Section */}
       {productDetails?.type === 'variable' && configurableAttributes && configurableAttributes.length > 0 && (
         <div>
-          <div className="px-4 pt-4 pb-2 border-t">
+          <div className="px-4 pt-3 pb-1 border-t">
             <h2 className="font-headline text-lg font-semibold text-foreground">
               Select Options
             </h2>
           </div>
-          <div className="px-4 pt-2 pb-4">
+          <div className="px-4 py-3">
             <VariantSelector
               attributes={configurableAttributes}
               selectedOptions={selectedVariationOptions}
@@ -87,12 +87,12 @@ export default function RightPanel({
 
       {/* Product Views Section */}
       <div>
-        <div className="px-4 pt-4 pb-2 border-t"> 
+        <div className="px-4 pt-3 pb-1 border-t"> 
           <h2 className="font-headline text-lg font-semibold text-foreground">
             Product Views
           </h2>
         </div>
-        <div className="px-4 pt-2 pb-4"> 
+        <div className="px-4 py-3"> 
           {productDetails && productDetails.views && productDetails.views.length > 0 ? (
             <ViewSwitcher
               productViews={productDetails.views}
@@ -107,10 +107,10 @@ export default function RightPanel({
       
       {/* Canvas Helpers Section */}
       <div>
-        <div className="px-4 pt-4 pb-2 border-t"> 
+        <div className="px-4 pt-3 pb-1 border-t"> 
           <h2 className="font-headline text-lg font-semibold text-foreground">Canvas Helpers</h2>
         </div>
-        <div className="px-4 pt-2 pb-4 space-y-3"> 
+        <div className="px-4 py-3 space-y-3"> 
           <HistoryControls />
           <BoundaryBoxControls showBoundaryBoxes={showBoundaryBoxes} toggleBoundaryBoxes={toggleBoundaryBoxes} /> 
           <GridControls showGrid={showGrid} toggleGrid={toggleGrid} />
@@ -120,4 +120,3 @@ export default function RightPanel({
   </div>
   );
 }
-
