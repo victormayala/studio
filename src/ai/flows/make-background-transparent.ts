@@ -1,16 +1,18 @@
+
 'use server';
 /**
  * @fileOverview An AI flow to attempt to make the background of an image transparent.
  *
  * - makeBackgroundTransparent - Takes an image data URI and tries to return a new one with a transparent background.
- * - MakeBackgroundTransparentInput - Input schema.
- * - MakeBackgroundTransparentOutput - Output schema.
+ * - MakeBackgroundTransparentInput - Input schema type.
+ * - MakeBackgroundTransparentOutput - Output schema type.
  */
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 
-export const MakeBackgroundTransparentInputSchema = z.object({
+// Schema is defined locally, not exported as a const.
+const MakeBackgroundTransparentInputSchema = z.object({
   imageDataUri: z
     .string()
     .url()
@@ -20,7 +22,8 @@ export const MakeBackgroundTransparentInputSchema = z.object({
 });
 export type MakeBackgroundTransparentInput = z.infer<typeof MakeBackgroundTransparentInputSchema>;
 
-export const MakeBackgroundTransparentOutputSchema = z.object({
+// Schema is defined locally, not exported as a const.
+const MakeBackgroundTransparentOutputSchema = z.object({
   processedImageUrl: z.string().url().describe(
     "The data URI of the processed image, hopefully with a transparent background. Expected format: 'data:image/png;base64,<encoded_data>'."
   ),
@@ -39,8 +42,8 @@ const model = 'googleai/gemini-2.0-flash-exp';
 const makeBackgroundTransparentFlow = ai.defineFlow(
   {
     name: 'makeBackgroundTransparentFlow',
-    inputSchema: MakeBackgroundTransparentInputSchema,
-    outputSchema: MakeBackgroundTransparentOutputSchema,
+    inputSchema: MakeBackgroundTransparentInputSchema, // Uses local schema
+    outputSchema: MakeBackgroundTransparentOutputSchema, // Uses local schema
   },
   async (input) => {
     const { text, media } = await ai.generate({
