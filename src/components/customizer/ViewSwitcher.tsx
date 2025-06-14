@@ -13,21 +13,21 @@ interface ViewSwitcherProps {
 
 export default function ViewSwitcher({ productViews, activeViewId, setActiveViewId }: ViewSwitcherProps) {
   if (!productViews || productViews.length === 0) {
-    return <p className="text-sm text-muted-foreground text-center">No product views to display.</p>;
+    return <p className="text-sm text-muted-foreground text-left">No product views to display.</p>;
   }
 
   return (
     <div>
-      <h4 className="text-sm font-semibold mb-3 text-center text-foreground">
+      <h4 className="text-sm font-semibold mb-3 text-left text-foreground">
         {productViews.length > 1 ? "Select View" : "Current View"}
       </h4>
-      <div className="flex flex-wrap justify-center gap-2">
+      <div className="flex flex-wrap justify-start gap-2">
         {productViews.map(view => (
           <button
             key={view.id}
             onClick={() => setActiveViewId(view.id)}
             className={cn(
-              "rounded-md border-2 p-1 transition-all hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1",
+              "rounded-md border-2 p-1 transition-all hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 flex flex-col items-start text-left",
               activeViewId === view.id
                 ? "border-primary opacity-100 ring-1 ring-primary ring-offset-background shadow-sm"
                 : "border-transparent opacity-70 hover:border-muted-foreground/30 bg-muted/30 hover:bg-muted/50"
@@ -45,10 +45,11 @@ export default function ViewSwitcher({ productViews, activeViewId, setActiveView
                 data-ai-hint={view.aiHint || "product view thumbnail"}
               />
             </div>
-            <p className="text-xs mt-1 text-center truncate w-12 text-foreground">{view.name}</p>
+            <p className="text-xs mt-1 w-12 truncate">{view.name}</p>
           </button>
         ))}
       </div>
     </div>
   );
 }
+
