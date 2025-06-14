@@ -9,7 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { PlusCircle, MoreHorizontal, Settings, Code, Trash2, AlertTriangle, Loader2, LogOut, Link as LinkIcon, KeyRound, Save, Package as PackageIcon, PlugZap, UserCircle, XCircle } from "lucide-react";
+import { RefreshCcw, MoreHorizontal, Settings, Code, Trash2, AlertTriangle, Loader2, LogOut, Link as LinkIcon, KeyRound, Save, Package as PackageIcon, PlugZap, UserCircle, XCircle } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from 'next/navigation';
 import NextImage from 'next/image';
@@ -35,7 +35,7 @@ type ActiveDashboardTab = 'products' | 'storeIntegration' | 'settings' | 'profil
 
 export default function DashboardPage() {
   const router = useRouter();
-  const { user, isLoading: authIsLoading, signOut: authSignOut } = useAuth(); // Renamed signOut to authSignOut to avoid conflict if any
+  const { user, isLoading: authIsLoading, signOut: authSignOut } = useAuth();
   const { toast } = useToast(); 
 
   const [activeTab, setActiveTab] = useState<ActiveDashboardTab>('products');
@@ -53,7 +53,7 @@ export default function DashboardPage() {
   const [isLoadingCredentials, setIsLoadingCredentials] = useState(true);
 
 
-  const loadProductsWithCredentials = useCallback(async (creds?: { storeUrl: string; consumerKey: string; consumerSecret: string }) => {
+  const loadProductsWithCredentials = useCallback(async (creds?: { storeUrl: string; consumerKey: string; consumerSecret: string }, isManualRefresh?: boolean) => {
     setIsLoadingProducts(true);
     setError(null);
     const startTime = Date.now();
@@ -80,16 +80,20 @@ export default function DashboardPage() {
           aiHint: p.images && p.images.length > 0 && p.images[0].alt ? p.images[0].alt.split(" ").slice(0,2).join(" ") : "product image"
         }));
         setProducts(displayProducts);
-        toast({
-          title: "Products Loaded",
-          description: `Fetched ${displayProducts.length} products in ${duration}ms. ${creds ? 'Used user credentials.' : 'Used global credentials.'}`,
-        });
+        if (isManualRefresh) {
+            toast({
+            title: "Products Refreshed",
+            description: `Fetched ${displayProducts.length} products in ${duration}ms. ${creds ? 'Used user credentials.' : 'Used global credentials.'}`,
+            });
+        }
       } else {
         setProducts([]);
-         toast({
-          title: "No Products Found",
-          description: "No products were returned from the store.",
-        });
+         if (isManualRefresh) {
+            toast({
+            title: "No Products Found",
+            description: "No products were returned from the store.",
+            });
+         }
       }
     } catch (err) {
       const message = err instanceof Error ? err.message : "An unexpected error occurred during product fetch.";
@@ -156,7 +160,7 @@ export default function DashboardPage() {
       });
       // If products tab is active, or to pre-load, re-fetch with new creds
       if (activeTab === 'products') {
-         loadProductsWithCredentials({ storeUrl, consumerKey, consumerSecret });
+         loadProductsWithCredentials({ storeUrl, consumerKey, consumerSecret }, true);
       }
     } catch (error) {
       toast({
@@ -185,7 +189,7 @@ export default function DashboardPage() {
         description: "Your WooCommerce credentials have been removed from this browser.",
       });
        if (activeTab === 'products') {
-        loadProductsWithCredentials(); // Fetch with global credentials
+        loadProductsWithCredentials(undefined, true); // Fetch with global credentials
       }
     } catch (error) {
       toast({
@@ -199,10 +203,21 @@ export default function DashboardPage() {
     }
   };
 
-  const handleAddNewProduct = () => {
-    const targetProductId = products.length > 0 ? products[0].id : "new_product_template";
-    router.push(`/dashboard/products/${targetProductId}/options`);
-  };
+  const handleRefreshDashboardData = useCallback(() => {
+    if (user && !isLoadingCredentials) {
+      const userStoreUrl = localStorage.getItem(`wc_store_url_${user.id}`);
+      const userConsumerKey = localStorage.getItem(`wc_consumer_key_${user.id}`);
+      const userConsumerSecret = localStorage.getItem(`wc_consumer_secret_${user.id}`);
+
+      if (userStoreUrl && userConsumerKey && userConsumerSecret) {
+        loadProductsWithCredentials({ storeUrl: userStoreUrl, consumerKey: userConsumerKey, consumerSecret: userConsumerSecret }, true);
+      } else {
+        loadProductsWithCredentials(undefined, true);
+      }
+    } else if (!user && !isLoadingCredentials) {
+      loadProductsWithCredentials(undefined, true); // Attempt with global if no user
+    }
+  }, [user, isLoadingCredentials, loadProductsWithCredentials]);
 
 
   if (authIsLoading || !user) {
@@ -268,9 +283,9 @@ export default function DashboardPage() {
                     </div>
                     {activeTab === 'products' && (
                        <div className="flex items-center gap-2">
-                        <Button onClick={handleAddNewProduct} className="bg-primary text-primary-foreground hover:bg-primary/90">
-                          <PlusCircle className="mr-2 h-5 w-5" />
-                          Add Product Configuration
+                        <Button onClick={handleRefreshDashboardData} className="bg-primary text-primary-foreground hover:bg-primary/90" disabled={isLoadingProducts}>
+                          {isLoadingProducts ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <RefreshCcw className="mr-2 h-5 w-5" />}
+                          Refresh Product Data
                         </Button>
                       </div>
                     )}
