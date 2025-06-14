@@ -1,3 +1,4 @@
+
 'use server';
 /**
  * @fileOverview Generates a design image and description based on a user prompt.
@@ -44,7 +45,7 @@ const generateDesignFromPromptFlow = ai.defineFlow(
       prompt: `User's design idea: "${input.userPrompt}"
 
       Based on the user's design idea provided above:
-      1. Generate a visually appealing image that represents this idea. The image should be suitable for placing on a product like a t-shirt or mug. Ensure the image has a transparent background if the subject is a distinct object, otherwise, a simple background is fine.
+      1. Generate a visually appealing image that represents this idea. The image MUST have a transparent background to allow it to be placed on various products. If the subject is complex, focus on making the main subject's background transparent.
       2. Provide a concise, one-sentence textual description of the generated image. This description will be used as alt text.
 
       Example of desired text output if user asks for "a happy cat":
@@ -53,7 +54,7 @@ const generateDesignFromPromptFlow = ai.defineFlow(
       Return ONLY the image and the textual description. Do not add any other conversational text or markdown.`,
       config: {
         responseModalities: ['TEXT', 'IMAGE'],
-         safetySettings: [ // Added safety settings to be less restrictive for common design requests
+         safetySettings: [ 
           { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
           { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
           { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
@@ -78,3 +79,4 @@ const generateDesignFromPromptFlow = ai.defineFlow(
     };
   }
 );
+
