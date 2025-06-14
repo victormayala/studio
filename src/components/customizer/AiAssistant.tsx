@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import Image from 'next/image';
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -27,9 +27,8 @@ export default function AiAssistant({ activeViewId }: AiAssistantProps) {
   const { addCanvasImageFromUrl } = useUploads();
   const { toast } = useToast();
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!promptText.trim()) {
+  const triggerDesignGeneration = useCallback(async (currentPrompt: string) => {
+    if (!currentPrompt.trim()) {
       setError("Please enter a design idea.");
       return;
     }
@@ -39,7 +38,7 @@ export default function AiAssistant({ activeViewId }: AiAssistantProps) {
     setGeneratedImageDescription(null);
 
     try {
-      const input: GenerateDesignFromPromptInput = { userPrompt: promptText };
+      const input: GenerateDesignFromPromptInput = { userPrompt: currentPrompt };
       const result: GenerateDesignFromPromptOutput = await generateDesignFromPrompt(input);
       setGeneratedImageDataUrl(result.generatedImageUrl);
       setGeneratedImageDescription(result.generatedImageDescription);
@@ -58,6 +57,11 @@ export default function AiAssistant({ activeViewId }: AiAssistantProps) {
     } finally {
       setIsLoading(false);
     }
+  }, [toast]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    await triggerDesignGeneration(promptText);
   };
 
   const handleUseDesign = () => {
@@ -78,14 +82,16 @@ export default function AiAssistant({ activeViewId }: AiAssistantProps) {
     // Reset after using
     setGeneratedImageDataUrl(null);
     setGeneratedImageDescription(null);
-    setPromptText(''); // Clear the input box
+    setPromptText(''); 
   };
 
-  const handleTryAgain = () => {
+  const handleTryAgain = async () => {
+    // Clear previous results immediately for better UX
     setGeneratedImageDataUrl(null);
     setGeneratedImageDescription(null);
     setError(null); 
-    // Keep promptText so user can modify it
+    // Re-trigger generation with the current promptText
+    await triggerDesignGeneration(promptText);
   };
 
   return (
@@ -106,7 +112,7 @@ export default function AiAssistant({ activeViewId }: AiAssistantProps) {
           />
         </div>
         <Button type="submit" disabled={isLoading || !promptText.trim()} className="w-full bg-primary text-primary-foreground hover:bg-primary/90">
-          {isLoading ? (
+          {isLoading && !generatedImageDataUrl ? ( // Show spinner only if actively loading new image, not if just showing a previous one
             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
           ) : (
             <Sparkles className="mr-2 h-4 w-4" />
@@ -126,6 +132,9 @@ export default function AiAssistant({ activeViewId }: AiAssistantProps) {
         <Alert variant="destructive">
           <AlertTitle>Generation Error</AlertTitle>
           <AlertDescription>{error}</AlertDescription>
+           <Button onClick={handleTryAgain} variant="outline" size="sm" className="mt-2">
+              <RefreshCcwIcon className="mr-2 h-4 w-4" /> Try Again With Same Prompt
+            </Button>
         </Alert>
       )}
 
@@ -148,7 +157,7 @@ export default function AiAssistant({ activeViewId }: AiAssistantProps) {
             <Button onClick={handleUseDesign} className="flex-1 bg-green-600 hover:bg-green-700 text-white">
               <Play className="mr-2 h-4 w-4" /> Use this Design
             </Button>
-            <Button onClick={handleTryAgain} variant="outline" className="flex-1">
+            <Button onClick={handleTryAgain} variant="outline" className="flex-1" disabled={isLoading || !promptText.trim()}>
               <RefreshCcwIcon className="mr-2 h-4 w-4" /> Try Again
             </Button>
           </div>
