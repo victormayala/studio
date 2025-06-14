@@ -227,11 +227,11 @@ function CustomizerLayoutAndLogic() {
       const { variations: fetchedVariations, error: variationsError } = await fetchWooCommerceProductVariations(productId, userCredentials);
       if (variationsError) {
         toast({ title: "Variations Load Error", description: variationsError, variant: "destructive" });
-        setProductVariations(null); // Store fetched variations
+        setProductVariations(null); 
         setConfigurableAttributes([]); 
         setSelectedVariationOptions({});
       } else if (fetchedVariations && fetchedVariations.length > 0) {
-        setProductVariations(fetchedVariations); // Store fetched variations
+        setProductVariations(fetchedVariations); 
         const relevantVariations = fetchedVariations.filter(v => cstmzrSelectedVariationIds.includes(v.id.toString()));
         
         if (relevantVariations.length > 0) {
@@ -301,9 +301,9 @@ function CustomizerLayoutAndLogic() {
     let newImageAiHint: string | undefined = undefined;
 
     const matchingVariation = productVariations.find(variation => {
-      // Variation matches if all its attributes are present in selectedVariationOptions and have the same option value
-      if (variation.attributes.length === 0 && Object.keys(selectedVariationOptions).length > 0) return false; // Base product with no attributes can't match if options are selected
-      if (variation.attributes.length > 0 && Object.keys(selectedVariationOptions).length === 0) return false; // Variation with attributes can't match if no options selected
+      if (variation.attributes.length === 0 && Object.keys(selectedVariationOptions).length > 0) return false; 
+      if (variation.attributes.length > 0 && Object.keys(selectedVariationOptions).length === 0 && variation.attributes.length !== configurableAttributes?.length) return false; 
+
 
       return variation.attributes.every(
         attr => selectedVariationOptions[attr.name] === attr.option
@@ -314,12 +314,11 @@ function CustomizerLayoutAndLogic() {
       newImageUrl = matchingVariation.image.src;
       newImageAiHint = matchingVariation.image.alt?.split(" ").slice(0,2).join(" ") || currentView.aiHint;
     } else {
-      // Revert to base image for this specific view
       const baseImageInfo = viewBaseImages[activeViewId];
       if (baseImageInfo) {
         newImageUrl = baseImageInfo.url;
         newImageAiHint = baseImageInfo.aiHint || currentView.aiHint;
-      } else { // Fallback if base image for view not found (should ideally not happen if viewBaseImages is populated correctly)
+      } else { 
         newImageUrl = defaultFallbackProduct.views[0].imageUrl;
         newImageAiHint = defaultFallbackProduct.views[0].aiHint;
       }
@@ -337,7 +336,7 @@ function CustomizerLayoutAndLogic() {
       });
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedVariationOptions, productVariations, activeViewId, viewBaseImages, productDetails?.id]);
+  }, [selectedVariationOptions, productVariations, activeViewId, viewBaseImages, productDetails?.id, configurableAttributes]);
 
 
   const getToolPanelTitle = (toolId: string): string => {
@@ -548,6 +547,7 @@ function CustomizerLayoutAndLogic() {
             configurableAttributes={configurableAttributes}
             selectedVariationOptions={selectedVariationOptions}
             onVariantOptionSelect={handleVariantOptionSelect}
+            productVariations={productVariations} // Pass productVariations
             className={cn(
               "transition-all duration-300 ease-in-out flex-shrink-0 h-full",
               isRightSidebarOpen ? "w-72 md:w-80 lg:w-96 opacity-100" : "w-0 opacity-0 pointer-events-none"

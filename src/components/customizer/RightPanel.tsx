@@ -7,6 +7,7 @@ import HistoryControls from './HistoryControls';
 import ViewSwitcher from './ViewSwitcher';
 import VariantSelector from './VariantSelector'; 
 import type { ProductForCustomizer, ConfigurableAttribute } from '@/app/customizer/page';
+import type { WCVariation } from '@/types/woocommerce'; // Import WCVariation
 import { cn } from '@/lib/utils'; 
 
 interface RightPanelProps {
@@ -19,6 +20,7 @@ interface RightPanelProps {
   configurableAttributes: ConfigurableAttribute[] | null; 
   selectedVariationOptions: Record<string, string>; 
   onVariantOptionSelect: (attributeName: string, optionValue: string) => void; 
+  productVariations?: WCVariation[] | null; // Add productVariations prop
 }
 
 export default function RightPanel({ 
@@ -31,6 +33,7 @@ export default function RightPanel({
   configurableAttributes,
   selectedVariationOptions,
   onVariantOptionSelect,
+  productVariations, // Destructure productVariations
 }: RightPanelProps) {
   return (
   <div 
@@ -71,6 +74,7 @@ export default function RightPanel({
               attributes={configurableAttributes}
               selectedOptions={selectedVariationOptions}
               onOptionSelect={onVariantOptionSelect}
+              productVariations={productVariations} // Pass productVariations
             />
           </div>
         </div>
