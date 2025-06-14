@@ -64,7 +64,7 @@ export interface CanvasText {
   shadowOffsetY: number; // In px
   shadowBlur: number; // In px
 
-  // Arch Effect (Visual Only for now)
+  // Arch Effect
   isArchText: boolean;
   archAmount: number; // e.g., 0-100 for curvature intensity
 
@@ -317,10 +317,12 @@ export function UploadProvider({ children }: { children: ReactNode }) {
   }, []); 
 
   const updateCanvasImage = useCallback((canvasImageId: string, updates: Partial<CanvasImage>) => {
-    if (!isInteractiveOperationInProgressRef.current) {
-      pushToUndoStack(createSnapshot());
-    }
-    setCanvasImages(prev => prev.map(img => img.id === canvasImageId ? { ...img, ...updates } : img));
+    queueMicrotask(() => {
+      if (!isInteractiveOperationInProgressRef.current) {
+        pushToUndoStack(createSnapshot());
+      }
+      setCanvasImages(prev => prev.map(img => img.id === canvasImageId ? { ...img, ...updates } : img));
+    });
   }, [createSnapshot, pushToUndoStack]); 
 
   const duplicateCanvasImage = useCallback((canvasImageId: string) => {
@@ -333,7 +335,7 @@ export function UploadProvider({ children }: { children: ReactNode }) {
     const currentMaxZIndex = getMaxZIndexForView(originalImage.viewId);
     const newCanvasImage: CanvasImage = {
       ...originalImage, id: crypto.randomUUID(), x: originalImage.x + 2, y: originalImage.y + 2, 
-      zIndex: currentMaxZIndex + 1, isLocked: false, movedFromDefault: true, // Duplicates are not at default spawn
+      zIndex: currentMaxZIndex + 1, isLocked: false, movedFromDefault: true,
     };
     setCanvasImages(prev => [...prev, newCanvasImage]);
     setSelectedCanvasImageId(newCanvasImage.id); 
@@ -411,27 +413,29 @@ export function UploadProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const updateCanvasText = useCallback((canvasTextId: string, updates: Partial<CanvasText>) => {
-    if (!isInteractiveOperationInProgressRef.current) {
-      pushToUndoStack(createSnapshot());
-    }
-    setCanvasTexts(prev => prev.map(txt => {
-      if (txt.id === canvasTextId) {
-        const newValues = { ...txt, ...updates };
-        
-        if (updates.outlineWidth !== undefined) {
-          newValues.outlineEnabled = updates.outlineWidth > 0;
-        }
-        
-        if (updates.shadowOffsetX !== undefined || updates.shadowOffsetY !== undefined || updates.shadowBlur !== undefined) {
-          const offX = updates.shadowOffsetX !== undefined ? updates.shadowOffsetX : newValues.shadowOffsetX;
-          const offY = updates.shadowOffsetY !== undefined ? updates.shadowOffsetY : newValues.shadowOffsetY;
-          const blur = updates.shadowBlur !== undefined ? updates.shadowBlur : newValues.shadowBlur;
-          newValues.shadowEnabled = offX !== 0 || offY !== 0 || blur !== 0;
-        }
-        return newValues;
+    queueMicrotask(() => {
+      if (!isInteractiveOperationInProgressRef.current) {
+        pushToUndoStack(createSnapshot());
       }
-      return txt;
-    }));
+      setCanvasTexts(prev => prev.map(txt => {
+        if (txt.id === canvasTextId) {
+          const newValues = { ...txt, ...updates };
+          
+          if (updates.outlineWidth !== undefined) {
+            newValues.outlineEnabled = updates.outlineWidth > 0;
+          }
+          
+          if (updates.shadowOffsetX !== undefined || updates.shadowOffsetY !== undefined || updates.shadowBlur !== undefined) {
+            const offX = updates.shadowOffsetX !== undefined ? updates.shadowOffsetX : newValues.shadowOffsetX;
+            const offY = updates.shadowOffsetY !== undefined ? updates.shadowOffsetY : newValues.shadowOffsetY;
+            const blur = updates.shadowBlur !== undefined ? updates.shadowBlur : newValues.shadowBlur;
+            newValues.shadowEnabled = offX !== 0 || offY !== 0 || blur !== 0;
+          }
+          return newValues;
+        }
+        return txt;
+      }));
+    });
   }, [createSnapshot, pushToUndoStack]);
 
   const duplicateCanvasText = useCallback((canvasTextId: string) => {
@@ -444,7 +448,7 @@ export function UploadProvider({ children }: { children: ReactNode }) {
     const currentMaxZIndex = getMaxZIndexForView(originalText.viewId);
     const newText: CanvasText = {
       ...originalText, id: crypto.randomUUID(), x: originalText.x + 2, y: originalText.y + 2,
-      zIndex: currentMaxZIndex + 1, isLocked: false, movedFromDefault: true, // Duplicates are not at default spawn
+      zIndex: currentMaxZIndex + 1, isLocked: false, movedFromDefault: true,
     };
     setCanvasTexts(prev => [...prev, newText]);
     setSelectedCanvasTextId(newText.id);
@@ -506,10 +510,12 @@ export function UploadProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const updateCanvasShape = useCallback((shapeId: string, updates: Partial<CanvasShape>) => {
-    if (!isInteractiveOperationInProgressRef.current) {
-      pushToUndoStack(createSnapshot());
-    }
-    setCanvasShapes(prev => prev.map(shp => shp.id === shapeId ? { ...shp, ...updates } : shp));
+     queueMicrotask(() => {
+      if (!isInteractiveOperationInProgressRef.current) {
+        pushToUndoStack(createSnapshot());
+      }
+      setCanvasShapes(prev => prev.map(shp => shp.id === shapeId ? { ...shp, ...updates } : shp));
+    });
   }, [createSnapshot, pushToUndoStack]);
 
   const duplicateCanvasShape = useCallback((shapeId: string) => {
@@ -522,7 +528,7 @@ export function UploadProvider({ children }: { children: ReactNode }) {
     const currentMaxZIndex = getMaxZIndexForView(originalShape.viewId);
     const newShape: CanvasShape = {
       ...originalShape, id: crypto.randomUUID(), x: originalShape.x + 2, y: originalShape.y + 2,
-      zIndex: currentMaxZIndex + 1, isLocked: false, movedFromDefault: true, // Duplicates are not at default spawn
+      zIndex: currentMaxZIndex + 1, isLocked: false, movedFromDefault: true,
     };
     setCanvasShapes(prev => [...prev, newShape]);
     setSelectedCanvasShapeId(newShape.id);
