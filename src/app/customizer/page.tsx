@@ -292,64 +292,73 @@ function CustomizerLayoutAndLogic() {
 
 
   useEffect(() => {
-    if (!productDetails || !productVariations || Object.keys(viewBaseImages).length === 0) {
+    if (!productDetails || !productVariations) {
       return;
     }
-
+  
     const matchingVariation = productVariations.find(variation => {
       if (variation.attributes.length === 0 && Object.keys(selectedVariationOptions).length > 0) return false;
       if (variation.attributes.length > 0 && Object.keys(selectedVariationOptions).length === 0 && configurableAttributes && variation.attributes.length !== configurableAttributes.length) return false;
-
+  
       return variation.attributes.every(
         attr => selectedVariationOptions[attr.name] === attr.option
       );
     });
-
-    let newGlobalImageUrl: string | null = null;
-    let newGlobalImageAiHint: string | undefined = undefined;
-
+  
+    let variationSpecificImageSrc: string | null = null;
+    let variationSpecificImageAiHint: string | undefined = undefined;
+  
     if (matchingVariation && matchingVariation.image?.src) {
-      newGlobalImageUrl = matchingVariation.image.src;
-      newGlobalImageAiHint = matchingVariation.image.alt?.split(" ").slice(0, 2).join(" ") || undefined;
+      variationSpecificImageSrc = matchingVariation.image.src;
+      variationSpecificImageAiHint = matchingVariation.image.alt?.split(" ").slice(0, 2).join(" ") || undefined;
     }
     
     setProductDetails(prevProductDetails => {
       if (!prevProductDetails) return null;
-
+  
       const updatedViews = prevProductDetails.views.map(view => {
-        let targetImageUrl = view.imageUrl; // Default to current
-        let targetAiHint = view.aiHint;   // Default to current
-
-        if (newGlobalImageUrl) { // A variation image is found
-          targetImageUrl = newGlobalImageUrl;
-          targetAiHint = newGlobalImageAiHint || view.aiHint || defaultFallbackProduct.views[0].aiHint;
-        } else { // No variation image, use the base image for this specific view
-          const baseImageInfo = viewBaseImages[view.id];
-          if (baseImageInfo && baseImageInfo.url) {
-            targetImageUrl = baseImageInfo.url;
-            targetAiHint = baseImageInfo.aiHint || view.aiHint || defaultFallbackProduct.views[0].aiHint;
-          } else { // Fallback if base image info is somehow missing for this view
-            targetImageUrl = defaultFallbackProduct.views[0].imageUrl;
-            targetAiHint = defaultFallbackProduct.views[0].aiHint;
+        let finalImageUrl: string;
+        let finalAiHint: string | undefined;
+  
+        // Determine the base image and hint for the current view
+        const baseImageInfo = viewBaseImages[view.id];
+        const baseImageUrl = baseImageInfo?.url || view.imageUrl; // Fallback to current if base not in map
+        const baseAiHint = baseImageInfo?.aiHint || view.aiHint;
+  
+        if (variationSpecificImageSrc) {
+          // A specific image for the selected variation combination exists
+          if (view.id === activeViewId) {
+            // This is the active view, so it gets the variation-specific image
+            finalImageUrl = variationSpecificImageSrc;
+            finalAiHint = variationSpecificImageAiHint || baseAiHint; // Prioritize variation hint
+          } else {
+            // This is a non-active view, so it uses its own base image
+            finalImageUrl = baseImageUrl;
+            finalAiHint = baseAiHint;
           }
+        } else {
+          // No specific image for the selected variation combination, ALL views use their base image
+          finalImageUrl = baseImageUrl;
+          finalAiHint = baseAiHint;
         }
-
-        // Only create a new object if the URL or hint actually changed
-        if (view.imageUrl !== targetImageUrl || view.aiHint !== targetAiHint) {
-          return { ...view, imageUrl: targetImageUrl, aiHint: targetAiHint };
+  
+        // Only create a new view object if something actually changed
+        if (view.imageUrl !== finalImageUrl || view.aiHint !== finalAiHint) {
+          return { ...view, imageUrl: finalImageUrl, aiHint: finalAiHint };
         }
         return view;
       });
-
+  
       // Check if any view object identity has changed
       const viewsChanged = updatedViews.some((newView, index) => newView !== prevProductDetails.views[index]);
-
+  
       if (viewsChanged) {
         return { ...prevProductDetails, views: updatedViews };
       }
       return prevProductDetails; // No actual change, return the same object to prevent re-render loops
     });
-  }, [selectedVariationOptions, productVariations, viewBaseImages, productDetails?.id, configurableAttributes, setProductDetails]);
+  // Ensure all dependencies are correctly listed.
+  }, [selectedVariationOptions, productVariations, productDetails?.id, activeViewId, viewBaseImages, configurableAttributes, setProductDetails]);
 
 
   const getToolPanelTitle = (toolId: string): string => {
