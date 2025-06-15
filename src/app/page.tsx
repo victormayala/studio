@@ -12,8 +12,8 @@ import { cn } from '@/lib/utils';
 
 const FeatureHighlightCard = ({ icon: Icon, title, description }: { icon: React.ElementType, title: string, description: string }) => (
   <div className="flex flex-col items-center p-6 text-center bg-card rounded-xl shadow-lg hover:shadow-xl transition-shadow duration-300 h-full">
-    <div className="bg-primary/10 p-4 rounded-full w-fit mb-6">
-      <Icon className="h-10 w-10 text-primary" />
+    <div className="bg-secondary/10 p-4 rounded-full w-fit mb-6">
+      <Icon className="h-10 w-10 text-secondary" />
     </div>
     <h3 className="text-xl font-semibold mb-3 text-foreground">{title}</h3>
     <p className="text-sm text-muted-foreground leading-relaxed flex-grow">{description}</p>
@@ -29,7 +29,7 @@ const StepCard = ({ icon: Icon, number, title, description }: { icon: React.Elem
       <h3 className="text-xl font-semibold text-foreground">{title}</h3>
     </div>
      <div className="flex-shrink-0 mb-4 flex justify-center">
-      <Icon className="h-12 w-12 text-primary" />
+      <Icon className="h-12 w-12 text-secondary" />
     </div>
     <p className="text-sm text-muted-foreground leading-relaxed">{description}</p>
   </div>
@@ -59,7 +59,7 @@ export default function MarketingHomePage() {
                   </span>
                 </Link>
               </Button>
-               <Button asChild size="lg" variant="outline" className="border-primary text-primary hover:bg-primary/5 shadow-md hover:shadow-lg transform hover:-translate-y-0.5 transition-all duration-300 px-8 py-3 text-base w-full sm:w-auto">
+               <Button asChild size="lg" className="bg-accent text-accent-foreground hover:bg-accent/90 shadow-md hover:shadow-lg transform hover:-translate-y-0.5 transition-all duration-300 px-8 py-3 text-base w-full sm:w-auto">
                 <Link href="/how-it-works">
                   <span className="flex items-center">
                     See How It Works
@@ -92,7 +92,7 @@ export default function MarketingHomePage() {
               {[...Array(5)].map((_, i) => (
                 <div key={i} className="relative h-10 w-32 opacity-60 hover:opacity-100 transition-opacity">
                   <Image
-                    src={`https://placehold.co/128x40.png`} // Slightly larger placeholder
+                    src={`https://placehold.co/128x40.png`} 
                     alt={`Partner Company Logo ${i + 1}`}
                     fill
                     className="object-contain"
@@ -182,7 +182,7 @@ export default function MarketingHomePage() {
               />
             </div>
             <div className="text-center mt-12">
-              <Button asChild size="lg" className="bg-primary text-primary-foreground hover:bg-primary/90">
+              <Button asChild size="lg" className="bg-accent text-accent-foreground hover:bg-accent/90">
                 <Link href="/signup">
                   <span className="flex items-center">
                     Start Customizing Today <ArrowRight className="ml-2 h-5 w-5" />
@@ -199,7 +199,7 @@ export default function MarketingHomePage() {
           <div className="container mx-auto px-4">
             <div className="flex flex-col lg:flex-row items-center gap-12 lg:gap-16">
               <div className="lg:w-1/2">
-                <div className="relative w-full aspect-square rounded-xl shadow-xl overflow-hidden border-2 border-primary/10 bg-card">
+                <div className="relative w-full aspect-square rounded-xl shadow-xl overflow-hidden border-2 border-secondary/10 bg-card">
                   <Image 
                     src="https://placehold.co/600x600.png"
                     alt="A collage of customized products created with Customizer Studio"
@@ -234,7 +234,7 @@ export default function MarketingHomePage() {
                     <span><span className="font-semibold text-foreground">Unlock New Markets:</span> Cater to niche customer demands with highly specific customizations.</span>
                   </li>
                 </ul>
-                <Button asChild size="lg" variant="outline" className="border-primary text-primary hover:bg-primary/5 hover:text-primary">
+                <Button asChild size="lg" className="bg-accent text-accent-foreground hover:bg-accent/90">
                   <Link href="/pricing">
                     <span className="flex items-center">
                       Explore Features & Pricing <ArrowRight className="ml-2 h-5 w-5" />
@@ -269,7 +269,7 @@ export default function MarketingHomePage() {
                   asChild
                   size="lg"
                   variant="outline"
-                  className="bg-transparent border-primary-foreground text-primary-foreground hover:bg-transparent hover:border-primary-foreground/80 hover:text-primary-foreground/80 w-full sm:w-auto text-base px-8 py-3"
+                  className="bg-transparent border-primary-foreground text-primary-foreground hover:bg-primary-foreground/10 hover:border-primary-foreground/80 hover:text-primary-foreground/80 w-full sm:w-auto text-base px-8 py-3"
                 >
                   <Link href="/pricing">
                     <span>View Pricing Plans</span>

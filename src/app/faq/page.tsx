@@ -53,7 +53,7 @@ export default function FaqPage() {
             <Accordion type="single" collapsible className="w-full space-y-4">
               {faqData.map((item, index) => (
                 <AccordionItem key={index} value={`item-${index}`} className="border-b-0 rounded-lg shadow-sm bg-card">
-                  <AccordionTrigger className="p-6 text-left font-semibold text-card-foreground hover:no-underline">
+                  <AccordionTrigger className="p-6 text-left font-semibold text-card-foreground hover:no-underline hover:text-accent">
                     {item.question}
                   </AccordionTrigger>
                   <AccordionContent className="p-6 pt-0 text-muted-foreground">
@@ -66,7 +66,7 @@ export default function FaqPage() {
 
           <div className="text-center mt-16">
             <p className="text-muted-foreground mb-4">Can't find the answer you're looking for?</p>
-            <Button asChild className="bg-primary text-primary-foreground hover:bg-primary/90">
+            <Button asChild className="bg-accent text-accent-foreground hover:bg-accent/90">
               <Link href="/contact">Contact Support</Link>
             </Button>
           </div>

@@ -22,6 +22,7 @@ const pricingTiers = [
     ],
     cta: "Start for Free",
     href: "/signup?plan=free",
+    ctaVariant: "outline" as const, // Specific for this button
   },
   {
     name: "Starter",
@@ -38,6 +39,7 @@ const pricingTiers = [
     cta: "Choose Starter",
     href: "/signup?plan=starter",
     popular: true,
+    ctaVariant: "default" as const, // Primary color for popular
   },
   {
     name: "Pro",
@@ -53,14 +55,15 @@ const pricingTiers = [
     ],
     cta: "Choose Pro",
     href: "/signup?plan=pro",
+    ctaVariant: "secondary" as const, // Accent/Secondary color for this
   },
 ];
 
 export default function PricingPage() {
   return (
-    <div className="flex flex-col min-h-screen bg-background"> {/* Overall page background remains theme default */}
+    <div className="flex flex-col min-h-screen bg-background"> 
       <MarketingHeader />
-      <main className="flex-1 py-12 md:py-20 bg-card"> {/* Main content area background set to white */}
+      <main className="flex-1 py-12 md:py-20 bg-card"> 
         <div className="container mx-auto px-4">
           <div className="text-center mb-16">
             <h1 className="text-4xl md:text-5xl font-bold font-headline text-foreground mb-4">
@@ -73,7 +76,6 @@ export default function PricingPage() {
 
           <div className="grid md:grid-cols-3 gap-8 items-stretch">
             {pricingTiers.map((tier) => (
-              // Cards themselves are already white (bg-card), so this is fine
               <Card key={tier.name} className={`flex flex-col shadow-lg ${tier.popular ? 'border-primary ring-2 ring-primary' : 'border-border'}`}>
                 <CardHeader className="pb-4">
                   {tier.popular && (
@@ -99,7 +101,16 @@ export default function PricingPage() {
                   </ul>
                 </CardContent>
                 <CardFooter>
-                  <Button asChild className={`w-full ${tier.popular ? 'bg-primary text-primary-foreground hover:bg-primary/90' : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'}`} size="lg">
+                  <Button 
+                    asChild 
+                    className={`w-full ${
+                      tier.ctaVariant === 'default' ? 'bg-primary text-primary-foreground hover:bg-primary/90' : 
+                      tier.ctaVariant === 'secondary' ? 'bg-secondary text-secondary-foreground hover:bg-secondary/90' : 
+                      'bg-transparent text-accent border border-accent hover:bg-accent/10' // Outline Accent
+                    }`} 
+                    size="lg"
+                    variant={tier.ctaVariant === 'outline' ? 'outline' : 'default'} // Set variant for proper styling base
+                  >
                     <Link href={tier.href}>{tier.cta}</Link>
                   </Button>
                 </CardFooter>
@@ -108,7 +119,7 @@ export default function PricingPage() {
           </div>
           <div className="text-center mt-16">
             <p className="text-muted-foreground">
-              Need more? <Link href="/contact" className="text-primary hover:underline">Contact us for enterprise solutions</Link>.
+              Need more? <Link href="/contact" className="text-accent hover:underline">Contact us for enterprise solutions</Link>.
             </p>
           </div>
         </div>
