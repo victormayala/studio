@@ -10,15 +10,15 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
-        default: "bg-primary text-primary-foreground hover:bg-accent hover:text-accent-foreground active:bg-accent/90 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+        default: "bg-primary text-primary-foreground hover:bg-primary/90",
         destructive:
-          "bg-destructive text-destructive-foreground hover:bg-accent hover:text-accent-foreground active:bg-accent/90 focus-visible:ring-2 focus-visible:ring-destructive focus-visible:ring-offset-2",
+          "bg-destructive text-destructive-foreground hover:bg-destructive/90",
         outline:
-          "border border-input bg-background hover:bg-accent hover:text-accent-foreground active:bg-accent/80 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+          "border border-input bg-background hover:bg-accent hover:text-accent-foreground",
         secondary:
-          "bg-secondary text-secondary-foreground hover:bg-accent hover:text-accent-foreground active:bg-accent/90 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
-        ghost: "hover:bg-accent hover:text-accent-foreground active:bg-accent/80 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
-        link: "text-primary underline-offset-4 hover:bg-accent hover:text-accent-foreground hover:no-underline active:bg-accent/90 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+          "bg-secondary text-secondary-foreground hover:bg-secondary/80",
+        ghost: "hover:bg-accent hover:text-accent-foreground",
+        link: "text-primary underline-offset-4 hover:underline",
       },
       size: {
         default: "h-10 px-4 py-2",
@@ -55,4 +55,3 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
 Button.displayName = "Button"
 
 export { Button, buttonVariants }
-
