@@ -196,10 +196,10 @@ export default function MarketingHomePage() {
               Join the growing number of businesses transforming their customer experience with CSTMZR. Start your free trial today and see the difference.
             </p>
             <div className="space-x-0 md:space-x-4 space-y-4 md:space-y-0 flex flex-col md:flex-row justify-center items-center">
-                <Button asChild size="lg" className="bg-accent text-accent-foreground hover:bg-accent/90 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-300 w-full md:w-auto">
+                <Button asChild size="lg" className="bg-primary-foreground text-primary hover:bg-primary-foreground/90 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-300 w-full md:w-auto">
                     <Link href="/signup">Claim Your Free Trial</Link>
                 </Button>
-                <Button asChild size="lg" variant="outline" className="border-primary-foreground/50 text-primary-foreground hover:bg-primary-foreground/10 w-full md:w-auto">
+                <Button asChild size="lg" variant="outline" className="border-primary-foreground text-primary-foreground hover:bg-primary-foreground hover:text-primary w-full md:w-auto">
                     <Link href="/pricing">View Pricing Plans</Link>
                 </Button>
             </div>
