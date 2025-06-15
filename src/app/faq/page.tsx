@@ -66,7 +66,7 @@ export default function FaqPage() {
 
           <div className="text-center mt-16">
             <p className="text-muted-foreground mb-4">Can't find the answer you're looking for?</p>
-            <Button asChild className="bg-accent text-accent-foreground hover:bg-accent/90">
+            <Button asChild className="bg-primary text-primary-foreground hover:bg-primary/90">
               <Link href="/contact">Contact Support</Link>
             </Button>
           </div>
@@ -76,3 +76,4 @@ export default function FaqPage() {
     </div>
   );
 }
+

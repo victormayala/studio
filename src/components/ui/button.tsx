@@ -14,10 +14,10 @@ const buttonVariants = cva(
         destructive:
           "bg-destructive text-destructive-foreground hover:bg-destructive/90",
         outline:
-          "border border-input bg-background hover:bg-muted hover:text-primary", // Changed hover
+          "border border-input bg-background hover:bg-secondary hover:text-secondary-foreground", // Changed hover
         secondary:
           "bg-secondary text-secondary-foreground hover:bg-secondary/80",
-        ghost: "hover:bg-muted hover:text-primary", // Changed hover
+        ghost: "hover:bg-secondary hover:text-secondary-foreground", // Changed hover
         link: "text-primary underline-offset-4 hover:underline",
       },
       size: {
@@ -55,3 +55,4 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
 Button.displayName = "Button"
 
 export { Button, buttonVariants }
+

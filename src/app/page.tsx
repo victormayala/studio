@@ -59,7 +59,7 @@ export default function MarketingHomePage() {
                   </span>
                 </Link>
               </Button>
-               <Button asChild size="lg" className="bg-accent text-accent-foreground hover:bg-accent/90 shadow-md hover:shadow-lg transform hover:-translate-y-0.5 transition-all duration-300 px-8 py-3 text-base w-full sm:w-auto">
+               <Button asChild size="lg" variant="outline" className="shadow-md hover:shadow-lg transform hover:-translate-y-0.5 transition-all duration-300 px-8 py-3 text-base w-full sm:w-auto">
                 <Link href="/how-it-works">
                   <span className="flex items-center">
                     See How It Works
@@ -138,7 +138,7 @@ export default function MarketingHomePage() {
               />
               <FeatureHighlightCard 
                 icon={BarChart3} 
-                title="Boost Conversions & AOV" 
+                title="Boost Conversions &amp; AOV" 
                 description="Personalized products lead to higher engagement, increased Average Order Value, and stronger brand loyalty." 
               />
               <FeatureHighlightCard 
@@ -177,7 +177,7 @@ export default function MarketingHomePage() {
               <StepCard
                 number="3"
                 icon={ShoppingCart}
-                title="Embed & Go Live"
+                title="Embed &amp; Go Live"
                 description="Add the Customizer Studio tool to your product pages and start offering unique personalized items."
               />
             </div>
@@ -237,7 +237,7 @@ export default function MarketingHomePage() {
                 <Button asChild size="lg" className="bg-accent text-accent-foreground hover:bg-accent/90">
                   <Link href="/pricing">
                     <span className="flex items-center">
-                      Explore Features & Pricing <ArrowRight className="ml-2 h-5 w-5" />
+                      Explore Features &amp; Pricing <ArrowRight className="ml-2 h-5 w-5" />
                     </span>
                   </Link>
                 </Button>
@@ -284,3 +284,4 @@ export default function MarketingHomePage() {
     </div>
   );
 }
+

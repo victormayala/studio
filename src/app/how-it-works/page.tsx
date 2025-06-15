@@ -33,14 +33,14 @@ const steps = [
   },
   {
     icon: <Palette className="h-10 w-10 text-secondary mb-4" />,
-    title: "4. Customers Design & Personalize",
+    title: "4. Customers Design &amp; Personalize",
     description: "Your customers will now see the Customizer Studio tool on your product pages. They can add text, upload images, choose colors, and see a live preview of their unique creation, leading to higher engagement and satisfaction.",
     imagePlaceholder: "https://placehold.co/500x350.png",
     aiHint: "customer design"
   },
   {
     icon: <PackageCheck className="h-10 w-10 text-secondary mb-4" />,
-    title: "5. Receive & Fulfill Custom Orders",
+    title: "5. Receive &amp; Fulfill Custom Orders",
     description: "When a customer places an order, all customization details (text, image URLs, chosen options) are seamlessly passed to your e-commerce platform with the order. Fulfill custom orders accurately and efficiently.",
     imagePlaceholder: "https://placehold.co/500x350.png",
     aiHint: "order fulfillment"
@@ -73,7 +73,7 @@ export default function HowItWorksPage() {
             <p className="text-muted-foreground mb-8 max-w-xl mx-auto">
               Join businesses already leveraging the power of personalization with Customizer Studio. Sign up today and take the first step towards a more interactive and profitable online store.
             </p>
-            <Button asChild size="lg" className="bg-accent text-accent-foreground hover:bg-accent/90">
+            <Button asChild size="lg" className="bg-primary text-primary-foreground hover:bg-primary/90">
               <Link href="/signup">
                 <span className="flex items-center">
                    Sign Up for Free <ArrowRight className="ml-2 h-5 w-5" />
@@ -132,3 +132,4 @@ const CardStep = ({ step, index }: CardStepProps) => {
   );
 };
     
+
