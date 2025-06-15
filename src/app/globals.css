@@ -8,40 +8,47 @@
 @layer base {
   :root {
     --background: 0 0% 100%; /* White */
-    --foreground: 0 0% 3.9%; /* Default dark */
+    --foreground: 240 10% 3.9%; /* Default dark */
     --card: 0 0% 100%;
-    --card-foreground: 0 0% 3.9%;
+    --card-foreground: 240 10% 3.9%;
     --popover: 0 0% 100%;
-    --popover-foreground: 0 0% 3.9%;
-    --primary: 210 70% 50%; /* New Blue Primary */
-    --primary-foreground: 0 0% 98%; /* Light color for contrast on primary */
+    --popover-foreground: 240 10% 3.9%;
+
+    --primary: 190 80% 50%; /* Vibrant Blue/Cyan */
+    --primary-foreground: 0 0% 100%; /* White for contrast on primary */
+    
     --secondary: 210 40% 96.1%; /* Default Shadcn light grayish-blue */
     --secondary-foreground: 210 40% 9.8%; /* Default Shadcn dark text for secondary */
-    --muted: 0 0% 96.1%;
-    --muted-foreground: 0 0% 45.1%;
-    --accent: 217.2 91.2% 59.8%; /* New Blue Accent */
-    --accent-foreground: 0 0% 98%; /* Light color for contrast on accent */
+    
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 240 5% 64.9%;
+    
+    --accent: 30 100% 60%; /* Warm Orange */
+    --accent-foreground: 0 0% 100%; /* White for contrast on accent */
+    
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 0 0% 98%;
-    --border: 0 0% 89.8%;
-    --input: 0 0% 89.8%;
-    --ring: 210 70% 50%; /* Use new blue primary color for ring */
-    --chart-1: 210 70% 50%; /* Primary Blue */
-    --chart-2: 200 60% 65%; /* Lighter Accent Blue */
-    --chart-3: 220 50% 40%; /* Darker, slightly different Blue */
+    
+    --border: 210 40% 90%;
+    --input: 210 40% 90%;
+    --ring: 190 80% 50%; /* Use new primary color for ring */
+
+    --chart-1: 190 80% 50%; /* Primary Blue/Cyan */
+    --chart-2: 25 90% 65%;  /* Lighter Accent Orange */
+    --chart-3: 190 70% 40%; /* Darker, slightly different Blue/Cyan */
     --chart-4: 0 0% 60%;   /* Mid Grey */
-    --chart-5: 210 30% 75%; /* Light, desaturated Blue */
+    --chart-5: 190 50% 75%; /* Light, desaturated Blue/Cyan */
     --radius: 0.5rem;
 
     /* Sidebar variables mapped to the main theme */
     --sidebar-background: 0 0% 100%;
-    --sidebar-foreground: 0 0% 3.9%;
-    --sidebar-primary: 210 70% 50%; /* Mapped to new blue primary */
-    --sidebar-primary-foreground: 0 0% 98%;
-    --sidebar-accent: 200 60% 55%; /* Mapped to new blue accent */
-    --sidebar-accent-foreground: 0 0% 98%;
-    --sidebar-border: 0 0% 85%;
-    --sidebar-ring: 210 70% 50%; /* Mapped to new blue primary (ring color) */
+    --sidebar-foreground: 240 10% 3.9%;
+    --sidebar-primary: 190 80% 50%; /* Mapped to new primary */
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 30 100% 60%; /* Mapped to new accent */
+    --sidebar-accent-foreground: 0 0% 100%;
+    --sidebar-border: 210 40% 85%;
+    --sidebar-ring: 190 80% 50%; /* Mapped to new primary (ring color) */
   }
 
   .dark {
@@ -51,34 +58,41 @@
     --card-foreground: 0 0% 98%;
     --popover: 240 10% 3.9%;
     --popover-foreground: 0 0% 98%;
-    --primary: 210 70% 65%; /* Lighter blue for dark mode */
-    --primary-foreground: 210 70% 15%; /* Darker blue for contrast */
-    --secondary: 217.2 32.6% 17.5%; /* Default Shadcn dark grayish-blue */
-    --secondary-foreground: 210 40% 98%; /* Default Shadcn light text for dark secondary */
-    --muted: 0 0% 14.9%;
-    --muted-foreground: 0 0% 63.9%;
-    --accent: 200 60% 70%; /* Lighter blue accent for dark mode */
-    --accent-foreground: 200 60% 15%; /* Darker blue for contrast */
+
+    --primary: 190 70% 65%; /* Lighter blue/cyan for dark mode */
+    --primary-foreground: 190 80% 15%; /* Darker blue/cyan for contrast */
+    
+    --secondary: 217.2 32.6% 17.5%;
+    --secondary-foreground: 210 40% 98%;
+    
+    --muted: 240 4% 15.9%;
+    --muted-foreground: 240 5% 54.9%;
+    
+    --accent: 30 90% 70%; /* Lighter orange accent for dark mode */
+    --accent-foreground: 30 100% 15%; /* Darker orange for contrast */
+    
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 0 0% 98%;
-    --border: 0 0% 14.9%;
-    --input: 0 0% 14.9%;
-    --ring: 210 70% 65%; /* Lighter blue primary for ring in dark mode */
-    --chart-1: 210 70% 65%; /* Primary Blue - Dark Theme */
-    --chart-2: 200 60% 75%; /* Lighter Accent Blue - Dark Theme */
-    --chart-3: 220 50% 55%; /* Mid Blue - Dark Theme */
-    --chart-4: 0 0% 50%;   /* Mid-Dark Grey */
-    --chart-5: 210 30% 85%; /* Very Light, desaturated Blue - Dark Theme */
+
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 190 70% 65%; /* Lighter primary for ring in dark mode */
+
+    --chart-1: 190 70% 65%; 
+    --chart-2: 25 80% 75%;  
+    --chart-3: 190 60% 55%; 
+    --chart-4: 0 0% 50%;   
+    --chart-5: 190 40% 85%;
 
     /* Dark Sidebar variables */
     --sidebar-background: 240 10% 3.9%; 
     --sidebar-foreground: 0 0% 98%;
-    --sidebar-primary: 210 70% 65%; /* Mapped to new blue primary dark */
-    --sidebar-primary-foreground: 210 70% 15%;
-    --sidebar-accent: 200 60% 70%; /* Mapped to new blue accent dark */
-    --sidebar-accent-foreground: 200 60% 15%;
-    --sidebar-border: 0 0% 14.9%;
-    --sidebar-ring: 210 70% 65%;
+    --sidebar-primary: 190 70% 65%; 
+    --sidebar-primary-foreground: 190 80% 15%;
+    --sidebar-accent: 30 90% 70%; 
+    --sidebar-accent-foreground: 30 100% 15%;
+    --sidebar-border: 217.2 32.6% 17.5%;
+    --sidebar-ring: 190 70% 65%;
   }
 }
 
