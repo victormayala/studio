@@ -7,33 +7,43 @@ import MarketingFooter from '@/components/layout/MarketingFooter';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { ArrowRight, Link2, Settings2, Code, Palette, ShoppingCart, PackageCheck } from 'lucide-react';
-import Image from 'next/image';
+import Image from 'next/image'; // Using next/image for optimized images
 
 const steps = [
   {
     icon: <Link2 className="h-10 w-10 text-primary mb-4" />,
     title: "1. Sign Up & Connect Your Store",
-    description: "Create your CSTMZR account in minutes. Then, seamlessly connect your Shopify or WooCommerce store using our guided setup. Product synchronization starts immediately, importing your catalog into CSTMZR."
+    description: "Create your CSTMZR account in minutes. Then, seamlessly connect your Shopify or WooCommerce store using our guided setup. Product synchronization starts immediately, importing your catalog into CSTMZR.",
+    imagePlaceholder: "https://placehold.co/500x350.png",
+    aiHint: "store connection"
   },
   {
     icon: <Settings2 className="h-10 w-10 text-primary mb-4" />,
     title: "2. Configure Customization Options",
-    description: "From your CSTMZR dashboard, select products you want to make customizable. Define available colors, sizes, text input fields, image upload zones, and set up design boundaries directly on your product images using our intuitive editor."
+    description: "From your CSTMZR dashboard, select products you want to make customizable. Define available colors, sizes, text input fields, image upload zones, and set up design boundaries directly on your product images using our intuitive editor.",
+    imagePlaceholder: "https://placehold.co/500x350.png",
+    aiHint: "product configuration"
   },
   {
     icon: <Code className="h-10 w-10 text-primary mb-4" />,
     title: "3. Embed the Customizer",
-    description: "Add CSTMZR to your product pages by simply copying a lightweight JavaScript snippet. For Shopify and WooCommerce, our dedicated apps/plugins will make this even easier, often just a few clicks to integrate."
+    description: "Add CSTMZR to your product pages by simply copying a lightweight JavaScript snippet. For Shopify and WooCommerce, our dedicated apps/plugins will make this even easier, often just a few clicks to integrate.",
+    imagePlaceholder: "https://placehold.co/500x350.png",
+    aiHint: "code embedding"
   },
   {
     icon: <Palette className="h-10 w-10 text-primary mb-4" />,
     title: "4. Customers Design & Personalize",
-    description: "Your customers will now see the CSTMZR tool on your product pages. They can add text, upload images, choose colors, and see a live preview of their unique creation, leading to higher engagement and satisfaction."
+    description: "Your customers will now see the CSTMZR tool on your product pages. They can add text, upload images, choose colors, and see a live preview of their unique creation, leading to higher engagement and satisfaction.",
+    imagePlaceholder: "https://placehold.co/500x350.png",
+    aiHint: "customer design"
   },
   {
     icon: <PackageCheck className="h-10 w-10 text-primary mb-4" />,
     title: "5. Receive & Fulfill Custom Orders",
-    description: "When a customer places an order, all customization details (text, image URLs, chosen options) are seamlessly passed to your e-commerce platform with the order. Fulfill custom orders accurately and efficiently."
+    description: "When a customer places an order, all customization details (text, image URLs, chosen options) are seamlessly passed to your e-commerce platform with the order. Fulfill custom orders accurately and efficiently.",
+    imagePlaceholder: "https://placehold.co/500x350.png",
+    aiHint: "order fulfillment"
   }
 ];
 
@@ -79,6 +89,8 @@ interface CardStepProps {
     icon: JSX.Element;
     title: string;
     description: string;
+    imagePlaceholder: string;
+    aiHint: string;
   };
   index: number;
   totalSteps: number;
@@ -86,9 +98,6 @@ interface CardStepProps {
 
 const CardStep = ({ step, index }: CardStepProps) => {
   const isEven = index % 2 === 0;
-  const placeholderImage = `https://placehold.co/500x350.png`;
-  const aiHint = step.title.toLowerCase().split(" ").slice(1,3).join(" ");
-
 
   return (
     <div className={`flex flex-col md:flex-row items-center gap-10 lg:gap-16 ${isEven ? '' : 'md:flex-row-reverse'}`}>
@@ -108,14 +117,16 @@ const CardStep = ({ step, index }: CardStepProps) => {
       </div>
       <div className="md:w-1/2 lg:w-7/12">
         <Image
-          src={placeholderImage}
+          src={step.imagePlaceholder}
           alt={step.title}
           width={500}
           height={350}
           className="rounded-xl shadow-xl object-cover border w-full aspect-[500/350]"
-          data-ai-hint={aiHint || "step visual"}
+          data-ai-hint={step.aiHint}
         />
       </div>
     </div>
   );
 };
+
+    
