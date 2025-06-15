@@ -5,7 +5,7 @@ import MarketingHeader from '@/components/layout/MarketingHeader';
 import MarketingFooter from '@/components/layout/MarketingFooter';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { ArrowRight, CheckCircle, Palette, ShoppingBag, Zap, Users, Edit, BarChart3, Settings, ShoppingCart } from 'lucide-react'; // Added Settings and ShoppingCart
+import { ArrowRight, CheckCircle, Palette, ShoppingBag, Zap, Users, Edit, BarChart3, Settings, ShoppingCart } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
 
@@ -25,10 +25,10 @@ const FeatureCard = ({ icon: Icon, title, description }: { icon: React.ElementTy
 
 const StepCard = ({ number, title, description, icon: Icon }: { number: string, title: string, description: string, icon: React.ElementType }) => (
   <div className="flex flex-col items-center text-center p-6 bg-card rounded-lg shadow-md hover:shadow-lg transition-shadow duration-300">
-    <div className="bg-accent/10 p-3 rounded-full w-fit mb-4">
-      <Icon className="h-8 w-8 text-accent" />
+    <div className="bg-primary/10 p-3 rounded-full w-fit mb-4">
+      <Icon className="h-8 w-8 text-primary" />
     </div>
-    <div className="bg-accent text-accent-foreground rounded-full h-10 w-10 flex items-center justify-center text-xl font-bold mb-4">{number}</div>
+    <div className="bg-primary text-primary-foreground rounded-full h-10 w-10 flex items-center justify-center text-xl font-bold mb-4">{number}</div>
     <h3 className="text-lg font-semibold mb-2 text-foreground">{title}</h3>
     <p className="text-sm text-muted-foreground">{description}</p>
   </div>
@@ -104,7 +104,7 @@ export default function MarketingHomePage() {
           <div className="container mx-auto px-4">
             <div className="text-center mb-16">
               <h2 className="text-3xl md:text-4xl font-bold font-headline text-foreground mb-4">
-                Launch in <span className="text-accent">3 Simple Steps</span>
+                Launch in <span className="text-primary">3 Simple Steps</span>
               </h2>
               <p className="text-lg text-muted-foreground max-w-xl mx-auto">
                 Go from setup to selling personalized products in no time.
@@ -116,7 +116,7 @@ export default function MarketingHomePage() {
               <StepCard number="3" title="Embed & Sell" description="Add the customizer to your site and start offering unique products." icon={ShoppingCart} />
             </div>
              <div className="text-center mt-16">
-                <Button asChild size="lg" className="bg-accent text-accent-foreground hover:bg-accent/90 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-300">
+                <Button asChild size="lg" className="bg-primary text-primary-foreground hover:bg-primary/90 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-300">
                     <Link href="/signup">Start Customizing Today <ArrowRight className="ml-2 h-5 w-5" /></Link>
                 </Button>
             </div>
@@ -211,6 +211,4 @@ export default function MarketingHomePage() {
     </div>
   );
 }
-
-
     
