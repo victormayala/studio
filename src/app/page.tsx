@@ -5,7 +5,7 @@ import MarketingHeader from '@/components/layout/MarketingHeader';
 import MarketingFooter from '@/components/layout/MarketingFooter';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { ArrowRight, CheckCircle, Palette, ShoppingBag, Zap, Users, Edit, BarChart3, Settings, ShoppingCart } from 'lucide-react';
+import { ArrowRight, Palette, ShoppingBag, Zap, Users, Edit, BarChart3, Settings, ShoppingCart } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
 
@@ -199,7 +199,12 @@ export default function MarketingHomePage() {
                 <Button asChild size="lg" className="bg-primary-foreground text-primary hover:bg-primary-foreground/90 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-300 w-full md:w-auto">
                     <Link href="/signup">Claim Your Free Trial</Link>
                 </Button>
-                <Button asChild size="lg" variant="outline" className="border-primary-foreground text-primary-foreground hover:bg-primary-foreground hover:text-primary w-full md:w-auto">
+                <Button 
+                  asChild 
+                  size="lg" 
+                  variant="outline" 
+                  className="border-primary-foreground text-primary-foreground hover:bg-transparent hover:border-primary-foreground/80 hover:text-primary-foreground/80 w-full md:w-auto"
+                >
                     <Link href="/pricing">View Pricing Plans</Link>
                 </Button>
             </div>
