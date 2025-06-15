@@ -14,7 +14,7 @@
     --popover: 0 0% 100%;
     --popover-foreground: 240 10% 3.9%;
 
-    --primary: 190 80% 50%; /* Vibrant Blue/Cyan */
+    --primary: 221 83% 53%; /* Tailwind Blue-600 */
     --primary-foreground: 0 0% 100%; /* White for contrast on primary */
     
     --secondary: 210 40% 96.1%; /* Default Shadcn light grayish-blue */
@@ -23,32 +23,32 @@
     --muted: 210 40% 96.1%;
     --muted-foreground: 240 5% 64.9%;
     
-    --accent: 30 100% 60%; /* Warm Orange */
-    --accent-foreground: 0 0% 100%; /* White for contrast on accent */
+    --accent: 43 98% 54%; /* Yellow #FCB415 */
+    --accent-foreground: 240 10% 3.9%; /* Dark for contrast on yellow accent */
     
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 0 0% 98%;
     
     --border: 210 40% 90%;
     --input: 210 40% 90%;
-    --ring: 190 80% 50%; /* Use new primary color for ring */
+    --ring: 221 83% 53%; /* Use new primary color for ring */
 
-    --chart-1: 190 80% 50%; /* Primary Blue/Cyan */
-    --chart-2: 25 90% 65%;  /* Lighter Accent Orange */
-    --chart-3: 190 70% 40%; /* Darker, slightly different Blue/Cyan */
+    --chart-1: 221 83% 53%; /* Primary Blue */
+    --chart-2: 43 98% 54%;  /* Accent Yellow */
+    --chart-3: 221 70% 43%; /* Darker Primary Blue */
     --chart-4: 0 0% 60%;   /* Mid Grey */
-    --chart-5: 190 50% 75%; /* Light, desaturated Blue/Cyan */
+    --chart-5: 221 60% 75%; /* Light, desaturated Primary Blue */
     --radius: 0.5rem;
 
     /* Sidebar variables mapped to the main theme */
     --sidebar-background: 0 0% 100%;
     --sidebar-foreground: 240 10% 3.9%;
-    --sidebar-primary: 190 80% 50%; /* Mapped to new primary */
+    --sidebar-primary: 221 83% 53%; /* Mapped to new primary */
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 30 100% 60%; /* Mapped to new accent */
-    --sidebar-accent-foreground: 0 0% 100%;
+    --sidebar-accent: 43 98% 54%; /* Mapped to new accent */
+    --sidebar-accent-foreground: 240 10% 3.9%;
     --sidebar-border: 210 40% 85%;
-    --sidebar-ring: 190 80% 50%; /* Mapped to new primary (ring color) */
+    --sidebar-ring: 221 83% 53%; /* Mapped to new primary (ring color) */
   }
 
   .dark {
@@ -59,8 +59,8 @@
     --popover: 240 10% 3.9%;
     --popover-foreground: 0 0% 98%;
 
-    --primary: 190 70% 65%; /* Lighter blue/cyan for dark mode */
-    --primary-foreground: 190 80% 15%; /* Darker blue/cyan for contrast */
+    --primary: 221 83% 65%; /* Lighter blue for dark mode */
+    --primary-foreground: 221 83% 15%; /* Darker blue for contrast */
     
     --secondary: 217.2 32.6% 17.5%;
     --secondary-foreground: 210 40% 98%;
@@ -68,31 +68,31 @@
     --muted: 240 4% 15.9%;
     --muted-foreground: 240 5% 54.9%;
     
-    --accent: 30 90% 70%; /* Lighter orange accent for dark mode */
-    --accent-foreground: 30 100% 15%; /* Darker orange for contrast */
+    --accent: 43 98% 60%; /* Lighter yellow accent for dark mode */
+    --accent-foreground: 43 98% 15%; /* Darker yellow for contrast */
     
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 0 0% 98%;
 
     --border: 217.2 32.6% 17.5%;
     --input: 217.2 32.6% 17.5%;
-    --ring: 190 70% 65%; /* Lighter primary for ring in dark mode */
+    --ring: 221 83% 65%; /* Lighter primary for ring in dark mode */
 
-    --chart-1: 190 70% 65%; 
-    --chart-2: 25 80% 75%;  
-    --chart-3: 190 60% 55%; 
+    --chart-1: 221 83% 65%; 
+    --chart-2: 43 98% 60%;  
+    --chart-3: 221 70% 55%; 
     --chart-4: 0 0% 50%;   
-    --chart-5: 190 40% 85%;
+    --chart-5: 221 60% 85%;
 
     /* Dark Sidebar variables */
     --sidebar-background: 240 10% 3.9%; 
     --sidebar-foreground: 0 0% 98%;
-    --sidebar-primary: 190 70% 65%; 
-    --sidebar-primary-foreground: 190 80% 15%;
-    --sidebar-accent: 30 90% 70%; 
-    --sidebar-accent-foreground: 30 100% 15%;
+    --sidebar-primary: 221 83% 65%; 
+    --sidebar-primary-foreground: 221 83% 15%;
+    --sidebar-accent: 43 98% 60%; 
+    --sidebar-accent-foreground: 43 98% 15%;
     --sidebar-border: 217.2 32.6% 17.5%;
-    --sidebar-ring: 190 70% 65%;
+    --sidebar-ring: 221 83% 65%;
   }
 }
 
@@ -104,3 +104,4 @@
     @apply bg-background text-foreground;
   }
 }
+
