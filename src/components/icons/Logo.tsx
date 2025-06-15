@@ -2,15 +2,11 @@
 "use client";
 
 import Image from 'next/image';
-import { useState, useEffect } from 'react';
+// Removed useState and useEffect
 
 export function Logo() {
-  const [logoSrc, setLogoSrc] = useState("/logo.png");
-
-  useEffect(() => {
-    // Apply cache-busting query param only on the client-side
-    setLogoSrc(`/logo.png?v=${Date.now()}`);
-  }, []);
+  // Use a static path. Cache busting should be handled by build processes or hard refresh in dev.
+  const logoSrc = "/logo.png";
 
   return (
     <div className="relative h-12 w-[180px]" aria-label="Customizer Studio Logo">
@@ -19,7 +15,7 @@ export function Logo() {
         alt="Customizer Studio Logo"
         fill
         style={{ objectFit: 'contain' }}
-        priority
+        priority // Keep priority if it's an LCP element
       />
     </div>
   );
