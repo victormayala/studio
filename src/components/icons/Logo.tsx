@@ -10,7 +10,7 @@ export function Logo() {
   const logoSrc = `/logo.png?v=${Date.now()}`;
 
   return (
-    <div className="relative h-8 w-32" aria-label="Customizer Studio Logo">
+    <div className="relative h-8 w-[180px]" aria-label="Customizer Studio Logo">
       <Image
         src={logoSrc}
         alt="Customizer Studio Logo"
