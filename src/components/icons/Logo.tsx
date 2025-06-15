@@ -5,12 +5,10 @@ import Image from 'next/image';
 
 export function Logo() {
   // Attempt to bust cache by adding a query string.
-  // The value of the query string (timestamp) changes on each build/render,
-  // forcing the browser to fetch the new image.
   const logoSrc = `/logo.png?v=${Date.now()}`;
 
   return (
-    <div className="relative h-8 w-[180px]" aria-label="Customizer Studio Logo">
+    <div className="relative h-full w-[180px]" aria-label="Customizer Studio Logo">
       <Image
         src={logoSrc}
         alt="Customizer Studio Logo"
