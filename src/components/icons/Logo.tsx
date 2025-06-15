@@ -4,8 +4,9 @@
 import Image from 'next/image';
 
 export function Logo() {
-  // Attempt to bust cache by adding a query string.
-  const logoSrc = `/logo.png?v=${Date.now()}`;
+  // The dynamic timestamp was causing hydration errors.
+  // Next.js handles static asset caching effectively.
+  const logoSrc = "/logo.png";
 
   return (
     <div className="relative h-12 w-[180px]" aria-label="Customizer Studio Logo">

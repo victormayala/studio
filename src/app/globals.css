@@ -7,48 +7,50 @@
 
 @layer base {
   :root {
-    --background: 0 0% 100%; /* White */
-    --foreground: 240 10% 3.9%; /* Default dark */
-    --card: 0 0% 100%;
-    --card-foreground: 240 10% 3.9%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 240 10% 3.9%;
-
-    --primary: 221 83% 53%; /* Tailwind Blue-600 */
-    --primary-foreground: 0 0% 100%; /* White for contrast on primary */
-    
-    --secondary: 210 40% 96.1%; /* Default Shadcn light grayish-blue */
-    --secondary-foreground: 210 40% 9.8%; /* Default Shadcn dark text for secondary */
-    
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 240 5% 64.9%;
-    
-    --accent: 43 98% 54%; /* Yellow #FCB415 */
-    --accent-foreground: 240 10% 3.9%; /* Dark for contrast on yellow accent */
-    
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 0 0% 98%;
-    
-    --border: 210 40% 90%;
-    --input: 210 40% 90%;
-    --ring: 221 83% 53%; /* Use new primary color for ring */
-
-    --chart-1: 221 83% 53%; /* Primary Blue */
-    --chart-2: 43 98% 54%;  /* Accent Yellow */
-    --chart-3: 221 70% 43%; /* Darker Primary Blue */
-    --chart-4: 0 0% 60%;   /* Mid Grey */
-    --chart-5: 221 60% 75%; /* Light, desaturated Primary Blue */
-    --radius: 0.5rem;
-
-    /* Sidebar variables mapped to the main theme */
-    --sidebar-background: 0 0% 100%;
-    --sidebar-foreground: 240 10% 3.9%;
-    --sidebar-primary: 221 83% 53%; /* Mapped to new primary */
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 43 98% 54%; /* Mapped to new accent */
-    --sidebar-accent-foreground: 240 10% 3.9%;
-    --sidebar-border: 210 40% 85%;
-    --sidebar-ring: 221 83% 53%; /* Mapped to new primary (ring color) */
+    --background: 223.8136 -172.5242% 100.0000%;
+    --foreground: 223.8136 0.0000% 3.9388%;
+    --card: 223.8136 -172.5242% 100.0000%;
+    --card-foreground: 223.8136 0.0000% 3.9388%;
+    --popover: 223.8136 -172.5242% 100.0000%;
+    --popover-foreground: 223.8136 0.0000% 3.9388%;
+    --primary: 225.5385 94.2029% 40.5882%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 168.4158 79.5276% 50.1961%;
+    --secondary-foreground: 225.5385 94.2029% 40.5882%;
+    --muted: 223.8136 0.0002% 96.0587%;
+    --muted-foreground: 223.8136 0.0000% 45.1519%;
+    --accent: 168.4158 79.5276% 50.1961%;
+    --accent-foreground: 223.8136 0.0000% 9.0527%;
+    --destructive: 351.7303 123.6748% 40.5257%;
+    --destructive-foreground: 223.8136 -172.5242% 100.0000%;
+    --border: 223.8136 0.0001% 89.8161%;
+    --input: 223.8136 0.0001% 89.8161%;
+    --ring: 223.8136 0.0000% 63.0163%;
+    --chart-1: 211.7880 101.9718% 78.6759%;
+    --chart-2: 217.4076 91.3672% 59.5787%;
+    --chart-3: 221.4336 86.3731% 54.0624%;
+    --chart-4: 223.6587 78.7180% 47.8635%;
+    --chart-5: 226.5426 70.0108% 39.9224%;
+    --sidebar: 223.8136 0.0004% 98.0256%;
+    --sidebar-foreground: 223.8136 0.0000% 3.9388%;
+    --sidebar-primary: 223.8136 0.0000% 9.0527%;
+    --sidebar-primary-foreground: 223.8136 0.0004% 98.0256%;
+    --sidebar-accent: 223.8136 0.0002% 96.0587%;
+    --sidebar-accent-foreground: 223.8136 0.0000% 9.0527%;
+    --sidebar-border: 223.8136 0.0001% 89.8161%;
+    --sidebar-ring: 223.8136 0.0000% 63.0163%;
+    --font-sans: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
+    --font-serif: ui-serif, Georgia, Cambria, "Times New Roman", Times, serif;
+    --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    --radius: 0.625rem;
+    --shadow-2xs: 0 1px 3px 0px hsl(0 0% 0% / 0.05);
+    --shadow-xs: 0 1px 3px 0px hsl(0 0% 0% / 0.05);
+    --shadow-sm: 0 1px 3px 0px hsl(0 0% 0% / 0.10), 0 1px 2px -1px hsl(0 0% 0% / 0.10);
+    --shadow: 0 1px 3px 0px hsl(0 0% 0% / 0.10), 0 1px 2px -1px hsl(0 0% 0% / 0.10);
+    --shadow-md: 0 1px 3px 0px hsl(0 0% 0% / 0.10), 0 2px 4px -1px hsl(0 0% 0% / 0.10);
+    --shadow-lg: 0 1px 3px 0px hsl(0 0% 0% / 0.10), 0 4px 6px -1px hsl(0 0% 0% / 0.10);
+    --shadow-xl: 0 1px 3px 0px hsl(0 0% 0% / 0.10), 0 8px 10px -1px hsl(0 0% 0% / 0.10);
+    --shadow-2xl: 0 1px 3px 0px hsl(0 0% 0% / 0.25);
   }
 
   .dark {
