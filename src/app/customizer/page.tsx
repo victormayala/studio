@@ -210,7 +210,7 @@ function CustomizerLayoutAndLogic() {
     let tempLoadedOptionsByColor: Record<string, ColorGroupOptionsForCustomizer> | null = null;
     let tempLoadedGroupingAttributeName: string | null = null;
 
-    const localStorageKey = user ? `cstmzr_product_options_${user.id}_${productId}` : `cstmzr_product_options_anonymous_${productId}`;
+    const localStorageKey = user ? `customizer_studio_product_options_${user.id}_${productId}` : `customizer_studio_product_options_anonymous_${productId}`;
     try {
       const savedOptionsString = localStorage.getItem(localStorageKey);
       if (savedOptionsString) {
@@ -219,14 +219,14 @@ function CustomizerLayoutAndLogic() {
           finalDefaultViews = parsedOptions.defaultViews.map(v => ({...v, price: v.price ?? 0})) || [];
           tempLoadedOptionsByColor = parsedOptions.optionsByColor || {};
           tempLoadedGroupingAttributeName = parsedOptions.groupingAttributeName || null;
-        } else if ((parsedOptions as any).views && (parsedOptions as any).cstmzrSelectedVariationIds) { 
-          console.warn("Customizer: Found old CSTMZR options format. Using basic views.");
+        } else if ((parsedOptions as any).views && (parsedOptions as any).cstmzrSelectedVariationIds) { // Old key format check for cstmzrSelectedVariationIds
+          console.warn("Customizer: Found old Customizer Studio options format. Using basic views.");
           finalDefaultViews = (parsedOptions as any).views.map((v:any) => ({...v, price: v.price ?? 0})) || [];
         }
       }
     } catch (e) {
-      console.warn("Customizer: Error parsing CSTMZR options from localStorage:", e);
-      toast({ title: "Local Settings Error", description: "Could not load saved CSTMZR settings. Using defaults.", variant: "info"});
+      console.warn("Customizer: Error parsing Customizer Studio options from localStorage:", e);
+      toast({ title: "Local Settings Error", description: "Could not load saved Customizer Studio settings. Using defaults.", variant: "info"});
     }
     
     if (finalDefaultViews.length === 0) {
@@ -504,7 +504,7 @@ function CustomizerLayoutAndLogic() {
     }
     
     if (window.parent !== window) {
-      window.parent.postMessage({ cstmzrDesignData: designData }, targetOrigin);
+      window.parent.postMessage({ customizerStudioDesignData: designData }, targetOrigin);
       toast({
         title: "Design Sent!",
         description: "Your design details have been sent to the store.",

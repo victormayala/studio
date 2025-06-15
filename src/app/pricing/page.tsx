@@ -17,7 +17,7 @@ const pricingTiers = [
     features: [
       "1 Customizable Product",
       "Basic Customization Tools",
-      "Embedz Branding",
+      "Customizer Studio Branding",
       "Community Support",
     ],
     cta: "Start for Free",
@@ -31,7 +31,7 @@ const pricingTiers = [
     features: [
       "10 Customizable Products",
       "All Customization Tools",
-      "No Embedz Branding",
+      "No Customizer Studio Branding",
       "Email Support",
       "Shopify Integration",
     ],

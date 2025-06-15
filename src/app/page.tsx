@@ -5,32 +5,36 @@ import MarketingHeader from '@/components/layout/MarketingHeader';
 import MarketingFooter from '@/components/layout/MarketingFooter';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { ArrowRight, Palette, ShoppingBag, Zap, Users, Settings2, Edit, BarChart3, ShoppingCart, Layers, Star, CheckCircle, Link2 } from 'lucide-react';
+import { ArrowRight, Palette, ShoppingBag, Zap, Users, Settings2, Edit, BarChart3, ShoppingCart, Layers, Star, CheckCircle, Link2, Lightbulb, Sparkles, MousePointerClick } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { cn } from '@/lib/utils';
 
 const FeatureHighlightCard = ({ icon: Icon, title, description }: { icon: React.ElementType, title: string, description: string }) => (
-  <div className="flex flex-col items-center p-6 text-center bg-card rounded-lg shadow-sm hover:shadow-lg transition-shadow duration-300">
-    <div className="bg-primary/10 p-4 rounded-full w-fit mb-5">
-      <Icon className="h-8 w-8 text-primary" />
+  <div className="flex flex-col items-center p-6 text-center bg-card rounded-xl shadow-lg hover:shadow-xl transition-shadow duration-300 h-full">
+    <div className="bg-primary/10 p-4 rounded-full w-fit mb-6">
+      <Icon className="h-10 w-10 text-primary" />
     </div>
-    <h3 className="text-xl font-semibold mb-2 text-foreground">{title}</h3>
+    <h3 className="text-xl font-semibold mb-3 text-foreground">{title}</h3>
+    <p className="text-sm text-muted-foreground leading-relaxed flex-grow">{description}</p>
+  </div>
+);
+
+const StepCard = ({ icon: Icon, number, title, description }: { icon: React.ElementType, number: string, title: string, description: string }) => (
+  <div className="flex flex-col p-6 bg-card rounded-xl shadow-lg hover:shadow-xl transition-shadow duration-300">
+    <div className="flex items-center mb-4">
+      <div className="flex-shrink-0 bg-primary text-primary-foreground rounded-full h-10 w-10 flex items-center justify-center text-lg font-bold mr-4">
+        {number}
+      </div>
+      <h3 className="text-xl font-semibold text-foreground">{title}</h3>
+    </div>
+     <div className="flex-shrink-0 mb-4 flex justify-center">
+      <Icon className="h-12 w-12 text-primary" />
+    </div>
     <p className="text-sm text-muted-foreground leading-relaxed">{description}</p>
   </div>
 );
 
-const StepPill = ({ number, title, description }: { number: string, title: string, description: string }) => (
-  <div className="flex items-start space-x-4 p-6 bg-card rounded-lg shadow-sm">
-    <div className="flex-shrink-0 bg-primary text-primary-foreground rounded-full h-10 w-10 flex items-center justify-center text-lg font-bold">
-      {number}
-    </div>
-    <div>
-      <h4 className="text-lg font-semibold text-foreground mb-1">{title}</h4>
-      <p className="text-sm text-muted-foreground">{description}</p>
-    </div>
-  </div>
-);
 
 export default function MarketingHomePage() {
   return (
@@ -39,28 +43,35 @@ export default function MarketingHomePage() {
       
       <main className="flex-1">
         {/* Hero Section */}
-        <section className="py-24 md:py-32 text-center bg-gradient-to-b from-background via-primary/5 to-background">
+        <section className="py-20 md:py-28 text-center bg-gradient-to-b from-background via-primary/5 to-background">
           <div className="container mx-auto px-4">
-            <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold font-headline text-foreground mb-6 leading-tight">
-              Unleash Creativity. <span className="text-primary">Boost Sales.</span>
+             <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold font-headline text-foreground mb-6 leading-tight">
+              Craft. Click. <span className="text-primary">Convert.</span>
             </h1>
             <p className="text-lg md:text-xl text-muted-foreground mb-10 max-w-2xl mx-auto">
-              CSTMZR provides a powerful yet simple platform for e-commerce businesses to offer product personalization at scale.
+              Customizer Studio empowers e-commerce businesses to offer intuitive product personalization at scale, effortlessly.
             </p>
-            <div className="flex justify-center">
-              <Button asChild size="lg" className="bg-primary text-primary-foreground hover:bg-primary/90 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-300 px-8 py-3 text-base">
+            <div className="flex flex-col sm:flex-row justify-center items-center gap-4">
+              <Button asChild size="lg" className="bg-primary text-primary-foreground hover:bg-primary/90 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-300 px-8 py-3 text-base w-full sm:w-auto">
                 <Link href="/signup">
                   <span className="flex items-center">
-                    Get Started for Free <ArrowRight className="ml-2 h-5 w-5" />
+                    Start Free Trial <ArrowRight className="ml-2 h-5 w-5" />
+                  </span>
+                </Link>
+              </Button>
+               <Button asChild size="lg" variant="outline" className="border-primary text-primary hover:bg-primary/5 shadow-md hover:shadow-lg transform hover:-translate-y-0.5 transition-all duration-300 px-8 py-3 text-base w-full sm:w-auto">
+                <Link href="/how-it-works">
+                  <span className="flex items-center">
+                    See How It Works
                   </span>
                 </Link>
               </Button>
             </div>
-            <div className="mt-16 md:mt-20 max-w-4xl mx-auto">
-              <div className="relative w-full aspect-[16/9] rounded-xl shadow-2xl overflow-hidden border-2 border-primary/10">
+            <div className="mt-16 md:mt-20 max-w-5xl mx-auto">
+              <div className="relative w-full aspect-video rounded-xl shadow-2xl overflow-hidden border-4 border-primary/20 bg-muted/20">
                   <Image 
-                      src="https://placehold.co/1200x675.png" 
-                      alt="Product customizer interface showing a t-shirt being customized"
+                      src="https://placehold.co/1280x720.png" 
+                      alt="Interactive product customizer interface example from Customizer Studio"
                       fill
                       className="object-cover"
                       data-ai-hint="product customizer interface"
@@ -74,18 +85,18 @@ export default function MarketingHomePage() {
         {/* Trusted By Section */}
         <section className="py-12 bg-card">
           <div className="container mx-auto px-4">
-            <h2 className="text-sm font-semibold text-muted-foreground text-center mb-6 tracking-wider uppercase">
-              Powering Personalization For Brands Worldwide
+            <h2 className="text-sm font-semibold text-muted-foreground text-center mb-8 tracking-wider uppercase">
+              Powering Personalization For Brands Like Yours
             </h2>
-            <div className="flex flex-wrap justify-center items-center gap-x-8 gap-y-4 md:gap-x-12 lg:gap-x-16">
+            <div className="flex flex-wrap justify-center items-center gap-x-10 gap-y-6 md:gap-x-16 lg:gap-x-20">
               {[...Array(5)].map((_, i) => (
-                <div key={i} className="relative h-8 w-28 opacity-60 hover:opacity-100 transition-opacity">
+                <div key={i} className="relative h-10 w-32 opacity-60 hover:opacity-100 transition-opacity">
                   <Image
-                    src={`https://placehold.co/120x40.png`}
-                    alt={`Client Logo ${i + 1}`}
+                    src={`https://placehold.co/128x40.png`} // Slightly larger placeholder
+                    alt={`Partner Company Logo ${i + 1}`}
                     fill
                     className="object-contain"
-                    data-ai-hint="company logo"
+                    data-ai-hint="company brand logo"
                   />
                 </div>
               ))}
@@ -98,42 +109,42 @@ export default function MarketingHomePage() {
           <div className="container mx-auto px-4">
             <div className="text-center mb-16">
               <h2 className="text-3xl md:text-4xl font-bold font-headline text-foreground mb-4">
-                Everything You Need, Nothing You Don't
+                Why Choose Customizer Studio?
               </h2>
               <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-                CSTMZR is packed with features to make product personalization seamless for you and delightful for your customers.
+                Customizer Studio is packed with intuitive features to make product personalization seamless for you and delightful for your customers.
               </p>
             </div>
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
               <FeatureHighlightCard 
                 icon={Zap} 
-                title="Effortless Integration" 
-                description="Connect with Shopify, WooCommerce, and more in minutes. Simple setup, powerful results." 
+                title="Seamless Integration" 
+                description="Connect with Shopify, WooCommerce, and more in minutes. Simple setup, powerful results for your store." 
               />
               <FeatureHighlightCard 
                 icon={Layers} 
                 title="Intuitive Design Canvas" 
-                description="A user-friendly interface for text, image uploads, clipart, shapes, and live previews." 
+                description="A user-friendly interface for text, image uploads, clipart, shapes, and live previews of designs." 
               />
               <FeatureHighlightCard 
-                icon={Palette} 
-                title="AI-Powered Suggestions" 
-                description="Smart AI assists with design ideas, element suggestions, and even background removal." 
+                icon={Sparkles} 
+                title="AI-Powered Assistance" 
+                description="Smart AI assists with design ideas, element suggestions, and even background removal for uploads." 
               />
               <FeatureHighlightCard 
                 icon={Settings2} 
-                title="Granular Control" 
-                description="Define design areas, manage product views, set up variations, and control every aspect." 
+                title="Granular Product Control" 
+                description="Define design areas, manage product views, set up variations, and control every aspect of customization." 
               />
               <FeatureHighlightCard 
-                icon={ShoppingCart} 
-                title="Boost Conversions" 
-                description="Personalized products lead to higher engagement, increased AOV, and stronger brand loyalty." 
+                icon={BarChart3} 
+                title="Boost Conversions & AOV" 
+                description="Personalized products lead to higher engagement, increased Average Order Value, and stronger brand loyalty." 
               />
               <FeatureHighlightCard 
                 icon={Users} 
-                title="Delight Customers" 
-                description="Give customers the power to create exactly what they want, leading to higher satisfaction." 
+                title="Delight Your Customers" 
+                description="Give customers the power to create exactly what they want, leading to higher satisfaction and repeat business." 
               />
             </div>
           </div>
@@ -143,38 +154,94 @@ export default function MarketingHomePage() {
         <section className="py-16 md:py-24 bg-card">
           <div className="container mx-auto px-4">
             <div className="text-center mb-16">
-              <h2 className="text-3xl md:text-4xl font-bold font-headline text-foreground mb-4">
-                Get Started in Minutes
+               <h2 className="text-3xl md:text-4xl font-bold font-headline text-foreground mb-4">
+                Launch in <span className="text-primary">3 Simple Steps</span>
               </h2>
               <p className="text-lg text-muted-foreground max-w-xl mx-auto">
-                Launching your personalized product line is simpler than you think.
+                Launching your personalized product line with Customizer Studio is simpler than you think.
               </p>
             </div>
-            <div className="max-w-2xl mx-auto space-y-8">
-              <StepPill 
-                number="1" 
-                title="Connect Your Store" 
-                description="Easily link CSTMZR to your existing e-commerce platform like Shopify or WooCommerce." 
+            <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
+              <StepCard
+                number="1"
+                icon={Link2}
+                title="Connect Your Store"
+                description="Easily link Customizer Studio to your existing e-commerce platform like Shopify or WooCommerce."
               />
-              <StepPill 
-                number="2" 
-                title="Configure Products" 
-                description="Select products, define customizable views, design areas, and set up options." 
+              <StepCard
+                number="2"
+                icon={Edit}
+                title="Configure Products"
+                description="Select products, define customizable views, design areas, and set up options using our intuitive tools."
               />
-              <StepPill 
-                number="3" 
-                title="Embed & Go Live" 
-                description="Add the CSTMZR tool to your product pages and start offering personalized items." 
+              <StepCard
+                number="3"
+                icon={ShoppingCart}
+                title="Embed & Go Live"
+                description="Add the Customizer Studio tool to your product pages and start offering unique personalized items."
               />
             </div>
             <div className="text-center mt-12">
-              <Button asChild size="lg" variant="link" className="text-primary hover:text-primary/80 text-base px-0">
-                <Link href="/how-it-works">
+              <Button asChild size="lg" className="bg-primary text-primary-foreground hover:bg-primary/90">
+                <Link href="/signup">
                   <span className="flex items-center">
-                  Learn More About How It Works <ArrowRight className="ml-2 h-5 w-5" />
+                    Start Customizing Today <ArrowRight className="ml-2 h-5 w-5" />
                   </span>
                 </Link>
               </Button>
+            </div>
+          </div>
+        </section>
+        
+
+        {/* Value Prop Section */}
+        <section className="py-16 md:py-24 bg-muted/20">
+          <div className="container mx-auto px-4">
+            <div className="flex flex-col lg:flex-row items-center gap-12 lg:gap-16">
+              <div className="lg:w-1/2">
+                <div className="relative w-full aspect-square rounded-xl shadow-xl overflow-hidden border-2 border-primary/10 bg-card">
+                  <Image 
+                    src="https://placehold.co/600x600.png"
+                    alt="A collage of customized products created with Customizer Studio"
+                    fill
+                    className="object-cover"
+                    data-ai-hint="customized products collage"
+                  />
+                </div>
+              </div>
+              <div className="lg:w-1/2">
+                <h2 className="text-3xl md:text-4xl font-bold font-headline text-foreground mb-6">
+                  Customizer Studio is Not Just a Tool, It's a <span className="text-primary">Growth Engine</span>.
+                </h2>
+                <p className="text-lg text-muted-foreground mb-4">
+                  Offering product personalization is one of the most effective ways to stand out in a crowded market. Customizer Studio provides an enterprise-grade solution that's accessible to businesses of all sizes.
+                </p>
+                <ul className="space-y-3 text-muted-foreground mb-8">
+                  <li className="flex items-start">
+                    <CheckCircle className="h-6 w-6 text-green-500 mr-3 mt-0.5 shrink-0" />
+                    <span><span className="font-semibold text-foreground">Increase Engagement:</span> Interactive design keeps customers on your page longer.</span>
+                  </li>
+                  <li className="flex items-start">
+                    <CheckCircle className="h-6 w-6 text-green-500 mr-3 mt-0.5 shrink-0" />
+                    <span><span className="font-semibold text-foreground">Reduce Returns:</span> Customers are more satisfied with products they helped create.</span>
+                  </li>
+                  <li className="flex items-start">
+                    <CheckCircle className="h-6 w-6 text-green-500 mr-3 mt-0.5 shrink-0" />
+                    <span><span className="font-semibold text-foreground">Command Premium Prices:</span> Personalized items often justify higher price points.</span>
+                  </li>
+                   <li className="flex items-start">
+                    <CheckCircle className="h-6 w-6 text-green-500 mr-3 mt-0.5 shrink-0" />
+                    <span><span className="font-semibold text-foreground">Unlock New Markets:</span> Cater to niche customer demands with highly specific customizations.</span>
+                  </li>
+                </ul>
+                <Button asChild size="lg" variant="outline" className="border-primary text-primary hover:bg-primary/5 hover:text-primary">
+                  <Link href="/pricing">
+                    <span className="flex items-center">
+                      Explore Features & Pricing <ArrowRight className="ml-2 h-5 w-5" />
+                    </span>
+                  </Link>
+                </Button>
+              </div>
             </div>
           </div>
         </section>
@@ -183,10 +250,10 @@ export default function MarketingHomePage() {
         <section className="py-20 md:py-32 bg-primary text-primary-foreground">
           <div className="container mx-auto px-4 text-center">
             <h2 className="text-3xl md:text-4xl font-bold font-headline mb-6">
-              Ready to Transform Your E-commerce?
+              Ready to Unleash Personalization?
             </h2>
             <p className="text-lg text-primary-foreground/90 mb-10 max-w-xl mx-auto">
-              Join hundreds of businesses offering unique, personalized products. Start your journey with CSTMZR today.
+              Join hundreds of businesses offering unique, personalized products. Start your journey with Customizer Studio today.
             </p>
             <div className="space-y-4 sm:space-y-0 sm:space-x-4 flex flex-col sm:flex-row justify-center items-center">
                 <Button

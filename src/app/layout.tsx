@@ -5,8 +5,8 @@ import { Toaster } from "@/components/ui/toaster";
 import { AuthProvider } from '@/contexts/AuthContext';
 
 export const metadata: Metadata = {
-  title: 'CSTMZR - Your Product Customization Platform',
-  description: 'Easily create and embed product customizers for your e-commerce store. Connect with Shopify, WordPress, and more.',
+  title: 'Customizer Studio - Your Product Customization Platform',
+  description: 'Easily create and embed product customizers with Customizer Studio. Connect with Shopify, WordPress, and more.',
 };
 
 export default function RootLayout({

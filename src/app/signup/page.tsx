@@ -9,22 +9,22 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import Link from 'next/link';
 import { useState } from 'react';
-import { useAuth } from '@/contexts/AuthContext'; // Added
-import { useToast } from '@/hooks/use-toast'; // Added
-import { Loader2 } from 'lucide-react'; // Added
+import { useAuth } from '@/contexts/AuthContext'; 
+import { useToast } from '@/hooks/use-toast'; 
+import { Loader2 } from 'lucide-react'; 
 
 export default function SignUpPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const { signUp, isLoading } = useAuth(); // Changed
-  const { toast } = useToast(); // Added
+  const { signUp, isLoading } = useAuth(); 
+  const { toast } = useToast(); 
 
-  const handleSubmit = async (e: React.FormEvent) => { // Changed to async
+  const handleSubmit = async (e: React.FormEvent) => { 
     e.preventDefault();
     if (isLoading) return;
     if (password !== confirmPassword) {
-      toast({ // Changed alert to toast
+      toast({ 
         title: "Passwords Mismatch",
         description: "The passwords you entered do not match.",
         variant: "destructive",
@@ -52,7 +52,7 @@ export default function SignUpPage() {
          <Card className="w-full max-w-md shadow-xl">
           <CardHeader className="text-center">
             <CardTitle className="text-3xl font-headline text-foreground">Create Your Account</CardTitle>
-            <CardDescription>Join CSTMZR and start customizing today!</CardDescription>
+            <CardDescription>Join Customizer Studio and start customizing today!</CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-6">

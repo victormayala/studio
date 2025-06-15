@@ -49,7 +49,7 @@ interface ProductToDelete {
   name: string;
 }
 
-const LOCALLY_HIDDEN_PRODUCTS_KEY_PREFIX = 'cstmzr_locally_hidden_products_';
+const LOCALLY_HIDDEN_PRODUCTS_KEY_PREFIX = 'customizer_studio_locally_hidden_products_';
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -594,4 +594,3 @@ export default function DashboardPage() {
     </UploadProvider>
   );
 }
-

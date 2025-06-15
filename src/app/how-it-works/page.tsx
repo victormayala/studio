@@ -13,28 +13,28 @@ const steps = [
   {
     icon: <Link2 className="h-10 w-10 text-primary mb-4" />,
     title: "1. Sign Up & Connect Your Store",
-    description: "Create your CSTMZR account in minutes. Then, seamlessly connect your Shopify or WooCommerce store using our guided setup. Product synchronization starts immediately, importing your catalog into CSTMZR.",
+    description: "Create your Customizer Studio account in minutes. Then, seamlessly connect your Shopify or WooCommerce store using our guided setup. Product synchronization starts immediately, importing your catalog into Customizer Studio.",
     imagePlaceholder: "https://placehold.co/500x350.png",
     aiHint: "store connection"
   },
   {
     icon: <Settings2 className="h-10 w-10 text-primary mb-4" />,
     title: "2. Configure Customization Options",
-    description: "From your CSTMZR dashboard, select products you want to make customizable. Define available colors, sizes, text input fields, image upload zones, and set up design boundaries directly on your product images using our intuitive editor.",
+    description: "From your Customizer Studio dashboard, select products you want to make customizable. Define available colors, sizes, text input fields, image upload zones, and set up design boundaries directly on your product images using our intuitive editor.",
     imagePlaceholder: "https://placehold.co/500x350.png",
     aiHint: "product configuration"
   },
   {
     icon: <Code className="h-10 w-10 text-primary mb-4" />,
     title: "3. Embed the Customizer",
-    description: "Add CSTMZR to your product pages by simply copying a lightweight JavaScript snippet. For Shopify and WooCommerce, our dedicated apps/plugins will make this even easier, often just a few clicks to integrate.",
+    description: "Add Customizer Studio to your product pages by simply copying a lightweight JavaScript snippet. For Shopify and WooCommerce, our dedicated apps/plugins will make this even easier, often just a few clicks to integrate.",
     imagePlaceholder: "https://placehold.co/500x350.png",
     aiHint: "code embedding"
   },
   {
     icon: <Palette className="h-10 w-10 text-primary mb-4" />,
     title: "4. Customers Design & Personalize",
-    description: "Your customers will now see the CSTMZR tool on your product pages. They can add text, upload images, choose colors, and see a live preview of their unique creation, leading to higher engagement and satisfaction.",
+    description: "Your customers will now see the Customizer Studio tool on your product pages. They can add text, upload images, choose colors, and see a live preview of their unique creation, leading to higher engagement and satisfaction.",
     imagePlaceholder: "https://placehold.co/500x350.png",
     aiHint: "customer design"
   },
@@ -55,10 +55,10 @@ export default function HowItWorksPage() {
         <div className="container mx-auto px-4">
           <div className="text-center mb-20 md:mb-24">
             <h1 className="text-4xl md:text-5xl font-bold font-headline text-foreground mb-6">
-              How CSTMZR Transforms Your Store
+              How Customizer Studio Transforms Your Store
             </h1>
             <p className="text-lg md:text-xl text-muted-foreground mb-10 max-w-3xl mx-auto">
-              Integrating powerful product customization into your e-commerce store is straightforward with CSTMZR. Follow these simple steps to unlock a new level of customer engagement and boost your sales.
+              Integrating powerful product customization into your e-commerce store is straightforward with Customizer Studio. Follow these simple steps to unlock a new level of customer engagement and boost your sales.
             </p>
           </div>
           
@@ -71,12 +71,12 @@ export default function HowItWorksPage() {
           <div className="mt-24 md:mt-32 text-center">
             <h2 className="text-3xl font-bold font-headline text-foreground mb-4">Ready to Get Started?</h2>
             <p className="text-muted-foreground mb-8 max-w-xl mx-auto">
-              Join businesses already leveraging the power of personalization with CSTMZR. Sign up today and take the first step towards a more interactive and profitable online store.
+              Join businesses already leveraging the power of personalization with Customizer Studio. Sign up today and take the first step towards a more interactive and profitable online store.
             </p>
             <Button asChild size="lg" className="bg-accent text-accent-foreground hover:bg-accent/90">
               <Link href="/signup">
-                <span>
-                  Sign Up for Free <ArrowRight className="ml-2 h-5 w-5" />
+                <span className="flex items-center">
+                   Sign Up for Free <ArrowRight className="ml-2 h-5 w-5" />
                 </span>
               </Link>
             </Button>

@@ -34,7 +34,7 @@ export default function MarketingFooter() {
             </Link>
           </nav>
           <p className="text-sm text-muted-foreground text-center md:text-right">
-            &copy; {currentYear} CSTMZR. All rights reserved.
+            &copy; {currentYear} Customizer Studio. All rights reserved.
           </p>
         </div>
       </div>

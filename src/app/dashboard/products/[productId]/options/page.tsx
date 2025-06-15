@@ -58,7 +58,8 @@ interface ProductOptionsData {
 
 interface LocalStorageData_Old { // For migration
   views: ProductView[]; 
-  cstmzrSelectedVariationIds: string[]; 
+  cstmzrSelectedVariationIds?: string[]; // Note: cstmzr prefix
+  customizerStudioSelectedVariationIds?: string[]; // Note: customizerStudio prefix
 }
 
 interface LocalStorageData_New { // New structure for saving
@@ -197,20 +198,21 @@ export default function ProductOptionsPage() {
     let loadedOptionsByColor: Record<string, ColorGroupOptions> = {};
     let loadedGroupingAttributeName: string | null = null;
     let localDataFoundAndParsed = false;
-    const localStorageKey = `cstmzr_product_options_${user.id}_${productId}`;
+    const localStorageKey = `customizer_studio_product_options_${user.id}_${productId}`; // Updated key
 
     try {
       const savedOptionsString = localStorage.getItem(localStorageKey);
       if (savedOptionsString) {
         const parsedOptions = JSON.parse(savedOptionsString);
         if (parsedOptions.optionsByColor && parsedOptions.defaultViews) { // New format
-          loadedDefaultViews = parsedOptions.defaultViews.map((view: any) => ({ ...view, price: view.price ?? 0 })) || []; // Ensure price exists
+          loadedDefaultViews = parsedOptions.defaultViews.map((view: any) => ({ ...view, price: view.price ?? 0 })) || [];
           loadedOptionsByColor = parsedOptions.optionsByColor || {};
           loadedGroupingAttributeName = parsedOptions.groupingAttributeName || null;
           localDataFoundAndParsed = true;
-        } else if (parsedOptions.views) { // Old format, needs migration
-          loadedDefaultViews = parsedOptions.views.map((view: any) => ({ ...view, price: view.price ?? 0 })) || []; // Ensure price exists
-          const migratedSelectedVariationIds = (parsedOptions as LocalStorageData_Old).cstmzrSelectedVariationIds || [];
+        } else if (parsedOptions.views) { // Old format (cstmzr or customizerStudio prefix for selectedVariationIds)
+          loadedDefaultViews = parsedOptions.views.map((view: any) => ({ ...view, price: view.price ?? 0 })) || [];
+          const oldFormat = parsedOptions as LocalStorageData_Old;
+          const migratedSelectedVariationIds = oldFormat.customizerStudioSelectedVariationIds || oldFormat.cstmzrSelectedVariationIds || [];
           
           if (identifiedGroupingAttr && tempGroupedVariationsData && Object.keys(tempGroupedVariationsData).length > 0) {
             const firstColorKey = Object.keys(tempGroupedVariationsData)[0];
@@ -228,10 +230,10 @@ export default function ProductOptionsPage() {
             loadedOptionsByColor['default'] = { selectedVariationIds: migratedSelectedVariationIds, variantViewImages: {} };
           }
           toast({title: "Settings Migrated", description: "Product options updated to new format.", variant: "info"});
-          localDataFoundAndParsed = true; // Mark as parsed even if migrated
+          localDataFoundAndParsed = true;
         }
       }
-    } catch (e) { console.error("Error parsing local CSTMZR options:", e); }
+    } catch (e) { console.error("Error parsing local Customizer Studio options:", e); }
 
     const finalDefaultViews = loadedDefaultViews.length > 0 ? loadedDefaultViews : initialDefaultViews;
     
@@ -249,7 +251,7 @@ export default function ProductOptionsPage() {
     setProductOptions({
       id: wcProduct.id.toString(), name: wcProduct.name || `Product ${productId}`, description: plainTextDescription,
       price: parseFloat(wcProduct.price) || 0, type: wcProduct.type,
-      defaultViews: finalDefaultViews.map(view => ({...view, price: view.price ?? 0})), // Ensure price on final assignment
+      defaultViews: finalDefaultViews.map(view => ({...view, price: view.price ?? 0})), 
       optionsByColor: finalOptionsByColor,
       groupingAttributeName: loadedGroupingAttributeName || identifiedGroupingAttr,
     });
@@ -356,7 +358,7 @@ export default function ProductOptionsPage() {
         toast({ title: "Error", description: "Product data or user session is missing.", variant: "destructive"});
         return;
     }
-    const localStorageKey = `cstmzr_product_options_${user.id}_${productOptions.id}`;
+    const localStorageKey = `customizer_studio_product_options_${user.id}_${productOptions.id}`; // Updated key
     const dataToSave: LocalStorageData_New = {
       defaultViews: productOptions.defaultViews,
       optionsByColor: productOptions.optionsByColor,
@@ -368,7 +370,7 @@ export default function ProductOptionsPage() {
       setHasUnsavedChanges(false);
     } catch (e) {
       console.error("Error saving to localStorage:", e);
-      toast({ title: "Save Error", description: "Could not save CSTMZR options.", variant: "destructive"});
+      toast({ title: "Save Error", description: "Could not save Customizer Studio options.", variant: "destructive"});
     }
   };
 
@@ -824,4 +826,3 @@ export default function ProductOptionsPage() {
     </div>
   );
 }
-      

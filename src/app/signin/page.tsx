@@ -9,17 +9,17 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import Link from 'next/link';
 import { useState } from 'react';
-import { useAuth } from '@/contexts/AuthContext'; // Added
-import { useToast } from '@/hooks/use-toast'; // Added
-import { Loader2 } from 'lucide-react'; // Added
+import { useAuth } from '@/contexts/AuthContext'; 
+import { useToast } from '@/hooks/use-toast'; 
+import { Loader2 } from 'lucide-react'; 
 
 export default function SignInPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const { signIn, isLoading } = useAuth(); // Changed
-  const { toast } = useToast(); // Added
+  const { signIn, isLoading } = useAuth(); 
+  const { toast } = useToast(); 
 
-  const handleSubmit = async (e: React.FormEvent) => { // Changed to async
+  const handleSubmit = async (e: React.FormEvent) => { 
     e.preventDefault();
     if (isLoading) return;
     try {
@@ -42,7 +42,7 @@ export default function SignInPage() {
         <Card className="w-full max-w-md shadow-xl">
           <CardHeader className="text-center">
             <CardTitle className="text-3xl font-headline text-foreground">Welcome Back!</CardTitle>
-            <CardDescription>Sign in to access your CSTMZR dashboard.</CardDescription>
+            <CardDescription>Sign in to access your Customizer Studio dashboard.</CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-6">
