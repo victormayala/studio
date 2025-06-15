@@ -4,6 +4,7 @@
 import type { ReactNode } from 'react';
 import { createContext, useContext, useState, useEffect, useCallback }  from 'react';
 import { useRouter, usePathname } from 'next/navigation';
+import { clearAccessCookie } from '@/app/access-login/actions'; // Import the action
 
 interface User {
   id: string;
@@ -33,16 +34,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (mockSessionUser) {
       try {
         const parsedUser = JSON.parse(mockSessionUser);
-        // Basic validation of the parsed user object could be added here
-        // For example, check if it has an 'id' and 'email' property
         if (parsedUser && typeof parsedUser.id === 'string' && typeof parsedUser.email === 'string') {
           setUser(parsedUser);
         } else {
-          localStorage.removeItem('mockUser'); // Clear invalid data
+          localStorage.removeItem('mockUser');
         }
       } catch (error) {
         console.error("Failed to parse mockUser from localStorage", error);
-        localStorage.removeItem('mockUser'); // Clear corrupted data
+        localStorage.removeItem('mockUser');
       }
     }
     setIsLoading(false);
@@ -50,7 +49,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signIn = useCallback(async (email: string, _pass: string) => {
     setIsLoading(true);
-    // Simulate API call
     await new Promise(resolve => setTimeout(resolve, 500));
     const mockUser: User = { id: 'mock-user-id-' + Date.now(), email };
     setUser(mockUser);
@@ -60,12 +58,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       console.error("Failed to set mockUser in localStorage", error);
     }
     setIsLoading(false);
-    router.push('/dashboard');
-  }, [router]);
+    // Check if already on access-login, if so, dashboard, otherwise let middleware handle
+    if (pathname === '/access-login') {
+      router.push('/dashboard');
+    } else {
+      // If signing in from a public page, attempt to go to dashboard.
+      // Middleware will intercept if app access is still needed.
+      router.push('/dashboard');
+    }
+  }, [router, pathname]);
 
   const signUp = useCallback(async (email: string, _pass: string) => {
     setIsLoading(true);
-    // Simulate API call
     await new Promise(resolve => setTimeout(resolve, 500));
     const mockUser: User = { id: 'mock-user-id-' + Date.now(), email };
     setUser(mockUser);
@@ -75,25 +79,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       console.error("Failed to set mockUser in localStorage", error);
     }
     setIsLoading(false);
+    // Similar to signIn, attempt dashboard, middleware handles access gate.
     router.push('/dashboard');
   }, [router]);
 
   const signOut = useCallback(async () => {
     setIsLoading(true);
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 500));
+    await new Promise(resolve => setTimeout(resolve, 250)); // Shorten delay for signout
     setUser(null);
     try {
       localStorage.removeItem('mockUser');
     } catch (error) {
       console.error("Failed to remove mockUser from localStorage", error);
     }
-    setIsLoading(false);
-    // Redirect to sign-in, but ensure it's not already on a public page that doesn't require redirect
-    if (pathname.startsWith('/dashboard') || pathname.startsWith('/customizer')) {
-      router.push('/signin');
+    
+    // Clear the app access cookie as well
+    try {
+      await clearAccessCookie();
+    } catch (error) {
+        console.error("Failed to clear app access cookie on sign out:", error);
     }
-  }, [router, pathname]);
+
+    setIsLoading(false);
+    // Always redirect to /signin after a full sign-out.
+    // If they want to re-access protected parts, they'll hit the /access-login via middleware.
+    router.push('/signin');
+  }, [router]);
 
   return (
     <AuthContext.Provider value={{ user, isLoading, signIn, signUp, signOut }}>
