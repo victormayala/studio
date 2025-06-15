@@ -4,6 +4,7 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Badge } from '@/components/ui/badge'; // Import Badge
 import { cn } from '@/lib/utils';
 import type { LucideIcon } from 'lucide-react';
 
@@ -42,7 +43,12 @@ export default function CustomizerIconNav({ tools, activeTool, setActiveTool }: 
               </Button>
             </TooltipTrigger>
             <TooltipContent side="right" align="center">
-              <p>{tool.label}</p>
+              <div className="flex items-center space-x-2">
+                <p>{tool.label}</p>
+                {tool.id === 'ai-assistant' && (
+                  <Badge variant="secondary" className="px-1.5 py-0.5 text-xs h-fit">Beta</Badge>
+                )}
+              </div>
             </TooltipContent>
           </Tooltip>
         ))}
