@@ -13,7 +13,7 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
+} from "@/components/ui/select";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Bold, Italic, Underline, CaseUpper, CaseLower, Type, Palette, Settings2, Pilcrow, TextCursorInput, Pipette, Waves } from 'lucide-react';
@@ -61,7 +61,7 @@ const initialTextToolPanelDefaultStyle: Omit<CanvasText, 'id' | 'viewId' | 'zInd
   shadowOffsetX: 0,
   shadowOffsetY: 0,
   shadowBlur: 0,
-  archAmount: 0, // Default archAmount to 0
+  archAmount: 0,
 };
 
 
@@ -94,7 +94,7 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
       setLocalOutlineColorHex(selectedText.outlineColor);
       setLocalShadowColorHex(selectedText.shadowColor);
     } else {
-      const resetStyle = { ...initialTextToolPanelDefaultStyle, content: '' };
+      const resetStyle = { ...initialTextToolPanelDefaultStyle, content: '', archAmount: 0 };
       setCurrentStyle(resetStyle);
       setTextValue(resetStyle.content); 
       setLocalTextColorHex(resetStyle.color);
@@ -133,13 +133,14 @@ export default function TextToolPanel({ activeViewId }: TextToolPanelProps) {
     const contentToAdd = textValue.trim() || "Your Text"; 
     const styleForNewText: Partial<CanvasText> = {
       ...currentStyle, 
-      content: contentToAdd, 
+      content: contentToAdd,
+      archAmount: currentStyle.archAmount, // Ensure archAmount is passed
     };
     addCanvasText(contentToAdd, activeViewId, styleForNewText);
     
     if (!selectedText) { 
         setTextValue(''); 
-        setCurrentStyle(prev => ({...prev, content: ''}));
+        setCurrentStyle(prev => ({...prev, content: '', archAmount: 0})); // Reset archAmount for new text
     }
   };
 
