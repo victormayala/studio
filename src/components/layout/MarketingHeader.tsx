@@ -80,8 +80,10 @@ export default function MarketingHeader() {
                     link.href ? (
                       <Button key={link.label} asChild variant={link.variant} className="w-full">
                         <Link href={link.href}>
-                          {link.icon && <link.icon className="mr-2 h-4 w-4" />}
-                          {link.label}
+                          <span className="flex items-center justify-center w-full">
+                            {link.icon && <link.icon className="mr-2 h-4 w-4" />}
+                            {link.label}
+                          </span>
                         </Link>
                       </Button>
                     ) : (
@@ -113,8 +115,10 @@ export default function MarketingHeader() {
                 link.href ? (
                   <Button key={link.label} asChild variant={link.variant} size="sm">
                     <Link href={link.href}>
-                      {link.icon && <link.icon className="mr-2 h-4 w-4" />}
-                      {link.label}
+                      <span className="flex items-center">
+                        {link.icon && <link.icon className="mr-2 h-4 w-4" />}
+                        {link.label}
+                      </span>
                     </Link>
                   </Button>
                 ) : (
