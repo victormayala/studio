@@ -54,10 +54,16 @@ export default function MarketingHomePage() {
                 </p>
                 <div className="space-y-4 sm:space-y-0 sm:space-x-4 flex flex-col sm:flex-row justify-center md:justify-start">
                   <Button asChild size="lg" className="bg-primary text-primary-foreground hover:bg-primary/90 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-300 w-full sm:w-auto">
-                    <Link href="/signup">Get Started Free <ArrowRight className="ml-2 h-5 w-5" /></Link>
+                    <Link href="/signup">
+                      <span className="flex items-center"> {/* Ensure single child for Link */}
+                        Get Started Free <ArrowRight className="ml-2 h-5 w-5" />
+                      </span>
+                    </Link>
                   </Button>
                   <Button asChild size="lg" variant="outline" className="bg-background hover:bg-muted w-full sm:w-auto">
-                    <Link href="/how-it-works">Discover How</Link>
+                    <Link href="/how-it-works">
+                      <span>Discover How</span>
+                    </Link>
                   </Button>
                 </div>
               </div>
@@ -117,7 +123,11 @@ export default function MarketingHomePage() {
             </div>
              <div className="text-center mt-16">
                 <Button asChild size="lg" className="bg-primary text-primary-foreground hover:bg-primary/90 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-300">
-                    <Link href="/signup">Start Customizing Today <ArrowRight className="ml-2 h-5 w-5" /></Link>
+                    <Link href="/signup">
+                       <span className="flex items-center"> {/* Ensure single child for Link */}
+                          Start Customizing Today <ArrowRight className="ml-2 h-5 w-5" />
+                       </span>
+                    </Link>
                 </Button>
             </div>
           </div>
@@ -151,6 +161,7 @@ export default function MarketingHomePage() {
                   <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent"></div>
                   <div className="absolute bottom-0 left-0 p-6">
                     <h3 className="text-xl font-semibold text-white mb-1">{item.title}</h3>
+                    {/* Assuming this button doesn't use Link or asChild for simplicity, or would need similar span wrapping if it did */}
                     <Button variant="outline" size="sm" className="text-white border-white/50 hover:bg-white/10">View Example</Button>
                   </div>
                 </div>
@@ -196,23 +207,23 @@ export default function MarketingHomePage() {
               Join the growing number of businesses transforming their customer experience with CSTMZR. Start your free trial today and see the difference.
             </p>
             <div className="space-x-0 md:space-x-4 space-y-4 md:space-y-0 flex flex-col md:flex-row justify-center items-center">
-                <Button 
-                  asChild 
-                  size="lg" 
+                <Button
+                  asChild
+                  size="lg"
                   className="bg-primary-foreground text-primary hover:bg-primary-foreground/90 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-300 w-full md:w-auto"
                 >
-                  <Link href="/signup" legacyBehavior passHref>
-                    <a>Claim Your Free Trial</a>
+                  <Link href="/signup">
+                    <span>Claim Your Free Trial</span>
                   </Link>
                 </Button>
-                <Button 
-                  asChild 
-                  size="lg" 
-                  variant="outline" 
+                <Button
+                  asChild
+                  size="lg"
+                  variant="outline"
                   className="bg-transparent border-primary-foreground text-primary-foreground hover:bg-transparent hover:border-primary-foreground/80 hover:text-primary-foreground/80 w-full md:w-auto"
                 >
-                  <Link href="/pricing" legacyBehavior passHref>
-                    <a>View Pricing Plans</a>
+                  <Link href="/pricing">
+                    <span>View Pricing Plans</span>
                   </Link>
                 </Button>
             </div>
@@ -224,5 +235,4 @@ export default function MarketingHomePage() {
     </div>
   );
 }
-
     
