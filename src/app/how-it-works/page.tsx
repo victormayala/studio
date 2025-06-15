@@ -74,7 +74,11 @@ export default function HowItWorksPage() {
               Join businesses already leveraging the power of personalization with CSTMZR. Sign up today and take the first step towards a more interactive and profitable online store.
             </p>
             <Button asChild size="lg" className="bg-accent text-accent-foreground hover:bg-accent/90">
-              <Link href="/signup">Sign Up for Free <ArrowRight className="ml-2 h-5 w-5" /></Link>
+              <Link href="/signup">
+                <span>
+                  Sign Up for Free <ArrowRight className="ml-2 h-5 w-5" />
+                </span>
+              </Link>
             </Button>
           </div>
         </div>
@@ -128,5 +132,4 @@ const CardStep = ({ step, index }: CardStepProps) => {
     </div>
   );
 };
-
     
