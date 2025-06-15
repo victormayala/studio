@@ -12,7 +12,7 @@ export const premiumDesignsData: PremiumDesignItem[] = [
   {
     id: 'premium-design-logo-1',
     name: 'Pro Logo Template',
-    imageUrl: 'https://placehold.co/150x100/673AB7/FFFFFF.png?text=Premium+Logo', // Deep Purple
+    imageUrl: '/premium-designs/pro-logo-template.png', 
     type: 'image/png',
     aiHint: 'professional logo',
     price: 1.00,
@@ -20,7 +20,7 @@ export const premiumDesignsData: PremiumDesignItem[] = [
   {
     id: 'premium-design-illustration-1',
     name: 'Detailed Illustration',
-    imageUrl: 'https://placehold.co/150x100/3F51B5/FFFFFF.png?text=Premium+Art', // Indigo
+    imageUrl: '/premium-designs/detailed-illustration.png',
     type: 'image/png',
     aiHint: 'detailed illustration',
     price: 1.00,
@@ -28,7 +28,7 @@ export const premiumDesignsData: PremiumDesignItem[] = [
   {
     id: 'premium-design-iconset-1',
     name: 'Custom Icon Set',
-    imageUrl: 'https://placehold.co/150x100/009688/FFFFFF.png?text=Icon+Set', // Teal
+    imageUrl: '/premium-designs/custom-icon-set.png',
     type: 'image/png',
     aiHint: 'custom icons',
     price: 1.00,
@@ -36,7 +36,7 @@ export const premiumDesignsData: PremiumDesignItem[] = [
   {
     id: 'premium-design-banner-1',
     name: 'Exclusive Banner',
-    imageUrl: 'https://placehold.co/150x100/FF5722/FFFFFF.png?text=Pro+Banner', // Deep Orange
+    imageUrl: '/premium-designs/exclusive-banner.png',
     type: 'image/png',
     aiHint: 'exclusive banner',
     price: 1.00,

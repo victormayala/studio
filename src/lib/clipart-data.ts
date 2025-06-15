@@ -11,42 +11,42 @@ export const clipartData: ClipartItem[] = [
   {
     id: 'clipart-star-1',
     name: 'Yellow Star',
-    imageUrl: 'https://placehold.co/100x100/FFEB3B/000000.png?text=\u2605', // Yellow star
+    imageUrl: '/clipart/yellow-star.png', 
     type: 'image/png',
     aiHint: 'yellow star',
   },
   {
     id: 'clipart-heart-1',
     name: 'Red Heart',
-    imageUrl: 'https://placehold.co/100x100/F44336/FFFFFF.png?text=\u2764', // Red heart
+    imageUrl: '/clipart/red-heart.png', 
     type: 'image/png',
     aiHint: 'red heart',
   },
   {
     id: 'clipart-smiley-1',
     name: 'Smiley Face',
-    imageUrl: 'https://placehold.co/100x100/FFC107/000000.png?text=\u263A', // Smiley face
+    imageUrl: '/clipart/smiley-face.png',
     type: 'image/png',
     aiHint: 'smiley face',
   },
   {
     id: 'clipart-arrow-1',
     name: 'Blue Arrow',
-    imageUrl: 'https://placehold.co/100x100/2196F3/FFFFFF.png?text=\u279C', // Right arrow
+    imageUrl: '/clipart/blue-arrow.png',
     type: 'image/png',
     aiHint: 'blue arrow',
   },
   {
     id: 'clipart-speech-bubble-1',
     name: 'Speech Bubble',
-    imageUrl: 'https://placehold.co/100x100/4CAF50/FFFFFF.png?text=\uD83D\uDCAC', // Speech bubble
+    imageUrl: '/clipart/speech-bubble.png', 
     type: 'image/png',
     aiHint: 'speech bubble',
   },
   {
     id: 'clipart-sun-1',
     name: 'Bright Sun',
-    imageUrl: 'https://placehold.co/100x100/FF9800/000000.png?text=\u2600', // Sun
+    imageUrl: '/clipart/bright-sun.png',
     type: 'image/png',
     aiHint: 'bright sun',
   },
