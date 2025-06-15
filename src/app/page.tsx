@@ -196,16 +196,24 @@ export default function MarketingHomePage() {
               Join the growing number of businesses transforming their customer experience with CSTMZR. Start your free trial today and see the difference.
             </p>
             <div className="space-x-0 md:space-x-4 space-y-4 md:space-y-0 flex flex-col md:flex-row justify-center items-center">
-                <Button asChild size="lg" className="bg-primary-foreground text-primary hover:bg-primary-foreground/90 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-300 w-full md:w-auto">
-                    <Link href="/signup">Claim Your Free Trial</Link>
+                <Button 
+                  asChild 
+                  size="lg" 
+                  className="bg-primary-foreground text-primary hover:bg-primary-foreground/90 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-300 w-full md:w-auto"
+                >
+                  <Link href="/signup" legacyBehavior passHref>
+                    <a>Claim Your Free Trial</a>
+                  </Link>
                 </Button>
                 <Button 
                   asChild 
                   size="lg" 
                   variant="outline" 
-                  className="border-primary-foreground text-primary-foreground hover:bg-transparent hover:border-primary-foreground/80 hover:text-primary-foreground/80 w-full md:w-auto"
+                  className="bg-transparent border-primary-foreground text-primary-foreground hover:bg-transparent hover:border-primary-foreground/80 hover:text-primary-foreground/80 w-full md:w-auto"
                 >
-                    <Link href="/pricing">View Pricing Plans</Link>
+                  <Link href="/pricing" legacyBehavior passHref>
+                    <a>View Pricing Plans</a>
+                  </Link>
                 </Button>
             </div>
           </div>
@@ -216,4 +224,5 @@ export default function MarketingHomePage() {
     </div>
   );
 }
+
     
