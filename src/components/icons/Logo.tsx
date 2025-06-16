@@ -12,7 +12,7 @@ export function Logo() {
       <Image
         key={logoSrc} 
         src={logoSrc}
-        alt="Customizer Studio Logo" // Changed to "Customizer Studio" to match general branding
+        alt="Customizer Studio Logo" // Ensures alt text matches "Customizer Studio"
         fill
         style={{ objectFit: 'contain' }}
         priority // Ensures the logo loads quickly, important for LCP
