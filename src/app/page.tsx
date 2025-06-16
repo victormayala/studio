@@ -68,9 +68,9 @@ export default function MarketingHomePage() {
               </Button>
             </div>
             <div className="mt-16 md:mt-20 max-w-5xl mx-auto">
-              <div className="relative w-full aspect-video rounded-xl shadow-2xl overflow-hidden border-4 border-primary/20 bg-muted/20">
+              <div className="relative w-full aspect-video rounded-xl overflow-hidden bg-muted/20">
                   <Image 
-                      src="https://placehold.co/1280x720.png" 
+                      src="/top-hero.png"
                       alt="Interactive product customizer interface example from Customizer Studio"
                       fill
                       className="object-cover"
@@ -199,9 +199,9 @@ export default function MarketingHomePage() {
           <div className="container mx-auto px-4">
             <div className="flex flex-col lg:flex-row items-center gap-12 lg:gap-16">
               <div className="lg:w-1/2">
-                <div className="relative w-full aspect-square rounded-xl shadow-xl overflow-hidden border-2 border-secondary/10 bg-card">
+                <div className="relative w-full aspect-square rounded-xl overflow-hidden bg-card">
                   <Image 
-                    src="https://placehold.co/600x600.png"
+                    src="/bottom-hero.png"
                     alt="A collage of customized products created with Customizer Studio"
                     fill
                     className="object-cover"
