@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect, FormEvent } from 'react';
+import React, { useState, useEffect, FormEvent, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -12,12 +12,12 @@ import { verifyPasswordAndSetCookie } from './actions';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, KeyRound } from 'lucide-react';
 
-export default function AccessLoginPage() {
+function AccessLoginFormContent() {
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
-  const searchParams = useSearchParams();
+  const searchParams = useSearchParams(); // Hook is used here
   const { toast } = useToast();
 
   const handleSubmit = async (e: FormEvent) => {
@@ -86,5 +86,18 @@ export default function AccessLoginPage() {
         &copy; {new Date().getFullYear()} Customizer Studio. All rights reserved.
       </p>
     </div>
+  );
+}
+
+export default function AccessLoginPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex flex-col min-h-screen bg-muted/20 items-center justify-center p-4">
+        <Loader2 className="h-10 w-10 animate-spin text-primary" />
+        <p className="mt-4 text-muted-foreground">Loading access page...</p>
+      </div>
+    }>
+      <AccessLoginFormContent />
+    </Suspense>
   );
 }

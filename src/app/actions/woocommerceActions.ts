@@ -30,10 +30,9 @@ function getApiCredentials(credentials?: WooCommerceCredentials) {
   const consumerSecret = credentials?.consumerSecret || process.env.WOOCOMMERCE_CONSUMER_SECRET;
 
   console.log(`WooCommerce API Credentials Check: 
-    Store URL Found: ${!!storeUrl}, 
-    Consumer Key Found: ${!!consumerKey}, 
-    Consumer Secret Found: ${!!consumerSecret}, 
-    User Provided Specific Credentials: ${!!credentials}`);
+    Store URL Found: ${!!storeUrl} (User Provided: ${!!credentials?.storeUrl}), 
+    Consumer Key Found: ${!!consumerKey} (User Provided: ${!!credentials?.consumerKey}), 
+    Consumer Secret Found: ${!!consumerSecret} (User Provided: ${!!credentials?.consumerSecret})`);
 
   return { storeUrl, consumerKey, consumerSecret, isUserProvided: !!credentials };
 }
@@ -68,7 +67,7 @@ export async function fetchWooCommerceProducts(credentials?: WooCommerceCredenti
     if (!response.ok) {
       const errorBody = await response.text();
       console.error(`WooCommerce API error during product fetch: ${response.status} ${response.statusText}`, errorBody);
-      return { error: `Failed to fetch products from WooCommerce. Status: ${response.status}. Details: ${errorBody}` };
+      return { error: `Failed to fetch products from WooCommerce. Status: ${response.status}. Details: ${errorBody}. Check server logs.` };
     }
 
     let products: WCCustomProduct[];
@@ -77,18 +76,18 @@ export async function fetchWooCommerceProducts(credentials?: WooCommerceCredenti
     } catch (jsonError) {
       console.error('Error parsing JSON response from WooCommerce product fetch:', jsonError);
       if (jsonError instanceof Error) {
-        return { error: `Failed to parse product data from WooCommerce. Invalid JSON. Details: ${jsonError.message}` };
+        return { error: `Failed to parse product data from WooCommerce. Invalid JSON. Details: ${jsonError.message}. Check server logs.` };
       }
-      return { error: 'Failed to parse product data from WooCommerce. Invalid JSON.' };
+      return { error: 'Failed to parse product data from WooCommerce. Invalid JSON. Check server logs.' };
     }
     
     return { products };
   } catch (error) {
     console.error('Network or fetch error during WooCommerce product fetch:', error);
     if (error instanceof Error) {
-      return { error: `An unexpected network or fetch error occurred: ${error.message}` };
+      return { error: `An unexpected network or fetch error occurred: ${error.message}. Check server logs.` };
     }
-    return { error: 'An unexpected error occurred while fetching products.' };
+    return { error: 'An unexpected error occurred while fetching products. Check server logs.' };
   }
 }
 
@@ -126,7 +125,7 @@ export async function fetchWooCommerceProductById(productId: string, credentials
     if (!response.ok) {
       const errorBody = await response.text();
       console.error(`WooCommerce API error for product ${productId}: ${response.status} ${response.statusText}`, errorBody);
-      return { error: `Failed to fetch product ${productId}. Status: ${response.status}. ${errorBody}` };
+      return { error: `Failed to fetch product ${productId}. Status: ${response.status}. ${errorBody}. Check server logs.` };
     }
 
     let product: WCCustomProduct;
@@ -135,17 +134,17 @@ export async function fetchWooCommerceProductById(productId: string, credentials
     } catch (jsonError) {
         console.error(`Error parsing JSON response for product ${productId}:`, jsonError);
         if (jsonError instanceof Error) {
-            return { error: `Failed to parse data for product ${productId}. Invalid JSON. Details: ${jsonError.message}` };
+            return { error: `Failed to parse data for product ${productId}. Invalid JSON. Details: ${jsonError.message}. Check server logs.` };
         }
-        return { error: `Failed to parse data for product ${productId}. Invalid JSON.` };
+        return { error: `Failed to parse data for product ${productId}. Invalid JSON. Check server logs.` };
     }
     return { product };
   } catch (error) {
     console.error(`Network or fetch error for WooCommerce product ${productId}:`, error);
     if (error instanceof Error) {
-      return { error: `An unexpected network or fetch error occurred for product ${productId}: ${error.message}` };
+      return { error: `An unexpected network or fetch error occurred for product ${productId}: ${error.message}. Check server logs.` };
     }
-    return { error: `An unexpected error occurred while fetching product ${productId}.` };
+    return { error: `An unexpected error occurred while fetching product ${productId}. Check server logs.` };
   }
 }
 
@@ -183,7 +182,7 @@ export async function fetchWooCommerceProductVariations(productId: string, crede
     if (!response.ok) {
       const errorBody = await response.text();
       console.error(`WooCommerce API error for product ${productId} variations: ${response.status} ${response.statusText}`, errorBody);
-      return { error: `Failed to fetch variations for product ${productId}. Status: ${response.status}. ${errorBody}` };
+      return { error: `Failed to fetch variations for product ${productId}. Status: ${response.status}. ${errorBody}. Check server logs.` };
     }
 
     let variations: WCVariation[];
@@ -192,16 +191,16 @@ export async function fetchWooCommerceProductVariations(productId: string, crede
     } catch (jsonError) {
         console.error(`Error parsing JSON response for product ${productId} variations:`, jsonError);
         if (jsonError instanceof Error) {
-            return { error: `Failed to parse variation data for product ${productId}. Invalid JSON. Details: ${jsonError.message}` };
+            return { error: `Failed to parse variation data for product ${productId}. Invalid JSON. Details: ${jsonError.message}. Check server logs.` };
         }
-        return { error: `Failed to parse variation data for product ${productId}. Invalid JSON.` };
+        return { error: `Failed to parse variation data for product ${productId}. Invalid JSON. Check server logs.` };
     }
     return { variations };
   } catch (error) {
     console.error(`Network or fetch error for WooCommerce variations for product ${productId}:`, error);
     if (error instanceof Error) {
-      return { error: `An unexpected network or fetch error occurred for product ${productId} variations: ${error.message}` };
+      return { error: `An unexpected network or fetch error occurred for product ${productId} variations: ${error.message}. Check server logs.` };
     }
-    return { error: `An unexpected error occurred while fetching variations for product ${productId}.` };
+    return { error: `An unexpected error occurred while fetching variations for product ${productId}. Check server logs.` };
   }
 }

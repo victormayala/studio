@@ -9,7 +9,7 @@ export async function verifyPasswordAndSetCookie(passwordAttempt: string, redire
 
   if (!correctPassword || !cookieValue) {
     console.error("APP_ACCESS_PASSWORD or APP_ACCESS_COOKIE_VALUE is not set in environment variables.");
-    return { success: false, error: 'Server configuration error. Please contact support.' };
+    return { success: false, error: 'Server configuration error. Please contact support and check server logs.' };
   }
 
   if (passwordAttempt === correctPassword) {
@@ -25,7 +25,7 @@ export async function verifyPasswordAndSetCookie(passwordAttempt: string, redire
       return { success: true, redirectPath: redirectUrl || '/dashboard' };
     } catch (e: any) {
       console.error("Error setting cookie in verifyPasswordAndSetCookie:", e);
-      return { success: false, error: `Failed to set access session. Details: ${e.message || 'Unknown error'}` };
+      return { success: false, error: `Failed to set access session. Details: ${e.message || 'Unknown error'}. Check server logs.` };
     }
   } else {
     return { success: false, error: 'Incorrect password. Please try again.' };
@@ -39,6 +39,6 @@ export async function clearAccessCookie() {
     return { success: true };
   } catch (error: any) {
     console.error("Failed to clear access cookie:", error);
-    return { success: false, error: `Failed to clear access session. Details: ${error.message || 'Unknown error'}` };
+    return { success: false, error: `Failed to clear access session. Details: ${error.message || 'Unknown error'}. Check server logs.` };
   }
 }
