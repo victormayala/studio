@@ -34,14 +34,14 @@ const steps = [
   },
   {
     icon: <Palette className="h-10 w-10 text-secondary mb-4" />,
-    title: "4. Customers Design &amp; Personalize",
+    title: "4. Customers Design & Personalize",
     description: "Your customers will now see the Customizer Studio tool on your product pages. They can add text, upload images, choose colors, and see a live preview of their unique creation, leading to higher engagement and satisfaction.",
     imagePlaceholder: "/customizer-app.png", // Make sure this image exists in /public
     aiHint: "customer design"
   },
   {
     icon: <PackageCheck className="h-10 w-10 text-secondary mb-4" />,
-    title: "5. Receive &amp; Fulfill Custom Orders",
+    title: "5. Receive & Fulfill Custom Orders",
     description: "When a customer places an order, all customization details (text, image URLs, chosen options) are seamlessly passed to your e-commerce platform with the order. Fulfill custom orders accurately and efficiently.",
     imagePlaceholder: "/cart.png", // Make sure this image exists in /public
     aiHint: "order fulfillment"

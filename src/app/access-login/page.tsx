@@ -57,7 +57,7 @@ function AccessLoginFormContent() {
       <Card className="w-full max-w-sm shadow-xl">
         <CardHeader className="text-center">
           <CardTitle className="text-2xl font-headline text-foreground">Application Access</CardTitle>
-          <CardDescription>Please enter the password to access the application.</CardDescription>
+          <CardDescription>Please enter the password to access the Customizer Studio application.</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-6">
