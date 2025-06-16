@@ -1,7 +1,7 @@
 import type {Metadata} from 'next';
 import { Inter, Space_Grotesk, Source_Code_Pro } from 'next/font/google';
 import './globals.css';
-import { AuthProvider } from '@/contexts/AuthContext'; // Re-add AuthProvider import
+import { AuthProvider } from '@/contexts/AuthContext';
 import { Toaster } from '@/components/ui/toaster';
 import { cn } from '@/lib/utils';
 
@@ -33,7 +33,6 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  // console.log("Simplified RootLayout rendering with AuthProvider");
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={cn(
@@ -42,7 +41,7 @@ export default function RootLayout({
         spaceGrotesk.variable,
         sourceCodePro.variable
       )}>
-        <AuthProvider> {/* Restore AuthProvider */}
+        <AuthProvider>
           {children}
           <Toaster />
         </AuthProvider>

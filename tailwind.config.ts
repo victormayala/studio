@@ -11,9 +11,9 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        sans: ['Inter', ...defaultTheme.fontFamily.sans],
-        headline: ['"Space Grotesk"', ...defaultTheme.fontFamily.sans],
-        code: ['"Source Code Pro"', ...defaultTheme.fontFamily.mono],
+        sans: ['var(--font-inter)', ...defaultTheme.fontFamily.sans],
+        headline: ['var(--font-space-grotesk)', ...defaultTheme.fontFamily.sans],
+        code: ['var(--font-source-code-pro)', ...defaultTheme.fontFamily.mono],
       },
       colors: {
         background: 'hsl(var(--background))',
