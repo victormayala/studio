@@ -12,9 +12,12 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        sans: ['var(--font-inter)', ...defaultTheme.fontFamily.sans],
-        headline: ['var(--font-space-grotesk)', ...defaultTheme.fontFamily.sans],
-        code: ['var(--font-source-code-pro)', ...defaultTheme.fontFamily.mono],
+        sans: ['Roboto', ...defaultTheme.fontFamily.sans],
+        // headline and code families removed as their CSS variables are no longer set in layout.tsx
+        // If Space Grotesk or Source Code Pro are needed, re-add font imports and variables in layout.tsx
+        // and then re-add these lines:
+        // headline: ['var(--font-space-grotesk)', ...defaultTheme.fontFamily.sans],
+        // code: ['var(--font-source-code-pro)', ...defaultTheme.fontFamily.mono],
       },
       colors: {
         background: 'hsl(var(--background))',
