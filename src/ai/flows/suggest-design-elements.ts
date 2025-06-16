@@ -63,12 +63,14 @@ const suggestDesignElementsFlow = ai.defineFlow(
     try {
       const {output} = await suggestDesignElementsPrompt(input);
       if (!output) {
-        throw new Error('AI model did not return the expected output for design element suggestions.');
+        const errMessage = 'AI model did not return the expected output for design element suggestions. Check server logs for prompt details and model response.';
+        console.error(errMessage, { input });
+        throw new Error(errMessage);
       }
       return output;
     } catch (error: any) {
       console.error(`Error in suggestDesignElementsFlow for composition "${input.designComposition}":`, error);
-      throw new Error(`AI Design Element Suggestion Error: ${error.message || 'An unexpected error occurred during suggestion generation.'}`);
+      throw new Error(`AI Design Element Suggestion Error: ${error.message || 'An unexpected error occurred. Check server logs for more details.'}`);
     }
   }
 );

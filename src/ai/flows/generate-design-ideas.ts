@@ -46,12 +46,14 @@ const generateDesignIdeasFlow = ai.defineFlow(
     try {
       const {output} = await prompt(input);
       if (!output) {
-        throw new Error('AI model did not return the expected output for design ideas.');
+        const errMessage = 'AI model did not return the expected output for design ideas. Check server logs for prompt details and model response.';
+        console.error(errMessage, { input });
+        throw new Error(errMessage);
       }
       return output;
     } catch (error: any) {
       console.error(`Error in generateDesignIdeasFlow for prompt "${input.prompt}":`, error);
-      throw new Error(`AI Design Idea Generation Error: ${error.message || 'An unexpected error occurred during design idea generation.'}`);
+      throw new Error(`AI Design Idea Generation Error: ${error.message || 'An unexpected error occurred. Check server logs for more details.'}`);
     }
   }
 );

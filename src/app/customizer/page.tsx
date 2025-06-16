@@ -1,7 +1,7 @@
 
 "use client"; 
 
-import { Suspense, useSearchParams } from 'next/navigation'; // This line will be changed
+import { useSearchParams } from 'next/navigation'; // This line will be changed
 import React, { useEffect, useState, useCallback } from 'react'; // Suspense will be imported from here
 import AppHeader from '@/components/layout/AppHeader';
 import DesignCanvas from '@/components/customizer/DesignCanvas';
