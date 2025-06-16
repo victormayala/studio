@@ -229,7 +229,7 @@ export default function ProductOptionsPage() {
           } else { 
             loadedOptionsByColor['default'] = { selectedVariationIds: migratedSelectedVariationIds, variantViewImages: {} };
           }
-          toast({title: "Settings Migrated", description: "Product options updated to new format.", variant: "info"});
+          toast({title: "Settings Migrated", description: "Product options updated to new format.", variant: "default"});
           localDataFoundAndParsed = true;
         }
       }
@@ -376,7 +376,7 @@ export default function ProductOptionsPage() {
 
   const handleOpenInCustomizer = () => {
     if (!productOptions || hasUnsavedChanges) {
-      toast({ title: "Save Changes", description: "Please save your changes before opening in customizer.", variant: "info"});
+      toast({ title: "Save Changes", description: "Please save your changes before opening in customizer.", variant: "default"});
       return;
     }
     router.push(`/customizer?productId=${productOptions.id}`);
@@ -389,7 +389,7 @@ export default function ProductOptionsPage() {
   const handleAddNewDefaultView = () => { 
     if (!productOptions) return;
     if (productOptions.defaultViews.length >= MAX_PRODUCT_VIEWS) {
-      toast({ title: "Limit Reached", description: `Max ${MAX_PRODUCT_VIEWS} views per product.`, variant: "info" });
+      toast({ title: "Limit Reached", description: `Max ${MAX_PRODUCT_VIEWS} views per product.`, variant: "default" });
       return;
     }
     const newView: ProductView = {
@@ -404,7 +404,7 @@ export default function ProductOptionsPage() {
   const handleDeleteDefaultView = (viewId: string) => { 
     if (!productOptions) return;
     if (productOptions.defaultViews.length <= 1) {
-      toast({ title: "Cannot Delete", description: "At least one view must remain.", variant: "info" });
+      toast({ title: "Cannot Delete", description: "At least one view must remain.", variant: "default" });
       return;
     }
     setViewIdToDelete(viewId);
@@ -800,11 +800,11 @@ export default function ProductOptionsPage() {
                 Total Default Views: <span className="font-semibold text-foreground">{productOptions.defaultViews.length}</span>
               </p>
               <p className="text-sm text-muted-foreground">
-                Active Setup View: <span className="font-semibold text-foreground">{currentSetupView?.name || "N/A"}</span>
+                Active Setup View: <span className="font-semibold text-foreground">{currentView?.name || "N/A"}</span>
               </p>
-              {currentSetupView && (
+              {currentView && (
                 <p className="text-sm text-muted-foreground">
-                  Areas in <span className="font-semibold text-primary">{currentSetupView.name}</span>: <span className="font-semibold text-foreground">{currentSetupView.boundaryBoxes.length}</span>
+                  Areas in <span className="font-semibold text-primary">{currentView.name}</span>: <span className="font-semibold text-foreground">{currentView.boundaryBoxes.length}</span>
                 </p>
               )}
               {productOptions.type === 'variable' && (
