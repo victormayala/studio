@@ -70,9 +70,10 @@ const generateDesignFromPromptFlow = ai.defineFlow(
 
 
       if (!imageUrl) {
-        console.error('Image generation failed or did not return an image. Text response:', text);
+        const errorLog = `Image generation failed or did not return an image. User prompt: "${input.userPrompt}". Model: ${model}. Text response: ${text}`;
+        console.error(errorLog);
         // This error should be caught by the client-side try...catch in AiAssistant.tsx
-        throw new Error('Image generation failed. The model might have refused the prompt or an internal error occurred. Check server logs for details.');
+        throw new Error('Image generation failed. The model might have refused the prompt or an internal error occurred. Please check server logs for details.');
       }
 
       return {
@@ -80,10 +81,10 @@ const generateDesignFromPromptFlow = ai.defineFlow(
         generatedImageDescription: imageDescription,
       };
     } catch (error: any) {
-      console.error(`Error in generateDesignFromPromptFlow for prompt "${input.userPrompt}":`, error);
+      console.error(`Error in generateDesignFromPromptFlow for prompt "${input.userPrompt}". Model: ${model}. Error: ${error.message || error}`, error);
       // Re-throw a more specific error or one that's easier for the client to handle
       // This helps ensure the client-side catch block in AiAssistant.tsx gets a clear error
-      throw new Error(`AI Design Generation Error: ${error.message || 'An unexpected error occurred. Check server logs for more details.'}`);
+      throw new Error(`AI Design Generation Error: ${error.message || 'An unexpected error occurred. Please check server logs for more details.'}`);
     }
   }
 );

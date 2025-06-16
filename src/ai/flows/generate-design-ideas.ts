@@ -45,15 +45,15 @@ const generateDesignIdeasFlow = ai.defineFlow(
   async input => {
     try {
       const {output} = await prompt(input);
-      if (!output) {
-        const errMessage = 'AI model did not return the expected output for design ideas. Check server logs for prompt details and model response.';
-        console.error(errMessage, { input });
-        throw new Error(errMessage);
+      if (!output || !output.designIdea) {
+        const errMessage = 'AI model did not return the expected output (designIdea string) for design ideas.';
+        console.error(`${errMessage} Input: ${JSON.stringify(input)}. Raw Model Output: ${JSON.stringify(output)}. Please check server logs for prompt details and model response.`);
+        throw new Error(`${errMessage} Check server logs for details.`);
       }
       return output;
     } catch (error: any) {
-      console.error(`Error in generateDesignIdeasFlow for prompt "${input.prompt}":`, error);
-      throw new Error(`AI Design Idea Generation Error: ${error.message || 'An unexpected error occurred. Check server logs for more details.'}`);
+      console.error(`Error in generateDesignIdeasFlow for prompt "${input.prompt}": ${error.message || error}`, error);
+      throw new Error(`AI Design Idea Generation Error: ${error.message || 'An unexpected error occurred. Please check server logs for more details.'}`);
     }
   }
 );
