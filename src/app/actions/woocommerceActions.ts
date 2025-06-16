@@ -55,21 +55,31 @@ export async function fetchWooCommerceProducts(credentials?: WooCommerceCredenti
       headers: {
         Authorization: `Basic ${Buffer.from(`${consumerKey}:${consumerSecret}`).toString('base64')}`,
       },
-      cache: 'no-store', // Ensure fresh data
+      cache: 'no-store', 
     });
 
     if (!response.ok) {
       const errorBody = await response.text();
       console.error(`WooCommerce API error: ${response.status} ${response.statusText}`, errorBody);
-      return { error: `Failed to fetch products from WooCommerce. Status: ${response.status}. ${errorBody}` };
+      return { error: `Failed to fetch products from WooCommerce. Status: ${response.status}. Details: ${errorBody}` };
     }
 
-    const products: WCCustomProduct[] = await response.json();
+    let products: WCCustomProduct[];
+    try {
+      products = await response.json();
+    } catch (jsonError) {
+      console.error('Error parsing JSON response from WooCommerce:', jsonError);
+      if (jsonError instanceof Error) {
+        return { error: `Failed to parse product data from WooCommerce. Invalid JSON. Details: ${jsonError.message}` };
+      }
+      return { error: 'Failed to parse product data from WooCommerce. Invalid JSON.' };
+    }
+    
     return { products };
   } catch (error) {
     console.error('Error fetching WooCommerce products:', error);
     if (error instanceof Error) {
-      return { error: `An unexpected error occurred: ${error.message}` };
+      return { error: `An unexpected network or fetch error occurred: ${error.message}` };
     }
     return { error: 'An unexpected error occurred while fetching products.' };
   }
@@ -144,7 +154,6 @@ export async function fetchWooCommerceProductVariations(productId: string, crede
     return { error: `Server configuration error: ${message}` };
   }
 
-  // Add per_page=100 to fetch up to 100 variations
   const apiUrl = `${storeUrl}/wp-json/wc/v3/products/${productId}/variations?per_page=100`;
 
   try {

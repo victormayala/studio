@@ -16,12 +16,9 @@ const nextConfig: NextConfig = {
         port: '',
         pathname: '/**',
       },
-      // IMPORTANT: Replace 'your-woocommerce-store.com' with the actual hostname
-      // where your WooCommerce product images are served.
-      // This might be your main store domain or a CDN domain.
       {
         protocol: 'https',
-        hostname: 'urmarketprints.com', // Placeholder: User needs to change this
+        hostname: 'urmarketprints.com', 
         port: '',
         pathname: '/**',
       },

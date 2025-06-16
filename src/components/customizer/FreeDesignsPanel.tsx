@@ -19,7 +19,7 @@ export default function FreeDesignsPanel({ activeViewId }: FreeDesignsPanelProps
 
   const handleDesignClick = (design: FreeDesignItem) => {
      if (!activeViewId) {
-      toast({ title: "No Active View", description: "Please select a product view first.", variant: "info" });
+      toast({ title: "No Active View", description: "Please select a product view first.", variant: "default" });
       return;
     }
     addCanvasImageFromUrl(design.name, design.imageUrl, design.type, activeViewId, design.id);
@@ -64,3 +64,4 @@ export default function FreeDesignsPanel({ activeViewId }: FreeDesignsPanelProps
     </div>
   );
 }
+
