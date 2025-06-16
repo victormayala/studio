@@ -20,8 +20,8 @@ interface AuthLink {
   label: string;
   variant: "outline" | "default";
   href?: string;
-  action?: () => Promise<void> | void; // Allow sync or async actions
-  icon?: LucideIcon; // Icon is now explicitly optional
+  action?: () => Promise<void> | void; 
+  icon?: LucideIcon; 
 }
 
 const defaultAuthLinks: AuthLink[] = [
