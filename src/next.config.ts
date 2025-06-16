@@ -2,7 +2,6 @@
 import type {NextConfig} from 'next';
 
 const nextConfig: NextConfig = {
-  output: 'standalone', // Added for better containerized deployment
   typescript: {
     ignoreBuildErrors: true,
   },
