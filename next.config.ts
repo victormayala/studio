@@ -1,6 +1,7 @@
 
 import type {NextConfig} from 'next';
 
+// Main configuration for Next.js
 const nextConfig: NextConfig = {
   typescript: {
     ignoreBuildErrors: true,
@@ -18,7 +19,7 @@ const nextConfig: NextConfig = {
       },
       {
         protocol: 'https',
-        hostname: 'urmarketprints.com',
+        hostname: 'urmarketprints.com', 
         port: '',
         pathname: '/**',
       },
