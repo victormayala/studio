@@ -1,12 +1,12 @@
 
 "use client"; 
 
-import { Suspense, useSearchParams } from 'next/navigation'; // Added Suspense
+import { Suspense, useSearchParams } from 'next/navigation'; // This line will be changed
+import React, { useEffect, useState, useCallback } from 'react'; // Suspense will be imported from here
 import AppHeader from '@/components/layout/AppHeader';
 import DesignCanvas from '@/components/customizer/DesignCanvas';
 import RightPanel from '@/components/customizer/RightPanel';
 import { UploadProvider, useUploads } from "@/contexts/UploadContext"; 
-import { useEffect, useState, useCallback } from 'react';
 import { fetchWooCommerceProductById, fetchWooCommerceProductVariations } from '@/app/actions/woocommerceActions';
 import { useAuth } from '@/contexts/AuthContext';
 import { 
@@ -671,17 +671,19 @@ function CustomizerLayoutAndLogic() {
 export default function CustomizerPage() {
   return (
     <UploadProvider>
-      <Suspense fallback={
+      <React.Suspense fallback={ // Changed from Suspense to React.Suspense
         <div className="flex min-h-svh h-screen w-full items-center justify-center bg-background">
           <Loader2 className="h-10 w-10 animate-spin text-primary" />
           <p className="ml-3 text-muted-foreground">Loading customizer page...</p>
         </div>
       }>
         <CustomizerLayoutAndLogic />
-      </Suspense>
+      </React.Suspense>
     </UploadProvider>
   );
 }
     
 
       
+
+    
