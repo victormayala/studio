@@ -114,7 +114,7 @@ export default function AiAssistant({ activeViewId }: AiAssistantProps) {
       const result: MakeBackgroundTransparentOutput = await makeBackgroundTransparent(input);
       setGeneratedImageDataUrl(result.processedImageUrl);
       if (result.feedbackText) {
-        toast({ title: "Background Removal", description: result.feedbackText, variant: "info" });
+        toast({ title: "Background Removal", description: result.feedbackText, variant: "default" });
       }
     } catch (err) {
       console.error("Background transparency error:", err);

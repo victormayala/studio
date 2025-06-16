@@ -2,12 +2,6 @@
 import type {NextConfig} from 'next';
 
 const nextConfig: NextConfig = {
-  typescript: {
-    ignoreBuildErrors: true,
-  },
-  eslint: {
-    ignoreDuringBuilds: true,
-  },
   images: {
     remotePatterns: [
       {
@@ -16,8 +10,8 @@ const nextConfig: NextConfig = {
         port: '',
         pathname: '/**',
       },
-      // IMPORTANT: Replace 'your-woocommerce-store.com' with the actual hostname 
-      // where your WooCommerce product images are served. 
+      // IMPORTANT: Replace 'your-woocommerce-store.com' with the actual hostname
+      // where your WooCommerce product images are served.
       // This might be your main store domain or a CDN domain.
       {
         protocol: 'https',
@@ -26,15 +20,6 @@ const nextConfig: NextConfig = {
         pathname: '/**',
       },
     ],
-  },
-  async redirects() {
-    return [
-      {
-        source: '/page',
-        destination: '/',
-        permanent: true,
-      },
-    ];
   },
 };
 
