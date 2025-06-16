@@ -25,8 +25,8 @@ const sourceCodePro = Source_Code_Pro({
 });
 
 export const metadata: Metadata = {
-  title: 'Embedz - Product Customizer',
-  description: 'Easily compose and arrange graphical elements for your products. Generate embeddable scripts for your store.',
+  title: 'Customizer Studio - Product Customizer',
+  description: 'Easily compose and arrange graphical elements for your products with Customizer Studio.',
 };
 
 export default function RootLayout({
