@@ -2,28 +2,25 @@
 "use client";
 
 import Image from 'next/image';
-import { useState, useEffect } from 'react';
 
 export function Logo() {
-  // State for the logo source, initially the static path
-  const [versionedLogoSrc, setVersionedLogoSrc] = useState("/logo.png");
-
-  // useEffect to append a version query string on the client-side
-  // This helps in cache-busting if the browser is aggressively caching
-  useEffect(() => {
-    // This ensures that Date.now() is only called on the client after mount
-    setVersionedLogoSrc(`/logo.png?v=${Date.now()}`);
-  }, []); // Empty dependency array means this runs once on mount
+  // Using a static path directly.
+  // The dynamic version with Date.now() for cache-busting can sometimes
+  // interact subtly with hydration if the key/src change immediately after mount
+  // causes issues with how Next.js/React reconciles the initial render.
+  // For simplicity and to rule this out as a source of hydration errors,
+  // we use a static path.
+  const logoSrc = "/logo.png";
 
   return (
     <div className="relative h-12 w-[180px]" aria-label="Customizer Studio Logo">
       <Image
-        key={versionedLogoSrc} // Use the versioned path as a key
-        src={versionedLogoSrc}
+        key={logoSrc} // Key is now static based on the src
+        src={logoSrc}
         alt="Customizer Studio Logo"
         fill
         style={{ objectFit: 'contain' }}
-        priority 
+        priority
       />
     </div>
   );
