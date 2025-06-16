@@ -14,35 +14,35 @@ const steps = [
     icon: <Link2 className="h-10 w-10 text-secondary mb-4" />,
     title: "1. Sign Up & Connect Your Store",
     description: "Create your Customizer Studio account in minutes. Then, seamlessly connect your Shopify or WooCommerce store using our guided setup. Product synchronization starts immediately, importing your catalog into Customizer Studio.",
-    imagePlaceholder: "https://placehold.co/500x350.png",
+    imagePlaceholder: "/connect.png",
     aiHint: "store connection"
   },
   {
     icon: <Settings2 className="h-10 w-10 text-secondary mb-4" />,
     title: "2. Configure Customization Options",
     description: "From your Customizer Studio dashboard, select products you want to make customizable. Define available colors, sizes, text input fields, image upload zones, and set up design boundaries directly on your product images using our intuitive editor.",
-    imagePlaceholder: "https://placehold.co/500x350.png",
+    imagePlaceholder: "/dashboard.png",
     aiHint: "product configuration"
   },
   {
     icon: <Code className="h-10 w-10 text-secondary mb-4" />,
     title: "3. Embed the Customizer",
     description: "Add Customizer Studio to your product pages by simply copying a lightweight JavaScript snippet. For Shopify and WooCommerce, our dedicated apps/plugins will make this even easier, often just a few clicks to integrate.",
-    imagePlaceholder: "https://placehold.co/500x350.png",
+    imagePlaceholder: "/options.png",
     aiHint: "code embedding"
   },
   {
     icon: <Palette className="h-10 w-10 text-secondary mb-4" />,
     title: "4. Customers Design &amp; Personalize",
     description: "Your customers will now see the Customizer Studio tool on your product pages. They can add text, upload images, choose colors, and see a live preview of their unique creation, leading to higher engagement and satisfaction.",
-    imagePlaceholder: "https://placehold.co/500x350.png",
+    imagePlaceholder: "/customizer-app.png",
     aiHint: "customer design"
   },
   {
     icon: <PackageCheck className="h-10 w-10 text-secondary mb-4" />,
     title: "5. Receive &amp; Fulfill Custom Orders",
     description: "When a customer places an order, all customization details (text, image URLs, chosen options) are seamlessly passed to your e-commerce platform with the order. Fulfill custom orders accurately and efficiently.",
-    imagePlaceholder: "https://placehold.co/500x350.png",
+    imagePlaceholder: "/cart.png",
     aiHint: "order fulfillment"
   }
 ];
@@ -122,9 +122,9 @@ const CardStep = ({ step, index }: CardStepProps) => {
         <Image
           src={step.imagePlaceholder}
           alt={step.title}
-          width={500}
-          height={350}
-          className="rounded-xl shadow-xl object-cover border w-full aspect-[500/350]"
+          width={400}
+          height={280}
+          className="rounded-xl object-cover border w-full aspect-[10/7]"
           data-ai-hint={step.aiHint}
         />
       </div>
@@ -132,4 +132,3 @@ const CardStep = ({ step, index }: CardStepProps) => {
   );
 };
     
-
