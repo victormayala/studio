@@ -11,6 +11,13 @@ const firebaseConfig: FirebaseOptions = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 };
 
+// Check if the API key is present, which is crucial for Firebase initialization.
+if (!firebaseConfig.apiKey) {
+  console.warn(
+    'CRITICAL FIREBASE CONFIG ERROR: Firebase API Key (NEXT_PUBLIC_FIREBASE_API_KEY) is missing or not accessible in the environment. Please check your .env.local file or hosting environment variables. Firebase will not initialize correctly.'
+  );
+}
+
 // Initialize Firebase
 let app;
 if (!getApps().length) {
