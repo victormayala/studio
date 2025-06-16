@@ -1,7 +1,7 @@
 
 "use client"; 
 
-import { useSearchParams } from 'next/navigation';
+import { Suspense, useSearchParams } from 'next/navigation'; // Added Suspense
 import AppHeader from '@/components/layout/AppHeader';
 import DesignCanvas from '@/components/customizer/DesignCanvas';
 import RightPanel from '@/components/customizer/RightPanel';
@@ -671,10 +671,17 @@ function CustomizerLayoutAndLogic() {
 export default function CustomizerPage() {
   return (
     <UploadProvider>
-      <CustomizerLayoutAndLogic />
+      <Suspense fallback={
+        <div className="flex min-h-svh h-screen w-full items-center justify-center bg-background">
+          <Loader2 className="h-10 w-10 animate-spin text-primary" />
+          <p className="ml-3 text-muted-foreground">Loading customizer page...</p>
+        </div>
+      }>
+        <CustomizerLayoutAndLogic />
+      </Suspense>
     </UploadProvider>
   );
 }
     
 
-
+      
