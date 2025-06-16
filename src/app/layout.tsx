@@ -1,13 +1,14 @@
-// src/app/layout.tsx
 import type {Metadata} from 'next';
-import './globals.css'; // This will also be simplified
+import { Inter, Space_Grotesk, Source_Code_Pro } from 'next/font/google';
+import './globals.css';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { Toaster } from '@/components/ui/toaster';
+import { cn } from '@/lib/utils';
 
 // Server-side check for critical environment variables
 // This log will appear in your Firebase App Hosting runtime logs
-if (typeof process !== 'undefined' && process.env.NODE_ENV === 'production') { // Check if on server & in production
-  console.log("--- Customizer Studio Environment Variable Check (Server Startup) ---");
+if (typeof process !== 'undefined' && process.env.NODE_ENV === 'production') {
+  console.log("--- Embedz Environment Variable Check (Server Startup) ---");
   const criticalEnvVars = [
     'APP_ACCESS_PASSWORD',
     'APP_ACCESS_COOKIE_VALUE',
@@ -26,10 +27,27 @@ if (typeof process !== 'undefined' && process.env.NODE_ENV === 'production') { /
   console.log("------------------------------------------------------------------");
 }
 
+const inter = Inter({
+  subsets: ['latin'],
+  variable: '--font-inter',
+  display: 'swap',
+});
+
+const spaceGrotesk = Space_Grotesk({
+  subsets: ['latin'],
+  variable: '--font-space-grotesk',
+  display: 'swap',
+});
+
+const sourceCodePro = Source_Code_Pro({
+  subsets: ['latin'],
+  variable: '--font-source-code-pro',
+  display: 'swap',
+});
 
 export const metadata: Metadata = {
-  title: 'Customizer Studio',
-  description: 'Create and customize your product designs.',
+  title: 'Embedz - Product Customizer',
+  description: 'Easily compose and arrange graphical elements for your products. Generate embeddable scripts for your store.',
 };
 
 export default function RootLayout({
@@ -39,7 +57,12 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body>
+      <body className={cn(
+        "min-h-screen bg-background font-sans antialiased",
+        inter.variable,
+        spaceGrotesk.variable,
+        sourceCodePro.variable
+      )}>
         <AuthProvider>
           {children}
           <Toaster />

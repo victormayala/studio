@@ -11,10 +11,9 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        // Set Roboto as the primary sans-serif font.
-        // Tailwind's default 'font-sans' utility will now use Roboto.
-        sans: ['Roboto', ...defaultTheme.fontFamily.sans],
-        // Removed custom 'body', 'headline', and 'code' as Roboto is the new default
+        sans: ['Inter', ...defaultTheme.fontFamily.sans],
+        headline: ['"Space Grotesk"', ...defaultTheme.fontFamily.sans],
+        code: ['"Source Code Pro"', ...defaultTheme.fontFamily.mono],
       },
       colors: {
         background: 'hsl(var(--background))',
