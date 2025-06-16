@@ -800,11 +800,11 @@ export default function ProductOptionsPage() {
                 Total Default Views: <span className="font-semibold text-foreground">{productOptions.defaultViews.length}</span>
               </p>
               <p className="text-sm text-muted-foreground">
-                Active Setup View: <span className="font-semibold text-foreground">{currentView?.name || "N/A"}</span>
+                Active Setup View: <span className="font-semibold text-foreground">{currentSetupView?.name || "N/A"}</span>
               </p>
-              {currentView && (
+              {currentSetupView && (
                 <p className="text-sm text-muted-foreground">
-                  Areas in <span className="font-semibold text-primary">{currentView.name}</span>: <span className="font-semibold text-foreground">{currentView.boundaryBoxes.length}</span>
+                  Areas in <span className="font-semibold text-primary">{currentSetupView.name}</span>: <span className="font-semibold text-foreground">{currentSetupView.boundaryBoxes.length}</span>
                 </p>
               )}
               {productOptions.type === 'variable' && (

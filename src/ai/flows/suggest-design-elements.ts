@@ -1,3 +1,4 @@
+
 // src/ai/flows/suggest-design-elements.ts
 'use server';
 
@@ -59,7 +60,16 @@ const suggestDesignElementsFlow = ai.defineFlow(
     outputSchema: SuggestDesignElementsOutputSchema,
   },
   async input => {
-    const {output} = await suggestDesignElementsPrompt(input);
-    return output!;
+    try {
+      const {output} = await suggestDesignElementsPrompt(input);
+      if (!output) {
+        throw new Error('AI model did not return the expected output for design element suggestions.');
+      }
+      return output;
+    } catch (error: any) {
+      console.error(`Error in suggestDesignElementsFlow for composition "${input.designComposition}":`, error);
+      throw new Error(`AI Design Element Suggestion Error: ${error.message || 'An unexpected error occurred during suggestion generation.'}`);
+    }
   }
 );
+

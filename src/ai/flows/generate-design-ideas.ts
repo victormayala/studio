@@ -1,3 +1,4 @@
+
 'use server';
 
 /**
@@ -42,7 +43,16 @@ const generateDesignIdeasFlow = ai.defineFlow(
     outputSchema: GenerateDesignIdeasOutputSchema,
   },
   async input => {
-    const {output} = await prompt(input);
-    return output!;
+    try {
+      const {output} = await prompt(input);
+      if (!output) {
+        throw new Error('AI model did not return the expected output for design ideas.');
+      }
+      return output;
+    } catch (error: any) {
+      console.error(`Error in generateDesignIdeasFlow for prompt "${input.prompt}":`, error);
+      throw new Error(`AI Design Idea Generation Error: ${error.message || 'An unexpected error occurred during design idea generation.'}`);
+    }
   }
 );
+
