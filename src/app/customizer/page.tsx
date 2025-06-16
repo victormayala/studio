@@ -226,7 +226,7 @@ function CustomizerLayoutAndLogic() {
       }
     } catch (e) {
       console.warn("Customizer: Error parsing Customizer Studio options from localStorage:", e);
-      toast({ title: "Local Settings Error", description: "Could not load saved Customizer Studio settings. Using defaults.", variant: "info"});
+      toast({ title: "Local Settings Note", description: "Could not load saved Customizer Studio settings. Using defaults."});
     }
     
     if (finalDefaultViews.length === 0) {
@@ -456,7 +456,7 @@ function CustomizerLayoutAndLogic() {
       toast({
         title: "Cannot Add to Cart",
         description: "Please add some design elements or sign in.",
-        variant: "info",
+        variant: "default", 
       });
       return;
     }
@@ -465,7 +465,7 @@ function CustomizerLayoutAndLogic() {
        toast({
         title: "Please Sign In",
         description: "Sign in to save your design and add to cart.",
-        variant: "info",
+        variant: "default", 
       });
       return;
     }
@@ -513,7 +513,7 @@ function CustomizerLayoutAndLogic() {
        toast({
         title: "Add to Cart Clicked (Standalone)",
         description: "This action would normally send data to an embedded store. Design data logged to console.",
-        variant: "info"
+        variant: "default" 
       });
       console.log("Add to Cart - Design Data:", designData);
     }
@@ -676,3 +676,5 @@ export default function CustomizerPage() {
   );
 }
     
+
+
