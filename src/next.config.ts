@@ -27,15 +27,15 @@ const nextConfig: NextConfig = {
       },
     ],
   },
-  // async redirects() { // Temporarily removed to simplify for ISE diagnosis
-  //   return [
-  //     {
-  //       source: '/page',
-  //       destination: '/',
-  //       permanent: true,
-  //     },
-  //   ];
-  // },
+  async redirects() {
+    return [
+      {
+        source: '/page',
+        destination: '/',
+        permanent: true,
+      },
+    ];
+  },
 };
 
 export default nextConfig;

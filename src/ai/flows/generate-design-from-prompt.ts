@@ -40,43 +40,51 @@ const generateDesignFromPromptFlow = ai.defineFlow(
     outputSchema: GenerateDesignFromPromptOutputSchema,
   },
   async (input) => {
-    const { text, media } = await ai.generate({
-      model: model,
-      prompt: `User's design idea: "${input.userPrompt}"
+    try {
+      const { text, media } = await ai.generate({
+        model: model,
+        prompt: `User's design idea: "${input.userPrompt}"
 
-      Based on the user's design idea provided above:
-      1. Generate a visually appealing image that represents this idea. The image *MUST* have a transparent background (e.g., like a PNG with an alpha channel) to allow it to be placed on various products. Do NOT generate a solid white or any other color background unless that color is part of the design requested by the user. If the subject of the design is complex, focus on making the background immediately surrounding the main subject transparent.
-      2. Provide a concise, one-sentence textual description of the generated image. This description will be used as alt text.
+        Based on the user's design idea provided above:
+        1. Generate a visually appealing image that represents this idea. The image *MUST* have a transparent background (e.g., like a PNG with an alpha channel) to allow it to be placed on various products. Do NOT generate a solid white or any other color background unless that color is part of the design requested by the user. If the subject of the design is complex, focus on making the background immediately surrounding the main subject transparent.
+        2. Provide a concise, one-sentence textual description of the generated image. This description will be used as alt text.
 
-      Example of desired text output if user asks for "a happy cat":
-      "A cheerful cartoon cat with bright green eyes and a playful smile."
+        Example of desired text output if user asks for "a happy cat":
+        "A cheerful cartoon cat with bright green eyes and a playful smile."
 
-      Return ONLY the image and the textual description. Do not add any other conversational text or markdown.`,
-      config: {
-        responseModalities: ['TEXT', 'IMAGE'],
-         safetySettings: [
-          { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
-          { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
-          { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
-          { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
-        ],
-      },
-    });
+        Return ONLY the image and the textual description. Do not add any other conversational text or markdown.`,
+        config: {
+          responseModalities: ['TEXT', 'IMAGE'],
+          safetySettings: [
+            { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
+            { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
+            { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
+            { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
+          ],
+        },
+      });
 
-    const imageUrl = media?.url;
-    // Ensure text is a string, default to a generic description if text is empty or not a string
-    const imageDescription = (typeof text === 'string' && text.trim()) ? text.trim() : `AI Generated: ${input.userPrompt.substring(0,30)}`;
+      const imageUrl = media?.url;
+      // Ensure text is a string, default to a generic description if text is empty or not a string
+      const imageDescription = (typeof text === 'string' && text.trim()) ? text.trim() : `AI Generated: ${input.userPrompt.substring(0,30)}`;
 
 
-    if (!imageUrl) {
-      console.error('Image generation failed or did not return an image. Text response:', text);
-      throw new Error('Image generation failed or did not return an image. The model might have refused the prompt due to safety settings or other reasons.');
+      if (!imageUrl) {
+        console.error('Image generation failed or did not return an image. Text response:', text);
+        // This error should be caught by the client-side try...catch in AiAssistant.tsx
+        throw new Error('Image generation failed or did not return an image. The model might have refused the prompt due to safety settings or other reasons.');
+      }
+
+      return {
+        generatedImageUrl: imageUrl,
+        generatedImageDescription: imageDescription,
+      };
+    } catch (error: any) {
+      console.error(`Error in generateDesignFromPromptFlow for prompt "${input.userPrompt}":`, error);
+      // Re-throw a more specific error or one that's easier for the client to handle
+      // This helps ensure the client-side catch block in AiAssistant.tsx gets a clear error
+      throw new Error(`AI Design Generation Error: ${error.message || 'An unexpected error occurred during image generation.'}`);
     }
-
-    return {
-      generatedImageUrl: imageUrl,
-      generatedImageDescription: imageDescription,
-    };
   }
 );
 
