@@ -199,7 +199,7 @@ export default function MarketingHomePage() {
           <div className="container mx-auto px-4">
             <div className="flex flex-col lg:flex-row items-center gap-12 lg:gap-16">
               <div className="lg:w-1/2">
-                <div className="relative w-full aspect-square rounded-xl overflow-hidden bg-card">
+                <div className="relative w-full aspect-square rounded-xl overflow-hidden">
                   <Image 
                     src="/bottom-hero.png"
                     alt="A collage of customized products created with Customizer Studio"
