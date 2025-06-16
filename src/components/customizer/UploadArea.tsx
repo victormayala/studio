@@ -48,7 +48,7 @@ export default function UploadArea({ activeViewId }: UploadAreaProps) {
 
   const handleImageClick = (image: UploadedImage) => {
     if (!activeViewId) {
-      toast({ title: "No Active View", description: "Please select a product view first.", variant: "info" });
+      toast({ title: "No Active View", description: "Please select a product view first.", variant: "default" });
       return;
     }
     addCanvasImage(image.id, activeViewId);
