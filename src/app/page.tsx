@@ -199,12 +199,13 @@ export default function MarketingHomePage() {
           <div className="container mx-auto px-4">
             <div className="flex flex-col lg:flex-row items-center gap-12 lg:gap-16">
               <div className="lg:w-1/2">
-                <div className="relative w-full aspect-square rounded-xl overflow-hidden">
-                  <Image 
+                <div className="w-full rounded-xl overflow-hidden">
+                  <Image
                     src="/bottom-hero.png"
                     alt="A collage of customized products created with Customizer Studio"
-                    fill
-                    className="object-cover"
+                    width={1200} 
+                    height={750} 
+                    className="w-full h-auto object-contain block rounded-xl"
                     data-ai-hint="customized products collage"
                   />
                 </div>
@@ -284,4 +285,3 @@ export default function MarketingHomePage() {
     </div>
   );
 }
-
