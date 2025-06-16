@@ -2,21 +2,27 @@
 "use client";
 
 import Image from 'next/image';
+import { useState, useEffect } from 'react';
 
 export function Logo() {
-  // Using a static path directly.
-  let logoSrc = "/logo.png"; // Ensure this file exists in your /public directory
+  const baseLogoSrc = "/logo.png";
+  // Initialize with the base source, which will be consistent between server and client initial render
+  const [effectiveLogoSrc, setEffectiveLogoSrc] = useState(baseLogoSrc);
 
-  // Add cache-busting query parameter in development
-  if (process.env.NODE_ENV === 'development') {
-    logoSrc = `/logo.png?t=${Date.now()}`;
-  }
+  useEffect(() => {
+    // This effect runs only on the client, after hydration.
+    if (process.env.NODE_ENV === 'development') {
+      // Update the src to include cache-busting timestamp only on the client in dev mode
+      setEffectiveLogoSrc(`${baseLogoSrc}?t=${Date.now()}`);
+    }
+    // If not in development, effectiveLogoSrc remains baseLogoSrc.
+  }, []); // Empty dependency array ensures this runs once on mount (client-side)
 
   return (
     <div className="relative h-12 w-[180px]" aria-label="Customizer Studio Logo">
       <Image
-        key={logoSrc} // Using logoSrc as key to force re-render if it changes
-        src={logoSrc}
+        key={effectiveLogoSrc} // Using key helps React re-render if src changes, ensuring new image loads
+        src={effectiveLogoSrc}
         alt="Customizer Studio Logo" // Ensures alt text matches "Customizer Studio"
         fill
         style={{ objectFit: 'contain' }}
