@@ -186,30 +186,28 @@ export default function ProductOptionsPage() {
     const initialDefaultViews: ProductView[] = [{ id: crypto.randomUUID(), name: "Front", imageUrl: defaultImageUrl, aiHint: defaultAiHint, boundaryBoxes: [], price: 0 }];
     
     let plainTextDescription = 'No description available.';
-    if (typeof window !== 'undefined' && (wcProduct.description || wcProduct.short_description)) {
-        const tempDiv = document.createElement('div');
-        tempDiv.innerHTML = wcProduct.description || wcProduct.short_description || '';
-        plainTextDescription = tempDiv.textContent || tempDiv.innerText || '';
-    } else if (wcProduct.description || wcProduct.short_description) {
-        plainTextDescription = (wcProduct.description || wcProduct.short_description || '').replace(/<[^>]+>/g, '');
+    const descriptionSource = wcProduct.description || wcProduct.short_description || '';
+    if (descriptionSource) {
+        // Use regex stripping consistently. This is safe for SSR and client.
+        plainTextDescription = descriptionSource.replace(/<[^>]+>/g, '');
     }
 
     let loadedDefaultViews: ProductView[] = [];
     let loadedOptionsByColor: Record<string, ColorGroupOptions> = {};
     let loadedGroupingAttributeName: string | null = null;
     let localDataFoundAndParsed = false;
-    const localStorageKey = `customizer_studio_product_options_${user.id}_${productId}`; // Updated key
+    const localStorageKey = `customizer_studio_product_options_${user.id}_${productId}`; 
 
     try {
       const savedOptionsString = localStorage.getItem(localStorageKey);
       if (savedOptionsString) {
         const parsedOptions = JSON.parse(savedOptionsString);
-        if (parsedOptions.optionsByColor && parsedOptions.defaultViews) { // New format
+        if (parsedOptions.optionsByColor && parsedOptions.defaultViews) { 
           loadedDefaultViews = parsedOptions.defaultViews.map((view: any) => ({ ...view, price: view.price ?? 0 })) || [];
           loadedOptionsByColor = parsedOptions.optionsByColor || {};
           loadedGroupingAttributeName = parsedOptions.groupingAttributeName || null;
           localDataFoundAndParsed = true;
-        } else if (parsedOptions.views) { // Old format (cstmzr or customizerStudio prefix for selectedVariationIds)
+        } else if (parsedOptions.views) { 
           loadedDefaultViews = parsedOptions.views.map((view: any) => ({ ...view, price: view.price ?? 0 })) || [];
           const oldFormat = parsedOptions as LocalStorageData_Old;
           const migratedSelectedVariationIds = oldFormat.customizerStudioSelectedVariationIds || oldFormat.cstmzrSelectedVariationIds || [];
@@ -358,7 +356,7 @@ export default function ProductOptionsPage() {
         toast({ title: "Error", description: "Product data or user session is missing.", variant: "destructive"});
         return;
     }
-    const localStorageKey = `customizer_studio_product_options_${user.id}_${productOptions.id}`; // Updated key
+    const localStorageKey = `customizer_studio_product_options_${user.id}_${productOptions.id}`; 
     const dataToSave: LocalStorageData_New = {
       defaultViews: productOptions.defaultViews,
       optionsByColor: productOptions.optionsByColor,
@@ -395,7 +393,7 @@ export default function ProductOptionsPage() {
     const newView: ProductView = {
       id: crypto.randomUUID(), name: `View ${productOptions.defaultViews.length + 1}`,
       imageUrl: 'https://placehold.co/600x600/eee/ccc.png?text=New+View', aiHint: 'product view',
-      boundaryBoxes: [], price: 0, // Initialize price
+      boundaryBoxes: [], price: 0, 
     };
     setProductOptions(prev => prev ? { ...prev, defaultViews: [...prev.defaultViews, newView] } : null);
     setActiveViewIdForSetup(newView.id); setSelectedBoundaryBoxId(null); setHasUnsavedChanges(true);
@@ -568,7 +566,6 @@ export default function ProductOptionsPage() {
   ) => {
     setProductOptions(prev => {
       if (!prev) return null;
-      // Create a deep copy of optionsByColor to ensure nested objects are new instances
       const updatedOptionsByColor = JSON.parse(JSON.stringify(prev.optionsByColor));
 
       if (!updatedOptionsByColor[colorKey]) {
@@ -826,3 +823,4 @@ export default function ProductOptionsPage() {
     </div>
   );
 }
+
