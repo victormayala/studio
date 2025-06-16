@@ -5,28 +5,24 @@ import Link from 'next/link';
 import { Logo } from '@/components/icons/Logo';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
-import { Menu, LogOut, LayoutDashboardIcon, type LucideIcon } from 'lucide-react';
+import { Menu, LogOut, LayoutDashboardIcon, UserCircle } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 const navLinks = [
   { href: "/", label: "Home" },
   { href: "/how-it-works", label: "How It Works" },
   { href: "/pricing", label: "Pricing" },
-];
-
-interface AuthLink {
-  label: string;
-  variant: "outline" | "default";
-  href?: string;
-  action?: () => Promise<void> | void; 
-  icon?: LucideIcon; 
-}
-
-const defaultAuthLinks: AuthLink[] = [
-  { href: "/signin", label: "Sign In", variant: "outline" as const },
-  { href: "/signup", label: "Sign Up", variant: "default" as const },
 ];
 
 export default function MarketingHeader() {
@@ -37,19 +33,94 @@ export default function MarketingHeader() {
   const handleSignOut = async () => {
     try {
       await signOut();
-      toast({ title: "Signed Out", description: "You have been successfully signed out." });
+      // Toast is handled in AuthContext signOut
     } catch (error) {
       console.error("Sign out error:", error);
       toast({ title: "Sign Out Failed", description: "Could not sign you out. Please try again.", variant: "destructive" });
     }
   };
 
-  const authLinks: AuthLink[] = user
-    ? [
-        { href: "/dashboard", label: "Dashboard", variant: "outline" as const, icon: LayoutDashboardIcon },
-        { action: handleSignOut, label: "Sign Out", variant: "default" as const, icon: LogOut },
-      ]
-    : defaultAuthLinks;
+  const UserNav = () => {
+    if (!user) return null;
+
+    const getInitials = (name: string | null | undefined) => {
+      if (!name) return "?";
+      const names = name.split(' ');
+      if (names.length === 1) return names[0][0].toUpperCase();
+      return `${names[0][0]}${names[names.length - 1][0]}`.toUpperCase();
+    };
+
+    return (
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button variant="ghost" className="relative h-9 w-9 rounded-full p-0">
+            <Avatar className="h-9 w-9">
+              <AvatarImage src={user.photoURL || ''} alt={user.displayName || user.email || 'User'} />
+              <AvatarFallback>{getInitials(user.displayName || user.email)}</AvatarFallback>
+            </Avatar>
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent className="w-56" align="end" forceMount>
+          <DropdownMenuLabel className="font-normal">
+            <div className="flex flex-col space-y-1">
+              <p className="text-sm font-medium leading-none">{user.displayName || "User"}</p>
+              <p className="text-xs leading-none text-muted-foreground">
+                {user.email}
+              </p>
+            </div>
+          </DropdownMenuLabel>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem asChild>
+            <Link href="/dashboard" className="flex items-center cursor-pointer">
+              <LayoutDashboardIcon className="mr-2 h-4 w-4" />
+              Dashboard
+            </Link>
+          </DropdownMenuItem>
+          {/* Add more items like Profile, Settings if needed */}
+          <DropdownMenuSeparator />
+          <DropdownMenuItem onClick={handleSignOut} disabled={authIsLoading} className="cursor-pointer">
+            <LogOut className="mr-2 h-4 w-4" />
+            Sign out
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    );
+  };
+  
+  const AuthButtonsMobile = () => {
+    if (user) {
+      return (
+        <>
+          <DropdownMenuLabel className="font-normal px-2 pt-2">
+            <div className="flex flex-col space-y-1">
+              <p className="text-sm font-medium leading-none">{user.displayName || "User"}</p>
+              <p className="text-xs leading-none text-muted-foreground">
+                {user.email}
+              </p>
+            </div>
+          </DropdownMenuLabel>
+          <DropdownMenuSeparator />
+          <Button asChild variant="ghost" className="w-full justify-start text-base font-medium">
+            <Link href="/dashboard"><LayoutDashboardIcon className="mr-2 h-5 w-5" />Dashboard</Link>
+          </Button>
+          <Button onClick={handleSignOut} variant="ghost" className="w-full justify-start text-base font-medium text-destructive hover:text-destructive" disabled={authIsLoading}>
+            <LogOut className="mr-2 h-5 w-5" />Sign out
+          </Button>
+        </>
+      );
+    }
+    return (
+      <>
+        <Button asChild variant="outline" className="w-full text-base">
+          <Link href="/signin">Sign In</Link>
+        </Button>
+        <Button asChild variant="default" className="w-full text-base">
+          <Link href="/signup">Sign Up</Link>
+        </Button>
+      </>
+    );
+  };
+
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-card flex justify-center">
@@ -70,36 +141,18 @@ export default function MarketingHeader() {
                 </Button>
               </SheetTrigger>
               <SheetContent side="right" className="w-[280px] p-6 bg-card">
-                <nav className="flex flex-col space-y-4">
+                <nav className="flex flex-col space-y-3">
                   {navLinks.map((link) => (
                     <Link
                       key={link.label}
                       href={link.href}
-                      className="text-lg font-medium text-foreground hover:text-primary"
+                      className="text-base font-medium text-foreground hover:text-primary"
                     >
                       {link.label}
                     </Link>
                   ))}
                   <hr className="my-2 border-border" />
-                  {authLinks.map((link) => (
-                    link.href ? (
-                      <Button key={link.label} asChild variant={link.variant} className="w-full">
-                        <Link href={link.href}>
-                          <span className="flex items-center justify-center w-full">
-                            {link.icon && <link.icon className="mr-2 h-4 w-4" />}
-                            {link.label}
-                          </span>
-                        </Link>
-                      </Button>
-                    ) : (
-                      <Button key={link.label} onClick={link.action} variant={link.variant} className="w-full" disabled={authIsLoading}>
-                        <span className="flex items-center justify-center w-full">
-                          {link.icon && <link.icon className="mr-2 h-4 w-4" />}
-                          {link.label}
-                        </span>
-                      </Button>
-                    )
-                  ))}
+                  <AuthButtonsMobile />
                 </nav>
               </SheetContent>
             </Sheet>
@@ -118,25 +171,18 @@ export default function MarketingHeader() {
               ))}
             </nav>
             <div className="flex items-center space-x-3">
-              {authLinks.map((link) => (
-                link.href ? (
-                  <Button key={link.label} asChild variant={link.variant} size="sm">
-                    <Link href={link.href}>
-                      <span className="flex items-center">
-                        {link.icon && <link.icon className="mr-2 h-4 w-4" />}
-                        {link.label}
-                      </span>
-                    </Link>
+              {user ? (
+                <UserNav />
+              ) : (
+                <>
+                  <Button asChild variant="outline" size="sm">
+                    <Link href="/signin">Sign In</Link>
                   </Button>
-                ) : (
-                  <Button key={link.label} onClick={link.action} variant={link.variant} size="sm" disabled={authIsLoading}>
-                     <span className="flex items-center">
-                        {link.icon && <link.icon className="mr-2 h-4 w-4" />}
-                        {link.label}
-                      </span>
+                  <Button asChild variant="default" size="sm">
+                    <Link href="/signup">Sign Up</Link>
                   </Button>
-                )
-              ))}
+                </>
+              )}
             </div>
           </>
         )}

@@ -11,13 +11,14 @@ import Link from 'next/link';
 import { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext'; 
 import { useToast } from '@/hooks/use-toast'; 
-import { Loader2 } from 'lucide-react'; 
+import { Loader2, UserPlus } from 'lucide-react'; 
+import { FcGoogle } from 'react-icons/fc'; // Using react-icons for Google logo
 
 export default function SignUpPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const { signUp, isLoading } = useAuth(); 
+  const { signUp, signInWithGoogle, isLoading } = useAuth(); 
   const { toast } = useToast(); 
 
   const handleSubmit = async (e: React.FormEvent) => { 
@@ -31,19 +32,31 @@ export default function SignUpPage() {
       });
       return;
     }
+    if (password.length < 6) {
+      toast({
+        title: "Weak Password",
+        description: "Password should be at least 6 characters long.",
+        variant: "destructive",
+      });
+      return;
+    }
     try {
       await signUp(email, password);
       // Navigation is handled by AuthContext
     } catch (error) {
-      console.error("Sign up error:", error);
-      toast({
-        title: "Sign Up Failed",
-        description: (error instanceof Error ? error.message : "An unexpected error occurred. Please try again."),
-        variant: "destructive",
-      });
+      // Error toast is handled within signUp method
     }
   };
 
+  const handleGoogleSignUp = async () => {
+    if (isLoading) return;
+    try {
+      await signInWithGoogle(); // Firebase handles account creation or sign-in seamlessly
+      // Navigation is handled by AuthContext
+    } catch (error) {
+      // Error toast is handled within signInWithGoogle method
+    }
+  };
 
   return (
     <div className="flex flex-col min-h-screen bg-background">
@@ -55,7 +68,7 @@ export default function SignUpPage() {
             <CardDescription>Join Customizer Studio and start customizing today!</CardDescription>
           </CardHeader>
           <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-6">
+            <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="email">Email Address</Label>
                 <Input 
@@ -70,10 +83,11 @@ export default function SignUpPage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="password">Password</Label>
+                <Label htmlFor="password">Password (min. 6 characters)</Label>
                 <Input 
                   id="password" 
                   type="password" 
+                  placeholder="Create a password"
                   required 
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
@@ -86,6 +100,7 @@ export default function SignUpPage() {
                 <Input 
                   id="confirmPassword" 
                   type="password" 
+                  placeholder="Confirm your password"
                   required 
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
@@ -94,24 +109,34 @@ export default function SignUpPage() {
                 />
               </div>
               <Button type="submit" className="w-full bg-primary text-primary-foreground hover:bg-primary/90" size="lg" disabled={isLoading}>
-                {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "Sign Up"}
+                {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <UserPlus className="mr-2 h-4 w-4" />}
+                Sign Up
               </Button>
-              <div className="text-center">
+            </form>
+            <div className="my-4 flex items-center">
+              <div className="flex-grow border-t border-muted-foreground/20"></div>
+              <span className="mx-4 text-xs uppercase text-muted-foreground">Or continue with</span>
+              <div className="flex-grow border-t border-muted-foreground/20"></div>
+            </div>
+            <Button variant="outline" className="w-full" onClick={handleGoogleSignUp} disabled={isLoading}>
+              {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FcGoogle className="mr-2 h-5 w-5" />}
+              Sign Up with Google
+            </Button>
+            <div className="text-center mt-4">
                  <p className="text-xs text-muted-foreground px-2">
                     By signing up, you agree to our{' '}
                     <Link href="/terms" className="underline hover:text-primary">Terms of Service</Link> and 
                     {' '}<Link href="/privacy" className="underline hover:text-primary">Privacy Policy</Link>.
                   </p>
               </div>
-              <div className="text-center">
-                <p className="text-sm text-muted-foreground">
-                  Already have an account?{' '}
-                  <Link href="/signin" className="font-medium text-primary hover:underline">
-                    Sign in here
-                  </Link>
-                </p>
-              </div>
-            </form>
+            <div className="text-center mt-4">
+              <p className="text-sm text-muted-foreground">
+                Already have an account?{' '}
+                <Link href="/signin" className="font-medium text-primary hover:underline">
+                  Sign in here
+                </Link>
+              </p>
+            </div>
           </CardContent>
         </Card>
       </main>
@@ -119,4 +144,3 @@ export default function SignUpPage() {
     </div>
   );
 }
-

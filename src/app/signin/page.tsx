@@ -11,12 +11,13 @@ import Link from 'next/link';
 import { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext'; 
 import { useToast } from '@/hooks/use-toast'; 
-import { Loader2 } from 'lucide-react'; 
+import { Loader2, LogIn } from 'lucide-react'; 
+import { FcGoogle } from 'react-icons/fc'; // Using react-icons for Google logo
 
 export default function SignInPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const { signIn, isLoading } = useAuth(); 
+  const { signIn, signInWithGoogle, isLoading } = useAuth(); 
   const { toast } = useToast(); 
 
   const handleSubmit = async (e: React.FormEvent) => { 
@@ -26,12 +27,17 @@ export default function SignInPage() {
       await signIn(email, password);
       // Navigation is handled by AuthContext
     } catch (error) {
-      console.error("Sign in error:", error);
-      toast({
-        title: "Sign In Failed",
-        description: (error instanceof Error ? error.message : "An unexpected error occurred. Please try again."),
-        variant: "destructive",
-      });
+      // Error toast is handled within signIn method
+    }
+  };
+
+  const handleGoogleSignIn = async () => {
+    if (isLoading) return;
+    try {
+      await signInWithGoogle();
+      // Navigation is handled by AuthContext
+    } catch (error) {
+      // Error toast is handled within signInWithGoogle method
     }
   };
 
@@ -45,7 +51,7 @@ export default function SignInPage() {
             <CardDescription>Sign in to access your Customizer Studio dashboard.</CardDescription>
           </CardHeader>
           <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-6">
+            <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="email">Email Address</Label>
                 <Input 
@@ -62,13 +68,14 @@ export default function SignInPage() {
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <Label htmlFor="password">Password</Label>
-                  <Link href="/forgot-password" className="text-sm text-primary hover:underline">
+                  {/* <Link href="/forgot-password" className="text-sm text-primary hover:underline">
                     Forgot password?
-                  </Link>
+                  </Link> */}
                 </div>
                 <Input 
                   id="password" 
                   type="password" 
+                  placeholder="Enter your password"
                   required 
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
@@ -77,17 +84,27 @@ export default function SignInPage() {
                 />
               </div>
               <Button type="submit" className="w-full bg-primary text-primary-foreground hover:bg-primary/90" size="lg" disabled={isLoading}>
-                {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "Sign In"}
+                {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <LogIn className="mr-2 h-4 w-4" />}
+                Sign In
               </Button>
-              <div className="text-center">
-                <p className="text-sm text-muted-foreground">
-                  Don't have an account?{' '}
-                  <Link href="/signup" className="font-medium text-primary hover:underline">
-                    Sign up here
-                  </Link>
-                </p>
-              </div>
             </form>
+            <div className="my-4 flex items-center">
+              <div className="flex-grow border-t border-muted-foreground/20"></div>
+              <span className="mx-4 text-xs uppercase text-muted-foreground">Or continue with</span>
+              <div className="flex-grow border-t border-muted-foreground/20"></div>
+            </div>
+            <Button variant="outline" className="w-full" onClick={handleGoogleSignIn} disabled={isLoading}>
+              {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FcGoogle className="mr-2 h-5 w-5" />}
+              Sign In with Google
+            </Button>
+            <div className="text-center mt-6">
+              <p className="text-sm text-muted-foreground">
+                Don't have an account?{' '}
+                <Link href="/signup" className="font-medium text-primary hover:underline">
+                  Sign up here
+                </Link>
+              </p>
+            </div>
           </CardContent>
         </Card>
       </main>
@@ -95,4 +112,3 @@ export default function SignInPage() {
     </div>
   );
 }
-

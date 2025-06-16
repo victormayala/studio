@@ -4,19 +4,33 @@
 import type { ReactNode } from 'react';
 import { createContext, useContext, useState, useEffect, useCallback }  from 'react';
 import { useRouter, usePathname } from 'next/navigation';
-import { clearAccessCookie } from '@/app/access-login/actions'; // Import the action
+import { 
+  getAuth, 
+  onAuthStateChanged, 
+  signInWithEmailAndPassword, 
+  createUserWithEmailAndPassword, 
+  GoogleAuthProvider, 
+  signInWithPopup, 
+  signOut as firebaseSignOut,
+  type User as FirebaseUser 
+} from 'firebase/auth';
+import { auth } from '@/lib/firebase'; // Import configured auth instance
+import { clearAccessCookie } from '@/app/access-login/actions';
+import { useToast } from '@/hooks/use-toast';
 
 interface User {
-  id: string;
-  email: string;
-  // Add other user properties as needed
+  uid: string;
+  email: string | null;
+  displayName: string | null;
+  photoURL: string | null;
 }
 
 interface AuthContextType {
   user: User | null;
   isLoading: boolean;
-  signIn: (email: string, pass: string) => Promise<void>; // pass is unused for mock
-  signUp: (email: string, pass: string) => Promise<void>; // pass is unused for mock
+  signIn: (email: string, pass: string) => Promise<void>;
+  signUp: (email: string, pass: string) => Promise<void>;
+  signInWithGoogle: () => Promise<void>;
   signOut: () => Promise<void>;
 }
 
@@ -24,90 +38,123 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
-  const [isLoading, setIsLoading] = useState(true); // Start as true to check session
+  const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
   const pathname = usePathname();
+  const { toast } = useToast();
 
-  // Mock session check
   useEffect(() => {
-    const mockSessionUser = localStorage.getItem('mockUser');
-    if (mockSessionUser) {
-      try {
-        const parsedUser = JSON.parse(mockSessionUser);
-        if (parsedUser && typeof parsedUser.id === 'string' && typeof parsedUser.email === 'string') {
-          setUser(parsedUser);
-        } else {
-          localStorage.removeItem('mockUser');
-        }
-      } catch (error) {
-        console.error("Failed to parse mockUser from localStorage", error);
-        localStorage.removeItem('mockUser');
+    const unsubscribe = onAuthStateChanged(auth, (firebaseUser: FirebaseUser | null) => {
+      if (firebaseUser) {
+        setUser({
+          uid: firebaseUser.uid,
+          email: firebaseUser.email,
+          displayName: firebaseUser.displayName,
+          photoURL: firebaseUser.photoURL,
+        });
+      } else {
+        setUser(null);
       }
-    }
-    setIsLoading(false);
+      setIsLoading(false);
+    });
+
+    return () => unsubscribe();
   }, []);
 
-  const signIn = useCallback(async (email: string, _pass: string) => {
-    setIsLoading(true);
-    await new Promise(resolve => setTimeout(resolve, 500));
-    const mockUser: User = { id: 'mock-user-id-' + Date.now(), email };
-    setUser(mockUser);
-    try {
-      localStorage.setItem('mockUser', JSON.stringify(mockUser));
-    } catch (error) {
-      console.error("Failed to set mockUser in localStorage", error);
-    }
-    setIsLoading(false);
-    // Check if already on access-login, if so, dashboard, otherwise let middleware handle
-    if (pathname === '/access-login') {
+  const handleAuthSuccess = useCallback(() => {
+    // If signing in/up from a public page, redirect to dashboard.
+    // Middleware will handle access gate if necessary.
+    if (pathname === '/signin' || pathname === '/signup' || pathname === '/') {
       router.push('/dashboard');
-    } else {
-      // If signing in from a public page, attempt to go to dashboard.
-      // Middleware will intercept if app access is still needed.
-      router.push('/dashboard');
+    } else if (pathname === '/access-login') {
+       router.push('/dashboard');
     }
+    // For other paths, stay on the current page, user state is updated.
   }, [router, pathname]);
 
-  const signUp = useCallback(async (email: string, _pass: string) => {
+  const signIn = useCallback(async (email: string, pass: string) => {
     setIsLoading(true);
-    await new Promise(resolve => setTimeout(resolve, 500));
-    const mockUser: User = { id: 'mock-user-id-' + Date.now(), email };
-    setUser(mockUser);
     try {
-      localStorage.setItem('mockUser', JSON.stringify(mockUser));
-    } catch (error) {
-      console.error("Failed to set mockUser in localStorage", error);
+      await signInWithEmailAndPassword(auth, email, pass);
+      // onAuthStateChanged will handle setting user and loading state
+      toast({ title: "Signed In", description: "Welcome back!" });
+      handleAuthSuccess();
+    } catch (error: any) {
+      console.error("Firebase sign in error:", error);
+      toast({
+        title: "Sign In Failed",
+        description: error.message || "Invalid credentials or user not found.",
+        variant: "destructive",
+      });
+      setIsLoading(false);
+      throw error;
     }
-    setIsLoading(false);
-    // Similar to signIn, attempt dashboard, middleware handles access gate.
-    router.push('/dashboard');
-  }, [router]);
+  }, [auth, toast, handleAuthSuccess]);
+
+  const signUp = useCallback(async (email: string, pass: string) => {
+    setIsLoading(true);
+    try {
+      await createUserWithEmailAndPassword(auth, email, pass);
+      // onAuthStateChanged will handle setting user and loading state
+      toast({ title: "Sign Up Successful", description: "Welcome! Your account has been created." });
+      handleAuthSuccess();
+    } catch (error: any) {
+      console.error("Firebase sign up error:", error);
+      toast({
+        title: "Sign Up Failed",
+        description: error.message || "Could not create account. Please try again.",
+        variant: "destructive",
+      });
+      setIsLoading(false);
+      throw error;
+    }
+  }, [auth, toast, handleAuthSuccess]);
+
+  const signInWithGoogle = useCallback(async () => {
+    setIsLoading(true);
+    const provider = new GoogleAuthProvider();
+    try {
+      await signInWithPopup(auth, provider);
+      // onAuthStateChanged will handle setting user and loading state
+      toast({ title: "Signed In with Google", description: "Welcome!" });
+      handleAuthSuccess();
+    } catch (error: any) {
+      console.error("Google sign in error:", error);
+      // Handle specific errors like popup closed by user, account exists with different credential, etc.
+      let description = "Could not sign in with Google. Please try again.";
+      if (error.code === 'auth/popup-closed-by-user') {
+        description = "Sign-in popup closed. Please try again.";
+      } else if (error.code === 'auth/account-exists-with-different-credential') {
+        description = "An account already exists with this email address. Try signing in with a different method.";
+      }
+      toast({
+        title: "Google Sign In Failed",
+        description,
+        variant: "destructive",
+      });
+      setIsLoading(false);
+      throw error;
+    }
+  }, [auth, toast, handleAuthSuccess]);
 
   const signOut = useCallback(async () => {
     setIsLoading(true);
-    await new Promise(resolve => setTimeout(resolve, 250)); // Shorten delay for signout
-    setUser(null);
     try {
-      localStorage.removeItem('mockUser');
-    } catch (error) {
-      console.error("Failed to remove mockUser from localStorage", error);
+      await firebaseSignOut(auth);
+      // onAuthStateChanged will set user to null
+      await clearAccessCookie(); // Clear separate app access if it exists
+      toast({ title: "Signed Out", description: "You have been successfully signed out." });
+      router.push('/signin');
+    } catch (error: any)      {
+      console.error("Sign out error:", error);
+      toast({ title: "Sign Out Failed", description: error.message, variant: "destructive" });
+      setIsLoading(false); // Ensure loading is false on error too
+      throw error;
     }
-    
-    // Clear the app access cookie as well
-    try {
-      await clearAccessCookie();
-    } catch (error) {
-        console.error("Failed to clear app access cookie on sign out:", error);
-    }
-
-    setIsLoading(false);
-    // Always redirect to /signin after a full sign-out.
-    // If they want to re-access protected parts, they'll hit the /access-login via middleware.
-    router.push('/signin');
-  }, [router]);
+  }, [auth, router, toast]);
 
   return (
-    <AuthContext.Provider value={{ user, isLoading, signIn, signUp, signOut }}>
+    <AuthContext.Provider value={{ user, isLoading, signIn, signUp, signInWithGoogle, signOut }}>
       {children}
     </AuthContext.Provider>
   );
