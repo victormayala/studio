@@ -5,10 +5,10 @@ import Link from 'next/link';
 import { Logo } from '@/components/icons/Logo';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
-import { Menu, LogOut, LayoutDashboardIcon } from 'lucide-react'; // Added LogOut, LayoutDashboardIcon
+import { Menu, LogOut, LayoutDashboardIcon, type LucideIcon } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { useAuth } from '@/contexts/AuthContext'; // Added
-import { useToast } from '@/hooks/use-toast'; // Added
+import { useAuth } from '@/contexts/AuthContext';
+import { useToast } from '@/hooks/use-toast';
 
 const navLinks = [
   { href: "/", label: "Home" },
@@ -16,30 +16,35 @@ const navLinks = [
   { href: "/pricing", label: "Pricing" },
 ];
 
-// Original auth links for logged-out users
-const defaultAuthLinks = [
+interface AuthLink {
+  label: string;
+  variant: "outline" | "default";
+  href?: string;
+  action?: () => Promise<void> | void; // Allow sync or async actions
+  icon?: LucideIcon; // Icon is now explicitly optional
+}
+
+const defaultAuthLinks: AuthLink[] = [
   { href: "/signin", label: "Sign In", variant: "outline" as const },
   { href: "/signup", label: "Sign Up", variant: "default" as const },
 ];
 
 export default function MarketingHeader() {
   const isMobile = useIsMobile();
-  const { user, signOut, isLoading: authIsLoading } = useAuth(); // Added
-  const { toast } = useToast(); // Added
+  const { user, signOut, isLoading: authIsLoading } = useAuth();
+  const { toast } = useToast();
 
   const handleSignOut = async () => {
     try {
       await signOut();
       toast({ title: "Signed Out", description: "You have been successfully signed out." });
-      // Navigation is handled by AuthContext's signOut
     } catch (error) {
       console.error("Sign out error:", error);
       toast({ title: "Sign Out Failed", description: "Could not sign you out. Please try again.", variant: "destructive" });
     }
   };
 
-  // Dynamic auth links based on user state
-  const authLinks = user
+  const authLinks: AuthLink[] = user
     ? [
         { href: "/dashboard", label: "Dashboard", variant: "outline" as const, icon: LayoutDashboardIcon },
         { action: handleSignOut, label: "Sign Out", variant: "default" as const, icon: LogOut },
@@ -88,8 +93,10 @@ export default function MarketingHeader() {
                       </Button>
                     ) : (
                       <Button key={link.label} onClick={link.action} variant={link.variant} className="w-full" disabled={authIsLoading}>
-                        {link.icon && <link.icon className="mr-2 h-4 w-4" />}
-                        {link.label}
+                        <span className="flex items-center justify-center w-full">
+                          {link.icon && <link.icon className="mr-2 h-4 w-4" />}
+                          {link.label}
+                        </span>
                       </Button>
                     )
                   ))}
@@ -123,8 +130,10 @@ export default function MarketingHeader() {
                   </Button>
                 ) : (
                   <Button key={link.label} onClick={link.action} variant={link.variant} size="sm" disabled={authIsLoading}>
-                     {link.icon && <link.icon className="mr-2 h-4 w-4" />}
-                    {link.label}
+                     <span className="flex items-center">
+                        {link.icon && <link.icon className="mr-2 h-4 w-4" />}
+                        {link.label}
+                      </span>
                   </Button>
                 )
               ))}
