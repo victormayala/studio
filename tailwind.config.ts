@@ -1,4 +1,3 @@
-
 import type {Config} from 'tailwindcss';
 const defaultTheme = require('tailwindcss/defaultTheme');
 
@@ -14,10 +13,6 @@ export default {
       fontFamily: {
         sans: ['Roboto', ...defaultTheme.fontFamily.sans],
         // headline and code families removed as their CSS variables are no longer set in layout.tsx
-        // If Space Grotesk or Source Code Pro are needed, re-add font imports and variables in layout.tsx
-        // and then re-add these lines:
-        // headline: ['var(--font-space-grotesk)', ...defaultTheme.fontFamily.sans],
-        // code: ['var(--font-source-code-pro)', ...defaultTheme.fontFamily.mono],
       },
       colors: {
         background: 'hsl(var(--background))',
