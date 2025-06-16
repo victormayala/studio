@@ -287,10 +287,18 @@ export default function DesignCanvas({
   };
 
   const handleDragging = useCallback((e: MouseEvent | TouchEvent) => {
-    if (!activeDrag || !canvasRef.current) return;
+    if (!activeDrag || !canvasRef.current) return; // Initial check
 
     cancelAnimationFrame(dragUpdateRef.current);
     dragUpdateRef.current = requestAnimationFrame(() => {
+      // Re-check canvasRef.current inside requestAnimationFrame as it might have changed
+      if (!canvasRef.current || !activeDrag) { 
+        console.warn("DesignCanvas: canvasRef.current or activeDrag is null inside requestAnimationFrame. Aborting drag update.");
+        if (activeDrag) setActiveDrag(null); 
+        endInteractiveOperation();
+        return;
+      }
+      
       let activeItemData: CanvasImage | CanvasText | CanvasShape | undefined;
       if (activeDrag.itemType === 'image') activeItemData = canvasImages.find(img => img.id === activeDrag.itemId);
       else if (activeDrag.itemType === 'text') activeItemData = canvasTexts.find(txt => txt.id === activeDrag.itemId);
@@ -309,8 +317,8 @@ export default function DesignCanvas({
           console.warn("Dragging with undefined initial values", activeDrag);
           return;
       }
-
-      const canvasRect = canvasRef.current.getBoundingClientRect();
+      
+      const canvasRect = canvasRef.current.getBoundingClientRect(); // Now safe to call
 
       if (type === 'rotate') {
         const angle = Math.atan2(coords.y - (canvasRect.top + itemCenterY) , coords.x - (canvasRect.left + itemCenterX)) * (180 / Math.PI);
@@ -441,7 +449,7 @@ export default function DesignCanvas({
           else if (itemType === 'shape') updateCanvasShape(itemId, { x: newX_canvas, y: newY_canvas, movedFromDefault: true });
       }
     });
-  }, [activeDrag, updateCanvasImage, canvasImages, updateCanvasText, canvasTexts, updateCanvasShape, canvasShapes, productDefinedBoundaryBoxes]);
+  }, [activeDrag, updateCanvasImage, canvasImages, updateCanvasText, canvasTexts, updateCanvasShape, canvasShapes, productDefinedBoundaryBoxes, endInteractiveOperation]);
 
   const handleDragEnd = useCallback(() => {
     cancelAnimationFrame(dragUpdateRef.current);
