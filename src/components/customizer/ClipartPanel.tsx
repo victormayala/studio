@@ -19,7 +19,7 @@ export default function ClipartPanel({ activeViewId }: ClipartPanelProps) {
 
   const handleClipartClick = (clipart: ClipartItem) => {
     if (!activeViewId) {
-      toast({ title: "No Active View", description: "Please select a product view first.", variant: "info" });
+      toast({ title: "No Active View", description: "Please select a product view first.", variant: "default" });
       return;
     }
     addCanvasImageFromUrl(clipart.name, clipart.imageUrl, clipart.type, activeViewId, clipart.id);
