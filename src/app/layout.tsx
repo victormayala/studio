@@ -1,32 +1,11 @@
-
 import type {Metadata} from 'next';
-import { Inter, Space_Grotesk, Source_Code_Pro } from 'next/font/google';
 import './globals.css';
+import { Toaster } from "@/components/ui/toaster";
 import { AuthProvider } from '@/contexts/AuthContext';
-import { Toaster } from '@/components/ui/toaster';
-import { cn } from '@/lib/utils';
-
-const inter = Inter({
-  subsets: ['latin'],
-  variable: '--font-inter',
-  display: 'swap',
-});
-
-const spaceGrotesk = Space_Grotesk({
-  subsets: ['latin'],
-  variable: '--font-space-grotesk',
-  display: 'swap',
-});
-
-const sourceCodePro = Source_Code_Pro({
-  subsets: ['latin'],
-  variable: '--font-source-code-pro',
-  display: 'swap',
-});
 
 export const metadata: Metadata = {
-  title: 'Customizer Studio - Product Customizer',
-  description: 'Easily compose and arrange graphical elements for your products with Customizer Studio.',
+  title: 'Customizer Studio - Your Product Customization Platform',
+  description: 'Easily create and embed product customizers with Customizer Studio. Connect with Shopify, WordPress, and more.',
 };
 
 export default function RootLayout({
@@ -34,31 +13,18 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  // Server-side log for environment variables - useful for deployed environment debugging
-  if (process.env.NODE_ENV === 'production' || process.env.NEXT_PUBLIC_APP_ENV === 'development') { 
-    console.log("Customizer Studio Environment Variable Check (Server-Side in layout.tsx):");
-    console.log("APP_ACCESS_PASSWORD is set:", !!process.env.APP_ACCESS_PASSWORD ? 'Yes' : 'No');
-    console.log("APP_ACCESS_COOKIE_VALUE is set:", !!process.env.APP_ACCESS_COOKIE_VALUE ? 'Yes' : 'No');
-    console.log("WOOCOMMERCE_STORE_URL is set:", !!process.env.WOOCOMMERCE_STORE_URL ? 'Yes' : 'No');
-    console.log("WOOCOMMERCE_CONSUMER_KEY is set:", !!process.env.WOOCOMMERCE_CONSUMER_KEY ? 'Yes' : 'No');
-    console.log("WOOCOMMERCE_CONSUMER_SECRET is set:", !!process.env.WOOCOMMERCE_CONSUMER_SECRET ? 'Yes' : 'No');
-  }
-
   return (
     <html lang="en" suppressHydrationWarning>
-      <body 
-        className={cn(
-          "min-h-screen bg-background font-sans antialiased",
-          inter.variable,
-          spaceGrotesk.variable,
-          sourceCodePro.variable
-        )}
-        suppressHydrationWarning={true}
-      >
+      <head>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet" />
+      </head>
+      <body className="font-sans antialiased" suppressHydrationWarning={true}>
         <AuthProvider>
           {children}
-          <Toaster />
         </AuthProvider>
+        <Toaster />
       </body>
     </html>
   );
