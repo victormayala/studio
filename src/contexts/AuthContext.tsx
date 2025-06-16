@@ -45,6 +45,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (firebaseUser: FirebaseUser | null) => {
+      setIsLoading(true); // Set loading true at the start of auth state evaluation
       if (firebaseUser) {
         setUser({
           uid: firebaseUser.uid,
@@ -52,33 +53,39 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           displayName: firebaseUser.displayName,
           photoURL: firebaseUser.photoURL,
         });
+        // User is authenticated
+        if (pathname === '/signin' || pathname === '/signup' || pathname === '/access-login') {
+          const searchParams = new URLSearchParams(window.location.search);
+          const redirectUrl = searchParams.get('redirect');
+          // Redirect to intended URL or dashboard, but not if redirect is to root (marketing page)
+          router.push(redirectUrl && redirectUrl !== '/' && !redirectUrl.startsWith('/signin') && !redirectUrl.startsWith('/signup') ? redirectUrl : '/dashboard');
+        }
       } else {
         setUser(null);
+        // User is NOT authenticated
+        const protectedUserPaths = ['/dashboard', '/customizer']; // Add more base paths as needed
+        // Check if current path starts with any of the protected base paths
+        const isCurrentlyOnProtectedPath = protectedUserPaths.some(p => pathname.startsWith(p));
+
+        if (isCurrentlyOnProtectedPath) {
+          // User is on a protected path but not logged in. Redirect to signin.
+          // Preserve original path and query params for redirection after login.
+          const fullPath = pathname + window.location.search;
+          router.push(`/signin?redirect=${encodeURIComponent(fullPath)}`);
+        }
       }
-      setIsLoading(false);
+      setIsLoading(false); // Set loading false after processing auth state
     });
 
     return () => unsubscribe();
-  }, []);
-
-  const handleAuthSuccess = useCallback(() => {
-    // If signing in/up from a public page, redirect to dashboard.
-    // Middleware will handle access gate if necessary.
-    if (pathname === '/signin' || pathname === '/signup' || pathname === '/') {
-      router.push('/dashboard');
-    } else if (pathname === '/access-login') {
-       router.push('/dashboard');
-    }
-    // For other paths, stay on the current page, user state is updated.
-  }, [router, pathname]);
+  }, [auth, router, pathname]); // Ensure pathname is a dependency
 
   const signIn = useCallback(async (email: string, pass: string) => {
     setIsLoading(true);
     try {
       await signInWithEmailAndPassword(auth, email, pass);
-      // onAuthStateChanged will handle setting user and loading state
       toast({ title: "Signed In", description: "Welcome back!" });
-      handleAuthSuccess();
+      // Redirection is now handled by onAuthStateChanged useEffect
     } catch (error: any) {
       console.error("Firebase sign in error:", error);
       toast({
@@ -86,18 +93,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         description: error.message || "Invalid credentials or user not found.",
         variant: "destructive",
       });
-      setIsLoading(false);
+      setIsLoading(false); // Ensure loading is false on error
       throw error;
     }
-  }, [auth, toast, handleAuthSuccess]);
+  }, [auth, toast]);
 
   const signUp = useCallback(async (email: string, pass: string) => {
     setIsLoading(true);
     try {
       await createUserWithEmailAndPassword(auth, email, pass);
-      // onAuthStateChanged will handle setting user and loading state
       toast({ title: "Sign Up Successful", description: "Welcome! Your account has been created." });
-      handleAuthSuccess();
+      // Redirection is now handled by onAuthStateChanged useEffect
     } catch (error: any) {
       console.error("Firebase sign up error:", error);
       toast({
@@ -105,22 +111,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         description: error.message || "Could not create account. Please try again.",
         variant: "destructive",
       });
-      setIsLoading(false);
+      setIsLoading(false); // Ensure loading is false on error
       throw error;
     }
-  }, [auth, toast, handleAuthSuccess]);
+  }, [auth, toast]);
 
   const signInWithGoogle = useCallback(async () => {
     setIsLoading(true);
     const provider = new GoogleAuthProvider();
     try {
       await signInWithPopup(auth, provider);
-      // onAuthStateChanged will handle setting user and loading state
       toast({ title: "Signed In with Google", description: "Welcome!" });
-      handleAuthSuccess();
+      // Redirection is now handled by onAuthStateChanged useEffect
     } catch (error: any) {
       console.error("Google sign in error:", error);
-      // Handle specific errors like popup closed by user, account exists with different credential, etc.
       let description = "Could not sign in with Google. Please try again.";
       if (error.code === 'auth/popup-closed-by-user') {
         description = "Sign-in popup closed. Please try again.";
@@ -132,25 +136,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         description,
         variant: "destructive",
       });
-      setIsLoading(false);
+      setIsLoading(false); // Ensure loading is false on error
       throw error;
     }
-  }, [auth, toast, handleAuthSuccess]);
+  }, [auth, toast]);
 
   const signOut = useCallback(async () => {
     setIsLoading(true);
     try {
       await firebaseSignOut(auth);
-      // onAuthStateChanged will set user to null
-      await clearAccessCookie(); // Clear separate app access if it exists
+      await clearAccessCookie(); 
       toast({ title: "Signed Out", description: "You have been successfully signed out." });
-      router.push('/signin');
+      // onAuthStateChanged will set user to null, and the useEffect will redirect if needed,
+      // but explicitly pushing to /signin ensures a clean state.
+      router.push('/signin'); 
     } catch (error: any)      {
       console.error("Sign out error:", error);
       toast({ title: "Sign Out Failed", description: error.message, variant: "destructive" });
-      setIsLoading(false); // Ensure loading is false on error too
+      setIsLoading(false); 
       throw error;
     }
+    // setIsLoading(false) will be handled by onAuthStateChanged
   }, [auth, router, toast]);
 
   return (
