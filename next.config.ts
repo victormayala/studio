@@ -1,7 +1,7 @@
 
 import type {NextConfig} from 'next';
 
-// Main configuration for Next.js
+// Configuration for Next.js
 const nextConfig: NextConfig = {
   typescript: {
     ignoreBuildErrors: true,
@@ -34,6 +34,7 @@ const nextConfig: NextConfig = {
       },
     ];
   },
+  // Minor change to potentially help with build issues
 };
 
 export default nextConfig;
