@@ -122,12 +122,21 @@ export async function fetchWooCommerceProductById(productId: string, credentials
       return { error: `Failed to fetch product ${productId}. Status: ${response.status}. ${errorBody}` };
     }
 
-    const product: WCCustomProduct = await response.json();
+    let product: WCCustomProduct;
+    try {
+        product = await response.json();
+    } catch (jsonError) {
+        console.error(`Error parsing JSON response for product ${productId}:`, jsonError);
+        if (jsonError instanceof Error) {
+            return { error: `Failed to parse data for product ${productId}. Invalid JSON. Details: ${jsonError.message}` };
+        }
+        return { error: `Failed to parse data for product ${productId}. Invalid JSON.` };
+    }
     return { product };
   } catch (error) {
     console.error(`Error fetching WooCommerce product ${productId}:`, error);
     if (error instanceof Error) {
-      return { error: `An unexpected error occurred: ${error.message}` };
+      return { error: `An unexpected network or fetch error occurred for product ${productId}: ${error.message}` };
     }
     return { error: `An unexpected error occurred while fetching product ${productId}.` };
   }
@@ -170,12 +179,21 @@ export async function fetchWooCommerceProductVariations(productId: string, crede
       return { error: `Failed to fetch variations for product ${productId}. Status: ${response.status}. ${errorBody}` };
     }
 
-    const variations: WCVariation[] = await response.json();
+    let variations: WCVariation[];
+    try {
+        variations = await response.json();
+    } catch (jsonError) {
+        console.error(`Error parsing JSON response for product ${productId} variations:`, jsonError);
+        if (jsonError instanceof Error) {
+            return { error: `Failed to parse variation data for product ${productId}. Invalid JSON. Details: ${jsonError.message}` };
+        }
+        return { error: `Failed to parse variation data for product ${productId}. Invalid JSON.` };
+    }
     return { variations };
   } catch (error) {
     console.error(`Error fetching WooCommerce variations for product ${productId}:`, error);
     if (error instanceof Error) {
-      return { error: `An unexpected error occurred: ${error.message}` };
+      return { error: `An unexpected network or fetch error occurred for product ${productId} variations: ${error.message}` };
     }
     return { error: `An unexpected error occurred while fetching variations for product ${productId}.` };
   }

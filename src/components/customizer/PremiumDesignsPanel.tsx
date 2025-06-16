@@ -21,7 +21,7 @@ export default function PremiumDesignsPanel({ activeViewId }: PremiumDesignsPane
 
   const handleDesignClick = (design: PremiumDesignItem) => {
     if (!activeViewId) {
-      toast({ title: "No Active View", description: "Please select a product view first.", variant: "info" });
+      toast({ title: "No Active View", description: "Please select a product view first.", variant: "default" });
       return;
     }
     addCanvasImageFromUrl(design.name, design.imageUrl, design.type, activeViewId, design.id);
