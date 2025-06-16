@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState, useEffect, FormEvent, Suspense } from 'react';
+import React, { useState, FormEvent, Suspense } from 'react'; // Removed useEffect as it's not used
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -17,7 +17,7 @@ function AccessLoginFormContent() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
-  const searchParams = useSearchParams(); // Hook is used here
+  const searchParams = useSearchParams(); 
   const { toast } = useToast();
 
   const handleSubmit = async (e: FormEvent) => {
@@ -34,11 +34,15 @@ function AccessLoginFormContent() {
         router.push(result.redirectPath || '/dashboard');
       } else {
         setError(result.error || 'An unknown error occurred.');
-        setPassword(''); // Clear password field on error
+        setPassword(''); 
       }
     } catch (err) {
       console.error("Access login error:", err);
-      setError('Failed to verify password. Please try again.');
+      let errorMessage = 'Failed to verify password. Please try again.';
+      if (err instanceof Error) {
+        errorMessage = `Access Login Error: ${err.message}. Check server logs for more details.`;
+      }
+      setError(errorMessage);
       setPassword('');
     } finally {
       setIsLoading(false);

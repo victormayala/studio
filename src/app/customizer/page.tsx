@@ -1,8 +1,8 @@
 
 "use client"; 
 
-import { useSearchParams } from 'next/navigation'; // This line will be changed
-import React, { useEffect, useState, useCallback } from 'react'; // Suspense will be imported from here
+import { useSearchParams } from 'next/navigation';
+import React, { useEffect, useState, useCallback, Suspense } from 'react'; 
 import AppHeader from '@/components/layout/AppHeader';
 import DesignCanvas from '@/components/customizer/DesignCanvas';
 import RightPanel from '@/components/customizer/RightPanel';
@@ -29,7 +29,7 @@ import ClipartPanel from '@/components/customizer/ClipartPanel';
 import FreeDesignsPanel from '@/components/customizer/FreeDesignsPanel';
 import PremiumDesignsPanel from '@/components/customizer/PremiumDesignsPanel';
 import VariantSelector from '@/components/customizer/VariantSelector';
-import AiAssistant from '@/components/customizer/AiAssistant'; // Import AiAssistant
+import AiAssistant from '@/components/customizer/AiAssistant'; 
 
 interface BoundaryBox {
   id: string;
@@ -94,7 +94,7 @@ const defaultFallbackProduct: ProductForCustomizer = {
 
 const toolItems: CustomizerTool[] = [
   { id: "layers", label: "Layers", icon: Layers },
-  { id: "ai-assistant", label: "AI Assistant", icon: Sparkles }, // Added AI Assistant
+  { id: "ai-assistant", label: "AI Assistant", icon: Sparkles }, 
   { id: "uploads", label: "Uploads", icon: UploadCloud },
   { id: "text", label: "Text", icon: Type },
   { id: "shapes", label: "Shapes", icon: ShapesIconLucide },
@@ -104,7 +104,6 @@ const toolItems: CustomizerTool[] = [
 ];
 
 
-// Inner component that uses the context
 function CustomizerLayoutAndLogic() {
   const searchParams = useSearchParams();
   const productId = searchParams.get('productId');
@@ -219,7 +218,7 @@ function CustomizerLayoutAndLogic() {
           finalDefaultViews = parsedOptions.defaultViews.map(v => ({...v, price: v.price ?? 0})) || [];
           tempLoadedOptionsByColor = parsedOptions.optionsByColor || {};
           tempLoadedGroupingAttributeName = parsedOptions.groupingAttributeName || null;
-        } else if ((parsedOptions as any).views && (parsedOptions as any).cstmzrSelectedVariationIds) { // Old key format check for cstmzrSelectedVariationIds
+        } else if ((parsedOptions as any).views && (parsedOptions as any).cstmzrSelectedVariationIds) { 
           console.warn("Customizer: Found old Customizer Studio options format. Using basic views.");
           finalDefaultViews = (parsedOptions as any).views.map((v:any) => ({...v, price: v.price ?? 0})) || [];
         }
@@ -671,19 +670,15 @@ function CustomizerLayoutAndLogic() {
 export default function CustomizerPage() {
   return (
     <UploadProvider>
-      <React.Suspense fallback={ // Changed from Suspense to React.Suspense
+      <Suspense fallback={ 
         <div className="flex min-h-svh h-screen w-full items-center justify-center bg-background">
           <Loader2 className="h-10 w-10 animate-spin text-primary" />
           <p className="ml-3 text-muted-foreground">Loading customizer page...</p>
         </div>
       }>
         <CustomizerLayoutAndLogic />
-      </React.Suspense>
+      </Suspense>
     </UploadProvider>
   );
 }
-    
-
-      
-
     

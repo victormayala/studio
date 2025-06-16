@@ -8,7 +8,7 @@ import { cn } from '@/lib/utils';
 // Server-side check for critical environment variables
 // This log will appear in your Firebase App Hosting runtime logs
 if (typeof process !== 'undefined' && process.env.NODE_ENV === 'production') {
-  console.log("--- Embedz Environment Variable Check (Server Startup) ---");
+  console.log("--- Customizer Studio Environment Variable Check (Server Startup) ---");
   const criticalEnvVars = [
     'APP_ACCESS_PASSWORD',
     'APP_ACCESS_COOKIE_VALUE',
@@ -24,8 +24,9 @@ if (typeof process !== 'undefined' && process.env.NODE_ENV === 'production') {
       console.warn(`[ENV VAR WARNING] ${varName}: NOT SET`);
     }
   });
-  console.log("------------------------------------------------------------------");
+  console.log("----------------------------------------------------------------------");
 }
+
 
 const inter = Inter({
   subsets: ['latin'],

@@ -8,8 +8,9 @@ export async function verifyPasswordAndSetCookie(passwordAttempt: string, redire
   const cookieValue = process.env.APP_ACCESS_COOKIE_VALUE;
 
   if (!correctPassword || !cookieValue) {
-    console.error("APP_ACCESS_PASSWORD or APP_ACCESS_COOKIE_VALUE is not set in environment variables.");
-    return { success: false, error: 'Server configuration error. Please contact support and check server logs.' };
+    const errorMessage = "APP_ACCESS_PASSWORD or APP_ACCESS_COOKIE_VALUE is not set in environment variables.";
+    console.error(`CRITICAL SERVER CONFIG ERROR: ${errorMessage}`);
+    return { success: false, error: `Server configuration error. Please contact support. Details: ${errorMessage} Check server logs.` };
   }
 
   if (passwordAttempt === correctPassword) {
