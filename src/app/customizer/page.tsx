@@ -241,6 +241,13 @@ function CustomizerLayoutAndLogic() {
   const loadCustomizerData = useCallback(async () => {
     setIsLoading(true);
     setError(null);
+    
+    // Clear previous product specific states when loading new data
+    if (productDetails && productId !== productDetails.id) {
+        setProductDetails(null);
+    } else if (!productId && productDetails && productDetails.id !== defaultFallbackProduct.id) {
+        setProductDetails(null);
+    }
     setProductVariations(null);
     setConfigurableAttributes(null);
     setSelectedVariationOptions({});
@@ -261,8 +268,8 @@ function CustomizerLayoutAndLogic() {
       return;
     }
 
-    if (authLoading) { 
-      // If auth is still loading, wait. If user becomes null later, it will proceed without credentials.
+    if (authLoading && user === undefined) { 
+      // If auth is still genuinely loading (user is undefined, not just null)
       return; 
     }
 
@@ -270,7 +277,7 @@ function CustomizerLayoutAndLogic() {
     let fetchError: string | undefined;
     let userWCCredentialsToUse: WooCommerceCredentials | undefined;
 
-    if (user?.uid && db) { // Only try to load user credentials if user is authenticated
+    if (user?.uid && db) { 
       try {
         const credDocRef = doc(db, 'userWooCommerceCredentials', user.uid);
         const credDocSnap = await getDoc(credDocRef);
@@ -281,20 +288,16 @@ function CustomizerLayoutAndLogic() {
             consumerKey: credData.consumerKey, 
             consumerSecret: credData.consumerSecret 
           };
-        } else {
-          // If no credentials found for this Firebase user, proceed without them.
-          // The fetchWooCommerceProductById action will then rely on its own logic (e.g., env fallbacks or erroring)
+        } else if (!isEmbedded) { // Only toast if not embedded and no creds
           toast({ title: "WooCommerce Credentials Note", description: "No saved WooCommerce credentials for this user. Product data might be limited or use defaults.", variant: "default" });
         }
       } catch (credError: any) {
-          toast({ title: "WooCommerce Connection Error", description: credError.message || "Could not load your WooCommerce store credentials.", variant: "destructive" });
-          // Don't block, proceed with undefined credentials
+          if (!isEmbedded) { // Only toast if not embedded
+            toast({ title: "WooCommerce Connection Error", description: credError.message || "Could not load your WooCommerce store credentials.", variant: "destructive" });
+          }
       }
     }
     
-    // If user is null (e.g., embedded scenario without login), userWCCredentialsToUse will remain undefined.
-    // fetchWooCommerceProductById will be called with undefined credentials.
-    // The action itself will then decide if it can proceed (e.g. with public data or env fallbacks) or if it must error.
     ({ product: wcProduct, error: fetchError } = await fetchWooCommerceProductById(productId, userWCCredentialsToUse));
 
 
@@ -309,7 +312,9 @@ function CustomizerLayoutAndLogic() {
       setConfigurableAttributes([]);
       setSelectedVariationOptions({});
       setIsLoading(false);
-      toast({ title: "Product Load Error", description: fetchError || `Product ${productId} not found.`, variant: "destructive"});
+      if (!isEmbedded) { // Only toast if not embedded
+        toast({ title: "Product Load Error", description: fetchError || `Product ${productId} not found.`, variant: "destructive"});
+      }
       return;
     }
 
@@ -317,26 +322,21 @@ function CustomizerLayoutAndLogic() {
     let tempLoadedOptionsByColor: Record<string, ColorGroupOptionsForCustomizer> | null = null;
     let tempLoadedGroupingAttributeName: string | null = null;
 
-    if (user?.uid) { // Only load user-specific product options if user is authenticated
+    if (user?.uid) { 
       const { options: firestoreOptions, error: firestoreLoadError } = await loadProductOptionsFromFirestore(user.uid, productId);
 
       if (firestoreLoadError) {
         console.warn("Customizer: Error loading options from Firestore:", firestoreLoadError);
-        toast({ title: "Settings Load Error", description: "Could not load saved Customizer Studio settings from cloud. Using product defaults.", variant: "default"});
+        if (!isEmbedded) {
+            toast({ title: "Settings Load Error", description: "Could not load saved Customizer Studio settings from cloud. Using product defaults.", variant: "default"});
+        }
       }
       if (firestoreOptions) {
           finalDefaultViews = firestoreOptions.defaultViews.map(v => ({...v, price: v.price ?? 0})) || [];
           tempLoadedOptionsByColor = firestoreOptions.optionsByColor || {};
           tempLoadedGroupingAttributeName = firestoreOptions.groupingAttributeName || null;
       }
-    } else {
-       // For unauthenticated users (e.g. embedded), do not load optionsByColor or groupingAttributeName from Firestore.
-       // Use product defaults for views.
-       // If wcProduct.type is 'variable', optionsByColor could be initialized based on fetched variations later.
-       // tempLoadedOptionsByColor will remain null initially.
-       // tempLoadedGroupingAttributeName will remain null initially.
     }
-
 
     if (finalDefaultViews.length === 0) {
         finalDefaultViews = [
@@ -373,7 +373,7 @@ function CustomizerLayoutAndLogic() {
     if (wcProduct.type === 'variable') {
       const { variations: fetchedVariations, error: variationsError } = await fetchWooCommerceProductVariations(productId, userWCCredentialsToUse);
       if (variationsError) {
-        toast({ title: "Variations Load Error", description: variationsError, variant: "destructive" });
+        if (!isEmbedded) toast({ title: "Variations Load Error", description: variationsError, variant: "destructive" });
         setProductVariations(null);
         setConfigurableAttributes([]);
         setSelectedVariationOptions({});
@@ -418,15 +418,34 @@ function CustomizerLayoutAndLogic() {
     }
 
     setIsLoading(false);
-  }, [productId, user?.uid, authLoading, toast]); 
+  }, [productId, user?.uid, authLoading, toast, isEmbedded, productDetails]); // Added productDetails to dep array
 
   useEffect(() => {
-    if (productId && !authLoading) { // Removed user?.uid check here to allow loading even if user is null (for embedded)
-        loadCustomizerData();
-    } else if (!productId && !authLoading) { 
-        loadCustomizerData(); // For default/fallback product
+    if (authLoading) {
+      return; // Wait for auth to fully resolve
     }
-  }, [productId, authLoading, user?.uid, loadCustomizerData]); // user?.uid still useful here to re-trigger if auth state changes after initial load
+
+    if (typeof productId === 'string' && productId.trim() !== '') {
+      // We have a valid productId from the URL.
+      // Load if productDetails isn't set for this ID, or if there was a prior error we want to retry from.
+      if ((!productDetails || productDetails.id !== productId) && !error) {
+        loadCustomizerData();
+      } else if (productDetails && productDetails.id === productId) {
+        // Product already loaded, ensure loading spinner is off.
+        setIsLoading(false);
+      } else if (error) {
+        // Error state, ensure loading spinner is off.
+        setIsLoading(false);
+      }
+    } else {
+      // No valid productId in URL. Load default/fallback if not already loaded.
+      if (!productDetails && !error) {
+        loadCustomizerData(); // loadCustomizerData will handle the null productId case
+      } else if (productDetails || error) {
+        setIsLoading(false);
+      }
+    }
+  }, [authLoading, productId, loadCustomizerData, productDetails, error]);
 
 
  useEffect(() => {
@@ -561,28 +580,31 @@ function CustomizerLayoutAndLogic() {
   };
 
   const handleAddToCart = () => {
-    // For embedded mode, "user" (Firebase user of Customizer Studio) might be null.
-    // The action of adding to cart is primarily for the embedding WordPress site's user.
-    // If the Customizer Studio "user" is null, and items are present, it's an embedded scenario for a guest.
-    if (!user && (canvasImages.length === 0 && canvasTexts.length === 0 && canvasShapes.length === 0)) {
-      toast({
-        title: "Cannot Add to Cart",
-        description: "Please add some design elements.",
+    if (!activeViewId && (canvasImages.length > 0 || canvasTexts.length > 0 || canvasShapes.length > 0)){
+       toast({
+        title: "Select a View",
+        description: "Please ensure an active product view is selected before adding to cart if you have customizations.",
         variant: "default",
       });
       return;
     }
 
-    // If the app is NOT embedded and there's no user, it's a standalone usage by a guest.
-    // If it IS embedded, user (Firebase user) might be null, which is fine.
+    if (canvasImages.length === 0 && canvasTexts.length === 0 && canvasShapes.length === 0) {
+      toast({
+        title: "Empty Design",
+        description: "Please add some design elements to the canvas before adding to cart.",
+        variant: "default",
+      });
+      return;
+    }
+
+
     if (!isEmbedded && !user && (canvasImages.length > 0 || canvasTexts.length > 0 || canvasShapes.length > 0)) {
        toast({
         title: "Please Sign In",
         description: "Sign in to save your design and add to cart (if applicable).",
         variant: "default",
       });
-      // For standalone, we might not proceed if not signed in.
-      // For embedded, this check might not be relevant as WordPress handles the user.
       return; 
     }
 
@@ -593,7 +615,12 @@ function CustomizerLayoutAndLogic() {
     canvasImages.forEach(item => { if(item.viewId) viewsUsedForSurcharge.add(item.viewId); });
     canvasTexts.forEach(item => { if(item.viewId) viewsUsedForSurcharge.add(item.viewId); });
     canvasShapes.forEach(item => { if(item.viewId) viewsUsedForSurcharge.add(item.viewId); });
-    if (activeViewId) viewsUsedForSurcharge.add(activeViewId);
+    
+    // Ensure activeViewId is only added if it actually has elements or is the only view.
+    if (activeViewId && (viewsUsedForSurcharge.has(activeViewId) || viewsUsedForSurcharge.size === 0)) {
+        viewsUsedForSurcharge.add(activeViewId);
+    }
+
 
     let totalViewSurcharge = 0;
     viewsUsedForSurcharge.forEach(vid => {
@@ -601,9 +628,9 @@ function CustomizerLayoutAndLogic() {
     });
 
     const designData = {
-      productId: currentProductIdFromParams,
+      productId: currentProductIdFromParams || productDetails?.id,
       variationId: productVariations?.find(v => v.attributes.every(attr => selectedVariationOptions[attr.name] === attr.option))?.id.toString() || null,
-      quantity: 1, // Default quantity to 1
+      quantity: 1, 
       customizationDetails: {
         viewData: productDetails?.views.map(view => ({
             viewId: view.id,
@@ -611,14 +638,14 @@ function CustomizerLayoutAndLogic() {
             images: canvasImages.filter(item => item.viewId === view.id).map(img => ({ src: img.dataUrl, name: img.name, type: img.type, x: img.x, y: img.y, scale: img.scale, rotation: img.rotation })),
             texts: canvasTexts.filter(item => item.viewId === view.id).map(txt => ({ content: txt.content, fontFamily: txt.fontFamily, fontSize: txt.fontSize, color: txt.color, x: txt.x, y: txt.y, scale: txt.scale, rotation: txt.rotation, outlineColor: txt.outlineColor, outlineWidth: txt.outlineWidth, shadowColor: txt.shadowColor, shadowOffsetX: txt.shadowOffsetX, shadowOffsetY: txt.shadowOffsetY, shadowBlur: txt.shadowBlur, archAmount: txt.archAmount })),
             shapes: canvasShapes.filter(item => item.viewId === view.id).map(shp => ({ type: shp.shapeType, color: shp.color, strokeColor: shp.strokeColor, strokeWidth: shp.strokeWidth, x: shp.x, y: shp.y, scale: shp.scale, rotation: shp.rotation, width: shp.width, height: shp.height })),
-        })).filter(view => view.images.length > 0 || view.texts.length > 0 || view.shapes.length > 0), // Only include views with elements
+        })).filter(view => view.images.length > 0 || view.texts.length > 0 || view.shapes.length > 0), 
         selectedOptions: selectedVariationOptions,
         baseProductPrice: baseProductPrice,
         totalViewSurcharge: totalViewSurcharge,
         totalCustomizationPrice: totalCustomizationPrice,
         activeViewIdUsed: activeViewId,
       },
-      userId: user?.uid || null, // Pass Firebase user ID if available, otherwise null
+      userId: user?.uid || null, 
     };
 
     let targetOrigin = '*'; 
@@ -651,7 +678,7 @@ function CustomizerLayoutAndLogic() {
   };
 
 
-  if (isLoading || authLoading) {
+  if (isLoading || (authLoading && user === undefined)) { // Show loader if global isLoading or if auth is truly still loading (user is undefined)
     return (
       <div className="flex min-h-svh h-screen w-full items-center justify-center bg-background">
         <Loader2 className="h-10 w-10 animate-spin text-primary" />
@@ -669,7 +696,7 @@ function CustomizerLayoutAndLogic() {
   const currentProductName = productDetails?.name || defaultFallbackProduct.name;
 
 
-  if (error && !productDetails) {
+  if (error && !productDetails) { // Show error if productDetails is null and an error exists
     return (
       <div className="flex flex-col min-h-svh h-w-full items-center justify-center bg-background p-4">
         <AlertTriangle className="h-12 w-12 text-destructive mb-4" />
@@ -736,7 +763,7 @@ function CustomizerLayoutAndLogic() {
                  <AlertTriangle className="inline h-4 w-4 mr-1" /> {error} Using default product view.
                </div>
             )}
-             {error && productDetails?.id !== defaultFallbackProduct.id && ( // For errors when a specific product was requested
+             {error && productDetails && productDetails.id !== defaultFallbackProduct.id && ( // For errors when a specific product was requested but failed to load fully
                 <div className="w-full max-w-4xl p-3 mb-4 border border-destructive bg-destructive/10 rounded-md text-destructive text-sm flex-shrink-0">
                     <AlertTriangle className="inline h-4 w-4 mr-1" /> {error}
                 </div>
@@ -791,7 +818,6 @@ function CustomizerLayoutAndLogic() {
           />
         </div>
 
-        {/* Render footer with Add to Cart button always, regardless of embedded mode for now */}
         <footer className="fixed bottom-0 left-0 right-0 h-16 border-t bg-card shadow-md px-4 py-2 flex items-center justify-between gap-4 z-40">
             <div className="text-md font-medium text-muted-foreground truncate max-w-xs sm:max-w-sm md:max-w-md" title={currentProductName}>
                 {currentProductName}
@@ -853,3 +879,4 @@ export default function CustomizerPage() {
     </UploadProvider>
   );
 }
+
