@@ -149,11 +149,7 @@ export default function DashboardPage() {
 
       if (fetchError) {
         setError(fetchError);
-        toast({
-          title: "Error Fetching Products",
-          description: fetchError,
-          variant: "destructive",
-        });
+        // Toast for fetch error is removed as per new instruction, main error block will show it
         setProducts([]);
       } else if (fetchedProducts) {
         const hiddenProductIds = ignoreHiddenList ? [] : getLocallyHiddenProductIds();
@@ -178,7 +174,7 @@ export default function DashboardPage() {
         setProducts([]);
          if (isManualRefresh) {
             toast({
-            title: "No Products Found",
+            title: "No Products Returned",
             description: "No products were returned from your store.",
             });
          }
@@ -186,11 +182,7 @@ export default function DashboardPage() {
     } catch (err) {
       const message = err instanceof Error ? err.message : "An unexpected error occurred during product fetch.";
       setError(message);
-      toast({
-        title: "Fetch Error",
-        description: message,
-        variant: "destructive",
-      });
+      // Toast for catch error is removed, main error block will show it
       setProducts([]);
     } finally {
       setIsLoadingProducts(false);
@@ -273,7 +265,7 @@ export default function DashboardPage() {
         description: "Your WooCommerce credentials have been removed from this browser.",
       });
        if (activeTab === 'products') {
-        setProducts([]); // Clear products as credentials are gone
+        setProducts([]); 
         setError("WooCommerce store not connected. Please go to 'Store Integration' to connect your store.");
       }
     } catch (error) {
@@ -295,7 +287,7 @@ export default function DashboardPage() {
       } else {
          setError("WooCommerce store not connected. Please go to 'Store Integration' to connect your store.");
          setProducts([]);
-         toast({
+         toast({ // This toast is for user action, not a system error, so it can stay.
             title: "Cannot Refresh",
             description: "Please connect your WooCommerce store first.",
             variant: "default",
@@ -308,7 +300,7 @@ export default function DashboardPage() {
     if (activeTab === 'products' && user && !isLoadingCredentials && products.length === 0 && !isLoadingProducts && !error) {
        if (credentialsExist) {
         loadProductsWithUserCredentials(false, false); 
-       } else if (!isLoadingProducts) { // Avoid setting error if products are already loading due to creds just being set
+       } else if (!isLoadingProducts) { 
          setError("WooCommerce store not connected. Please go to 'Store Integration' to connect your store.");
        }
     }
@@ -343,6 +335,8 @@ export default function DashboardPage() {
       </div>
     );
   }
+
+  const isStoreNotConnectedError = error && (error.includes("store not connected") || error.includes("credentials are not configured") || error.includes("User-specific WooCommerce credentials are required"));
 
   return (
     <UploadProvider>
@@ -413,12 +407,6 @@ export default function DashboardPage() {
                         <CardTitle className="font-headline text-xl text-card-foreground">Your Products</CardTitle>
                         <CardDescription className="text-muted-foreground">
                           View, edit, and manage your customizable products from your connected store.
-                          {!isLoadingCredentials && !credentialsExist && (
-                            <span className="block text-orange-500 text-sm mt-2">
-                              <AlertTriangle className="inline h-4 w-4 mr-1" />
-                              Your WooCommerce store is not connected. Please go to the <Button variant="link" className="p-0 h-auto text-sm text-orange-500 hover:text-orange-600" onClick={() => setActiveTab('storeIntegration')}>Store Integration</Button> tab to connect it.
-                            </span>
-                          )}
                         </CardDescription>
                       </CardHeader>
                       <CardContent>
@@ -429,11 +417,19 @@ export default function DashboardPage() {
                           </div>
                         ) : error ? (
                           <div className="text-center py-10">
-                            <AlertTriangle className="mx-auto h-12 w-12 text-destructive" />
-                            <p className="mt-4 text-destructive font-semibold">Error loading products</p>
-                            <p className="text-sm text-muted-foreground mt-1 px-4">{error}</p>
-                            {error.includes("store not connected") && (
-                              <Button variant="link" onClick={() => setActiveTab('storeIntegration')} className="mt-3">
+                            <AlertTriangle className="mx-auto h-12 w-12 text-orange-500" /> {/* Changed color */}
+                            <p className="mt-4 text-orange-600 font-semibold"> {/* Changed color */}
+                              {isStoreNotConnectedError
+                                ? "Store Not Connected"
+                                : "No Products Found"} {/* Changed title based on error type */}
+                            </p>
+                            <p className="text-sm text-muted-foreground mt-1 px-4">
+                              {isStoreNotConnectedError
+                                ? <>Your WooCommerce store is not connected.<br />Please go to 'Store Integration' to connect your store.</> /* Added line break */
+                                : error}
+                            </p>
+                            {isStoreNotConnectedError && (
+                              <Button variant="link" onClick={() => setActiveTab('storeIntegration')} className="mt-3 text-orange-600 hover:text-orange-700"> {/* Changed color */}
                                 Go to Store Integration
                               </Button>
                             )}
@@ -489,7 +485,7 @@ export default function DashboardPage() {
                               ))}
                             </TableBody>
                           </Table>
-                        ) : credentialsExist ? ( // Credentials exist, but no products found
+                        ) : credentialsExist ? ( 
                           <div className="text-center py-10">
                             <PackageIcon className="mx-auto h-12 w-12 text-muted-foreground" />
                             <p className="mt-4 text-muted-foreground">No products found in your connected store.</p>
@@ -497,14 +493,14 @@ export default function DashboardPage() {
                               Click "Refresh Product Data" to try fetching again.
                             </p>
                           </div>
-                        ) : ( // This case is for when error is null but credentials don't exist (should be caught by above error handling)
+                        ) : ( 
                            <div className="text-center py-10">
-                            <PlugZap className="mx-auto h-12 w-12 text-muted-foreground" />
-                            <p className="mt-4 text-muted-foreground">Please connect your store.</p>
-                            <p className="text-sm text-muted-foreground mt-1">
-                              Go to the 'Store Integration' tab to set up your WooCommerce connection.
+                            <PlugZap className="mx-auto h-12 w-12 text-orange-500" /> {/* Changed color */}
+                            <p className="mt-4 text-orange-600 font-semibold">Store Not Connected</p> {/* Changed color */}
+                            <p className="text-sm text-muted-foreground mt-1 px-4">
+                               Your WooCommerce store is not connected.<br />Please go to the 'Store Integration' tab to set up your WooCommerce connection.
                             </p>
-                             <Button variant="link" onClick={() => setActiveTab('storeIntegration')} className="mt-3">
+                             <Button variant="link" onClick={() => setActiveTab('storeIntegration')} className="mt-3 text-orange-600 hover:text-orange-700"> {/* Changed color */}
                                 Connect Store
                               </Button>
                           </div>
@@ -649,3 +645,6 @@ export default function DashboardPage() {
     </UploadProvider>
   );
 }
+
+
+    
