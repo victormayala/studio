@@ -14,6 +14,7 @@ import Link from "next/link";
 import { useRouter } from 'next/navigation';
 import NextImage from 'next/image';
 import { fetchWooCommerceProducts, type WooCommerceCredentials } from "@/app/actions/woocommerceActions";
+import { saveWooCommerceCredentials, loadWooCommerceCredentials, deleteWooCommerceCredentials } from "@/app/actions/userCredentialsActions"; // NEW IMPORT
 import type { WCCustomProduct } from '@/types/woocommerce';
 import {format} from 'date-fns';
 import { useAuth } from "@/contexts/AuthContext";
@@ -112,35 +113,29 @@ export default function DashboardPage() {
     const startTime = Date.now();
 
     let userCredentials: WooCommerceCredentials | undefined;
-    try {
-      const userStoreUrl = localStorage.getItem(`wc_store_url_${user.uid}`);
-      const userConsumerKey = localStorage.getItem(`wc_consumer_key_${user.uid}`);
-      const userConsumerSecret = localStorage.getItem(`wc_consumer_secret_${user.uid}`);
+    const { credentials, error: credError } = await loadWooCommerceCredentials(user.uid);
 
-      if (userStoreUrl && userConsumerKey && userConsumerSecret) {
-        userCredentials = { storeUrl: userStoreUrl, consumerKey: userConsumerKey, consumerSecret: userConsumerSecret };
-        setCredentialsExist(true);
-      } else {
-        setCredentialsExist(false);
-        setError("WooCommerce store not connected. Please go to 'Store Integration' to connect your store.");
-        setProducts([]);
-        setIsLoadingProducts(false);
-        if (isManualRefresh) {
-          toast({
-            title: "Store Not Connected",
-            description: "Please connect your WooCommerce store first.",
-            variant: "default",
-          });
-        }
-        return;
+    if (credError || !credentials) {
+      setCredentialsExist(false);
+      setError(credError || "WooCommerce store not connected. Please go to 'Store Integration' to connect your store.");
+      setProducts([]);
+      setIsLoadingProducts(false);
+      if (isManualRefresh) {
+        toast({
+          title: "Store Not Connected",
+          description: "Please connect your WooCommerce store first.",
+          variant: "default",
+        });
       }
-    } catch (storageError) {
-        console.error("Error accessing localStorage for WC credentials:", storageError);
-        setError("Could not load your store credentials. Please try saving them again in 'Store Integration'.");
-        setProducts([]);
-        setIsLoadingProducts(false);
-        return;
+      return;
     }
+    
+    userCredentials = { 
+      storeUrl: credentials.storeUrl, 
+      consumerKey: credentials.consumerKey, 
+      consumerSecret: credentials.consumerSecret 
+    };
+    setCredentialsExist(true);
     
 
     try {
@@ -188,24 +183,33 @@ export default function DashboardPage() {
   }, [user, toast, getLocallyHiddenProductIds]);
 
   useEffect(() => {
-    if (user) {
+    if (user && user.uid) {
       setIsLoadingCredentials(true);
-      try {
-        const savedStoreUrl = localStorage.getItem(`wc_store_url_${user.uid}`);
-        const savedConsumerKey = localStorage.getItem(`wc_consumer_key_${user.uid}`);
-        const savedConsumerSecret = localStorage.getItem(`wc_consumer_secret_${user.uid}`);
-
-        setStoreUrl(savedStoreUrl || '');
-        setConsumerKey(savedConsumerKey || '');
-        setConsumerSecret(savedConsumerSecret || '');
-        setCredentialsExist(!!(savedStoreUrl && savedConsumerKey && savedConsumerSecret));
-      } catch (e) {
-        console.error("Error reading credentials from localStorage on mount:", e);
-        toast({ title: "Credential Load Error", description: "Could not read saved credentials.", variant: "destructive"});
-        setCredentialsExist(false);
-      } finally {
-        setIsLoadingCredentials(false);
-      }
+      loadWooCommerceCredentials(user.uid)
+        .then(({ credentials, error: credError }) => {
+          if (credentials) {
+            setStoreUrl(credentials.storeUrl || '');
+            setConsumerKey(credentials.consumerKey || '');
+            setConsumerSecret(credentials.consumerSecret || '');
+            setCredentialsExist(true);
+          } else {
+            setStoreUrl('');
+            setConsumerKey('');
+            setConsumerSecret('');
+            setCredentialsExist(false);
+            if (credError) {
+              toast({ title: "Credential Load Error", description: `Could not read saved credentials: ${credError}`, variant: "default"});
+            }
+          }
+        })
+        .catch(e => {
+          console.error("Error loading credentials from Firestore:", e);
+          toast({ title: "Credential Load Error", description: "Could not read saved credentials from the cloud.", variant: "destructive"});
+          setCredentialsExist(false);
+        })
+        .finally(() => {
+          setIsLoadingCredentials(false);
+        });
     } else {
       setStoreUrl('');
       setConsumerKey('');
@@ -218,68 +222,64 @@ export default function DashboardPage() {
 
   const handleSaveCredentials = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!user || isSavingCredentials) return;
+    if (!user || !user.uid || isSavingCredentials) return;
 
     setIsSavingCredentials(true);
-    try {
-      localStorage.setItem(`wc_store_url_${user.uid}`, storeUrl);
-      localStorage.setItem(`wc_consumer_key_${user.uid}`, consumerKey);
-      localStorage.setItem(`wc_consumer_secret_${user.uid}`, consumerSecret);
+    const credentialsToSave: WooCommerceCredentials = { storeUrl, consumerKey, consumerSecret };
+    const result = await saveWooCommerceCredentials(user.uid, credentialsToSave);
+
+    if (result.success) {
       setCredentialsExist(true);
       toast({
-        title: "Credentials Saved (Locally)",
-        description: "Your WooCommerce credentials have been saved in this browser.",
+        title: "Credentials Saved",
+        description: "Your WooCommerce credentials have been saved to your account.",
       });
       
       if (activeTab === 'products') {
          loadProductsWithUserCredentials(true, false); 
       }
-    } catch (error) {
-      setCredentialsExist(false);
+    } else {
+      setCredentialsExist(false); // Potentially, or keep existing state if save failed but prior existed
       toast({
         title: "Error Saving Credentials",
-        description: "Could not save credentials to local storage. Ensure localStorage is enabled and not full.",
+        description: result.error || "Could not save credentials to your account.",
         variant: "destructive",
       });
-      console.error("Error saving to localStorage:", error);
-    } finally {
-      setIsSavingCredentials(false);
     }
+    setIsSavingCredentials(false);
   };
 
   const handleClearCredentials = async () => {
-    if (!user || isSavingCredentials) return;
+    if (!user || !user.uid || isSavingCredentials) return;
     setIsSavingCredentials(true); 
-    try {
-      localStorage.removeItem(`wc_store_url_${user.uid}`);
-      localStorage.removeItem(`wc_consumer_key_${user.uid}`);
-      localStorage.removeItem(`wc_consumer_secret_${user.uid}`);
+    
+    const result = await deleteWooCommerceCredentials(user.uid);
+
+    if (result.success) {
       setStoreUrl('');
       setConsumerKey('');
       setConsumerSecret('');
       setCredentialsExist(false);
       toast({
         title: "Credentials Cleared",
-        description: "Your WooCommerce credentials have been removed from this browser.",
+        description: "Your WooCommerce credentials have been removed from your account.",
       });
        if (activeTab === 'products') {
         setProducts([]); 
         setError("WooCommerce store not connected. Please go to 'Store Integration' to connect your store.");
       }
-    } catch (error) {
+    } else {
       toast({
         title: "Error Clearing Credentials",
-        description: "Could not clear credentials from local storage.",
+        description: result.error || "Could not clear credentials from your account.",
         variant: "destructive",
       });
-       console.error("Error clearing localStorage:", error);
-    } finally {
-      setIsSavingCredentials(false);
     }
+    setIsSavingCredentials(false);
   };
 
   const handleRefreshDashboardData = useCallback(() => {
-    if (user && !isLoadingCredentials) {
+    if (user && user.uid && !isLoadingCredentials) {
       if (credentialsExist) {
          loadProductsWithUserCredentials(true, true);
       } else {
@@ -295,7 +295,7 @@ export default function DashboardPage() {
   }, [user, isLoadingCredentials, loadProductsWithUserCredentials, credentialsExist, toast]);
 
   useEffect(() => {
-    if (activeTab === 'products' && user && !isLoadingCredentials && products.length === 0 && !isLoadingProducts && !error) {
+    if (activeTab === 'products' && user && user.uid && !isLoadingCredentials && products.length === 0 && !isLoadingProducts && !error) {
        if (credentialsExist) {
         loadProductsWithUserCredentials(false, false); 
        } else if (!isLoadingProducts) { 
@@ -408,7 +408,7 @@ export default function DashboardPage() {
                         </CardDescription>
                       </CardHeader>
                       <CardContent>
-                        {isLoadingProducts || (isLoadingCredentials && !credentialsExist) ? ( 
+                        {isLoadingProducts || (isLoadingCredentials && !credentialsExist && !error) ? ( 
                           <div className="flex justify-center items-center py-10">
                             <Loader2 className="h-8 w-8 animate-spin text-primary" />
                             <p className="ml-3 text-muted-foreground">Loading products...</p>
@@ -512,7 +512,7 @@ export default function DashboardPage() {
                       <CardHeader>
                         <CardTitle className="font-headline text-xl text-card-foreground">WooCommerce Store Connection</CardTitle>
                         <CardDescription className="text-muted-foreground">
-                          Connect your WooCommerce store to fetch and manage products. Your credentials are saved locally in your browser.
+                          Connect your WooCommerce store to fetch and manage products. Your credentials are saved to your user account.
                         </CardDescription>
                       </CardHeader>
                       <CardContent>
@@ -578,7 +578,7 @@ export default function DashboardPage() {
                                 variant="destructive"
                                 onClick={handleClearCredentials}
                                 className="w-full sm:w-auto"
-                                disabled={isSavingCredentials || (!storeUrl && !consumerKey && !consumerSecret)}
+                                disabled={isSavingCredentials || (!storeUrl && !consumerKey && !consumerSecret && !credentialsExist)}
                               >
                                 {isSavingCredentials ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <XCircle className="mr-2 h-4 w-4" />}
                                 Clear Saved Credentials

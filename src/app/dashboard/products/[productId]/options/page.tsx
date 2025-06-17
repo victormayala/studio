@@ -16,8 +16,9 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
-import { fetchWooCommerceProductById, fetchWooCommerceProductVariations, type WooCommerceCredentials } from '@/app/actions/woocommerceActions';
-import { saveProductOptionsToFirestore, loadProductOptionsFromFirestore, type ProductOptionsFirestoreData } from '@/app/actions/productOptionsActions'; // NEW IMPORTS
+import { fetchWooCommerceProductById, fetchWooCommerceProductVariations } from '@/app/actions/woocommerceActions';
+import { saveProductOptionsToFirestore, loadProductOptionsFromFirestore, type ProductOptionsFirestoreData } from '@/app/actions/productOptionsActions';
+import { loadWooCommerceCredentials, type UserWooCommerceCredentials } from '@/app/actions/userCredentialsActions'; // NEW IMPORT
 import type { WCCustomProduct, WCVariation, WCVariationAttribute } from '@/types/woocommerce';
 import { Alert as ShadCnAlert, AlertDescription as ShadCnAlertDescription, AlertTitle as ShadCnAlertTitle } from "@/components/ui/alert";
 import ProductViewSetup from '@/components/product-options/ProductViewSetup'; 
@@ -46,13 +47,12 @@ interface ColorGroupOptions {
   variantViewImages: Record<string, { imageUrl: string; aiHint?: string }>; 
 }
 
-// This interface defines the structure of the options state within this component
 interface ProductOptionsData {
-  id: string; // Product ID, matches wcProduct.id
-  name: string; // Product name from wcProduct
-  description: string; // from wcProduct
-  price: number; // from wcProduct
-  type: 'simple' | 'variable' | 'grouped' | 'external'; // from wcProduct
+  id: string; 
+  name: string; 
+  description: string; 
+  price: number; 
+  type: 'simple' | 'variable' | 'grouped' | 'external'; 
   defaultViews: ProductView[]; 
   optionsByColor: Record<string, ColorGroupOptions>; 
   groupingAttributeName: string | null;
@@ -125,28 +125,20 @@ export default function ProductOptionsPage() {
     setVariationsError(null); setVariations([]);
     setGroupedVariations(null); 
 
-    let userCredentials: WooCommerceCredentials | undefined;
-    try {
-      const userStoreUrl = localStorage.getItem(`wc_store_url_${user.uid}`); 
-      const userConsumerKey = localStorage.getItem(`wc_consumer_key_${user.uid}`); 
-      const userConsumerSecret = localStorage.getItem(`wc_consumer_secret_${user.uid}`); 
-      if (userStoreUrl && userConsumerKey && userConsumerSecret) {
-        userCredentials = { storeUrl: userStoreUrl, consumerKey: userConsumerKey, consumerSecret: userConsumerSecret };
-        setCredentialsExist(true);
-      } else {
+    let userWCCredentials: UserWooCommerceCredentials | undefined;
+    const { credentials, error: credError } = await loadWooCommerceCredentials(user.uid);
+
+    if (credError || !credentials) {
         setCredentialsExist(false);
-        setError("WooCommerce store not connected. Please go to Dashboard > 'Store Integration' to connect your store first.");
-        setProductOptions(null); setIsLoading(false); setIsRefreshing(false);
-        return;
-      }
-    } catch (e) { 
-        console.warn("Error accessing localStorage for WC credentials:", e); 
-        setError("Could not load store credentials. Please try saving them again via the Dashboard.");
+        setError(credError || "WooCommerce store not connected. Please go to Dashboard > 'Store Integration' to connect your store first.");
         setProductOptions(null); setIsLoading(false); setIsRefreshing(false);
         return;
     }
+    userWCCredentials = credentials;
+    setCredentialsExist(true);
 
-    const { product: wcProduct, error: fetchError } = await fetchWooCommerceProductById(productId, userCredentials);
+
+    const { product: wcProduct, error: fetchError } = await fetchWooCommerceProductById(productId, userWCCredentials);
     if (fetchError || !wcProduct) {
       setError(fetchError || `Product with ID ${productId} not found in your connected store.`);
       setProductOptions(null); setIsLoading(false); setIsRefreshing(false);
@@ -159,7 +151,7 @@ export default function ProductOptionsPage() {
 
     if (wcProduct.type === 'variable') {
       setIsLoadingVariations(true);
-      const { variations: fetchedVars, error: varsError } = await fetchWooCommerceProductVariations(productId, userCredentials);
+      const { variations: fetchedVars, error: varsError } = await fetchWooCommerceProductVariations(productId, userWCCredentials);
       if (varsError) {
         setVariationsError(varsError);
       } else if (fetchedVars && fetchedVars.length > 0) {
@@ -206,7 +198,6 @@ export default function ProductOptionsPage() {
     let loadedOptionsByColor: Record<string, ColorGroupOptions> = {};
     let loadedGroupingAttributeName: string | null = null;
     
-    // Load from Firestore
     const { options: firestoreOptions, error: firestoreError } = await loadProductOptionsFromFirestore(user.uid, productId);
     if (firestoreError) {
         console.warn("Error loading from Firestore, will use defaults or WC data:", firestoreError);
@@ -243,31 +234,36 @@ export default function ProductOptionsPage() {
 
     setActiveViewIdForSetup(finalDefaultViews[0]?.id || null);
     setSelectedBoundaryBoxId(null);
-    setHasUnsavedChanges(isRefresh ? hasUnsavedChanges : false); // Keep unsaved changes if it's a manual refresh, reset otherwise
+    setHasUnsavedChanges(isRefresh ? hasUnsavedChanges : false); 
     setIsLoading(false); setIsRefreshing(false);
     if (isRefresh) toast({ title: "Product Data Refreshed", description: "Details updated from your store."});
 
-  }, [productId, user?.uid, toast, hasUnsavedChanges]); // Added hasUnsavedChanges to dependencies
+  }, [productId, user?.uid, toast, hasUnsavedChanges]); 
 
 
   useEffect(() => {
     if (authIsLoading) {
-      setIsLoading(true); setError(null); return;
+      setError(null); 
+      return;
     }
     if (!user) {
-      setError("User not authenticated. Please sign in."); setIsLoading(false); setProductOptions(null); return;
+      setError("User not authenticated. Please sign in."); 
+      setIsLoading(false); 
+      setProductOptions(null); 
+      return;
     }
     if (!productId) {
-      setError("Product ID is missing."); setIsLoading(false); setProductOptions(null); return;
+      setError("Product ID is missing."); 
+      setIsLoading(false); 
+      setProductOptions(null); 
+      return;
     }
-    setError(null);
-  
-    if (!productOptions && !error) { 
+    
+    if (!productOptions && !error && !isLoading) {
       fetchAndSetProductData(false);
-    } else {
-      setIsLoading(false);
     }
-  }, [authIsLoading, user, productId, fetchAndSetProductData, productOptions, error]);
+  
+  }, [authIsLoading, user, productId, productOptions, error, isLoading, fetchAndSetProductData]);
 
 
   const handleRefreshData = () => {
@@ -371,7 +367,7 @@ export default function ProductOptionsPage() {
 
     setIsSaving(true);
     const dataToSave: Omit<ProductOptionsFirestoreData, 'lastSaved' | 'createdAt'> = {
-      id: productOptions.id, // product id
+      id: productOptions.id, 
       name: productOptions.name,
       description: productOptions.description,
       price: productOptions.price,

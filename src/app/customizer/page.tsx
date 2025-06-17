@@ -8,7 +8,8 @@ import DesignCanvas from '@/components/customizer/DesignCanvas';
 import RightPanel from '@/components/customizer/RightPanel';
 import { UploadProvider, useUploads } from "@/contexts/UploadContext";
 import { fetchWooCommerceProductById, fetchWooCommerceProductVariations } from '@/app/actions/woocommerceActions';
-import { loadProductOptionsFromFirestore, type ProductOptionsFirestoreData } from '@/app/actions/productOptionsActions'; // NEW IMPORT
+import { loadProductOptionsFromFirestore, type ProductOptionsFirestoreData } from '@/app/actions/productOptionsActions';
+import { loadWooCommerceCredentials } from '@/app/actions/userCredentialsActions'; // NEW IMPORT
 import { useAuth } from '@/contexts/AuthContext';
 import {
   Loader2, AlertTriangle, ShoppingCart, UploadCloud, Layers, Type, Shapes as ShapesIconLucide, Smile, Palette, Gem as GemIcon, Settings2 as SettingsIcon,
@@ -230,27 +231,31 @@ function CustomizerLayoutAndLogic() {
       return;
     }
 
-    if (authLoading || !user?.uid) { // Wait for auth and ensure user.uid is available for Firestore
+    if (authLoading || !user?.uid) { 
       return;
     }
 
     let wcProduct: WCCustomProduct | undefined;
     let fetchError: string | undefined;
-    let userCredentials;
+    let userWCCredentials;
 
-    // Fetch WC Credentials from localStorage (this part remains client-side for now)
-    try {
-      const userStoreUrl = localStorage.getItem(`wc_store_url_${user.uid}`);
-      const userConsumerKey = localStorage.getItem(`wc_consumer_key_${user.uid}`);
-      const userConsumerSecret = localStorage.getItem(`wc_consumer_secret_${user.uid}`);
-      if (userStoreUrl && userConsumerKey && userConsumerSecret) {
-        userCredentials = { storeUrl: userStoreUrl, consumerKey: userConsumerKey, consumerSecret: userConsumerSecret };
-      }
-    } catch (storageError) {
-      console.warn("Customizer: Could not access localStorage for WC credentials:", storageError);
+    const { credentials, error: credError } = await loadWooCommerceCredentials(user.uid);
+    if (credError || !credentials) {
+        toast({ title: "WooCommerce Connection Error", description: credError || "Could not load your WooCommerce store credentials. Please set them in Dashboard > Store Integration.", variant: "destructive" });
+        setError(credError || `Failed to load product (ID: ${productId}) due to missing store credentials. Displaying default.`);
+        const defaultViewsError = defaultFallbackProduct.views;
+        const baseImagesMapError: Record<string, {url: string, aiHint?: string, price?: number}> = {};
+        defaultViewsError.forEach(view => { baseImagesMapError[view.id] = { url: view.imageUrl, aiHint: view.aiHint, price: view.price ?? 0 }; });
+        setViewBaseImages(baseImagesMapError);
+        setProductDetails(defaultFallbackProduct);
+        setActiveViewId(defaultViewsError[0]?.id || null);
+        setIsLoading(false);
+        return;
     }
+    userWCCredentials = { storeUrl: credentials.storeUrl, consumerKey: credentials.consumerKey, consumerSecret: credentials.consumerSecret };
 
-    ({ product: wcProduct, error: fetchError } = await fetchWooCommerceProductById(productId, userCredentials));
+
+    ({ product: wcProduct, error: fetchError } = await fetchWooCommerceProductById(productId, userWCCredentials));
 
     if (fetchError || !wcProduct) {
       setError(fetchError || `Failed to load product (ID: ${productId}). Displaying default.`);
@@ -271,7 +276,6 @@ function CustomizerLayoutAndLogic() {
     let tempLoadedOptionsByColor: Record<string, ColorGroupOptionsForCustomizer> | null = null;
     let tempLoadedGroupingAttributeName: string | null = null;
 
-    // Load options from Firestore
     const { options: firestoreOptions, error: firestoreLoadError } = await loadProductOptionsFromFirestore(user.uid, productId);
 
     if (firestoreLoadError) {
@@ -287,14 +291,13 @@ function CustomizerLayoutAndLogic() {
 
 
     if (finalDefaultViews.length === 0) {
-        // Fallback to WC product image if no views from Firestore
         finalDefaultViews = [
             {
                 id: `default_view_wc_${wcProduct.id}`,
                 name: "Front View",
                 imageUrl: wcProduct.images && wcProduct.images.length > 0 ? wcProduct.images[0].src : defaultFallbackProduct.views[0].imageUrl,
                 aiHint: wcProduct.images && wcProduct.images.length > 0 && wcProduct.images[0].alt ? wcProduct.images[0].alt.split(" ").slice(0,2).join(" ") : defaultFallbackProduct.views[0].aiHint,
-                boundaryBoxes: defaultFallbackProduct.views[0].boundaryBoxes, // Keep default boundary boxes
+                boundaryBoxes: defaultFallbackProduct.views[0].boundaryBoxes, 
                 price: defaultFallbackProduct.views[0].price ?? 0,
             }
         ];
@@ -320,7 +323,7 @@ function CustomizerLayoutAndLogic() {
     setActiveViewId(finalDefaultViews[0]?.id || null);
 
     if (wcProduct.type === 'variable') {
-      const { variations: fetchedVariations, error: variationsError } = await fetchWooCommerceProductVariations(productId, userCredentials);
+      const { variations: fetchedVariations, error: variationsError } = await fetchWooCommerceProductVariations(productId, userWCCredentials);
       if (variationsError) {
         toast({ title: "Variations Load Error", description: variationsError, variant: "destructive" });
         setProductVariations(null);
@@ -367,12 +370,12 @@ function CustomizerLayoutAndLogic() {
     }
 
     setIsLoading(false);
-  }, [productId, user?.uid, authLoading, toast]); // user.uid is crucial here
+  }, [productId, user?.uid, authLoading, toast]); 
 
   useEffect(() => {
-    if (productId && !authLoading && user?.uid) { // Check for user.uid availability
+    if (productId && !authLoading && user?.uid) { 
         loadCustomizerData();
-    } else if (!productId && !authLoading) { // Handle no productId case (default customizer)
+    } else if (!productId && !authLoading) { 
         loadCustomizerData();
     }
   }, [productId, authLoading, user?.uid, loadCustomizerData]);
@@ -423,7 +426,7 @@ function CustomizerLayoutAndLogic() {
           finalImageUrl = currentVariantViewImages[view.id].imageUrl;
           finalAiHint = currentVariantViewImages[view.id].aiHint || baseAiHint;
         }
-        else if (primaryVariationImageSrc && view.id === activeViewId) {
+        else if (primaryVariationImageSrc && view.id === activeViewId) { // Apply primary variation image only to the active view if no specific variant view image exists
           finalImageUrl = primaryVariationImageSrc;
           finalAiHint = primaryVariationImageAiHint || baseAiHint;
         }
