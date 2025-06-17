@@ -145,6 +145,9 @@ function CustomizerLayoutAndLogic() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const productId = searchParams.get('productId');
+  const viewMode = searchParams.get('viewMode');
+  const isEmbedded = viewMode === 'embedded';
+
   const { user, isLoading: authLoading } = useAuth();
   const { toast } = useToast();
   const { canvasImages, canvasTexts, canvasShapes } = useUploads();
@@ -181,7 +184,7 @@ function CustomizerLayoutAndLogic() {
 
   useEffect(() => {
     const handleBeforeUnload = (event: BeforeUnloadEvent) => {
-      if (hasCanvasElements) {
+      if (hasCanvasElements && !isEmbedded) { // Only block if not embedded
         event.preventDefault();
         event.returnValue = 'You have unsaved changes. Are you sure you want to leave?';
       }
@@ -191,11 +194,11 @@ function CustomizerLayoutAndLogic() {
     return () => {
       window.removeEventListener('beforeunload', handleBeforeUnload);
     };
-  }, [hasCanvasElements]);
+  }, [hasCanvasElements, isEmbedded]);
 
   useEffect(() => {
     const handleAttemptClose = () => {
-      if (hasCanvasElements) {
+      if (hasCanvasElements && !isEmbedded) { // Only confirm if not embedded
         setOnConfirmLeaveAction(() => () => {
           if (user) {
             router.push('/dashboard');
@@ -204,13 +207,14 @@ function CustomizerLayoutAndLogic() {
           }
         });
         setIsLeaveConfirmOpen(true);
-      } else {
+      } else if (!isEmbedded) { // If no elements and not embedded, just navigate
         if (user) {
           router.push('/dashboard');
         } else {
           router.push('/');
         }
       }
+      // If embedded, the parent controls closing, so this event might not be relevant or needs different handling.
     };
     
     const eventListener = () => handleAttemptClose();
@@ -219,7 +223,7 @@ function CustomizerLayoutAndLogic() {
     return () => {
       window.removeEventListener('attemptCloseCustomizer', eventListener);
     };
-  }, [hasCanvasElements, router, user]);
+  }, [hasCanvasElements, router, user, isEmbedded]);
 
 
   const toggleGrid = () => setShowGrid(prev => !prev);
@@ -592,7 +596,7 @@ function CustomizerLayoutAndLogic() {
             viewId: view.id,
             viewName: view.name,
             images: canvasImages.filter(item => item.viewId === view.id).map(img => ({ src: img.dataUrl, name: img.name, type: img.type, x: img.x, y: img.y, scale: img.scale, rotation: img.rotation })),
-            texts: canvasTexts.filter(item => item.viewId === view.id).map(txt => ({ content: txt.content, fontFamily: txt.fontFamily, fontSize: txt.fontSize, color: txt.color, x: txt.x, y: txt.y, scale: txt.scale, rotation: txt.rotation })),
+            texts: canvasTexts.filter(item => item.viewId === view.id).map(txt => ({ content: txt.content, fontFamily: txt.fontFamily, fontSize: txt.fontSize, color: txt.color, x: txt.x, y: txt.y, scale: txt.scale, rotation: txt.rotation, outlineColor: txt.outlineColor, outlineWidth: txt.outlineWidth, shadowColor: txt.shadowColor, shadowOffsetX: txt.shadowOffsetX, shadowOffsetY: txt.shadowOffsetY, shadowBlur: txt.shadowBlur, archAmount: txt.archAmount })),
             shapes: canvasShapes.filter(item => item.viewId === view.id).map(shp => ({ type: shp.shapeType, color: shp.color, strokeColor: shp.strokeColor, strokeWidth: shp.strokeWidth, x: shp.x, y: shp.y, scale: shp.scale, rotation: shp.rotation, width: shp.width, height: shp.height })),
         })).filter(view => view.images.length > 0 || view.texts.length > 0 || view.shapes.length > 0), // Only include views with elements
         selectedOptions: selectedVariationOptions,
@@ -604,17 +608,16 @@ function CustomizerLayoutAndLogic() {
       userId: user?.uid,
     };
 
-    let targetOrigin = '*'; // Default for development or if not determined
+    let targetOrigin = '*'; 
     if (window.parent !== window && document.referrer) {
       try {
         const referrerOrigin = new URL(document.referrer).origin;
         targetOrigin = referrerOrigin;
-        console.log(`Using document.referrer for targetOrigin: ${targetOrigin}`);
       } catch (e) {
-        console.warn("Could not parse document.referrer, falling back to targetOrigin '*' for postMessage. Ensure parent page validates event.origin.", e);
+        console.warn("Could not parse document.referrer for targetOrigin. Defaulting to '*'. Ensure parent page validates event.origin.", e);
       }
     } else if (window.parent !== window) {
-        console.warn("document.referrer is empty, falling back to targetOrigin '*' for postMessage. Ensure parent page validates event.origin.");
+        console.warn("document.referrer is empty, but app is in an iframe. Defaulting to targetOrigin '*' for postMessage. Ensure parent page validates event.origin.");
     }
 
 
@@ -622,7 +625,7 @@ function CustomizerLayoutAndLogic() {
       window.parent.postMessage({ customizerStudioDesignData: designData }, targetOrigin);
       toast({
         title: "Design Sent!",
-        description: "Your design details have been sent to the store. The store must verify the origin of this message for security.",
+        description: "Your design details have been sent. The store must verify the origin of this message for security.",
       });
     } else {
        toast({
@@ -667,8 +670,8 @@ function CustomizerLayoutAndLogic() {
   }
 
   return (
-      <div className="flex flex-col min-h-svh h-screen w-full bg-muted/20">
-        <AppHeader />
+      <div className={cn("flex flex-col min-h-svh h-screen w-full", isEmbedded ? "bg-transparent" : "bg-muted/20")}>
+        {!isEmbedded && <AppHeader />}
         <div className="relative flex flex-1 overflow-hidden">
           <CustomizerIconNav
             tools={toolItems}
@@ -767,6 +770,7 @@ function CustomizerLayoutAndLogic() {
           />
         </div>
 
+        {/* Conditionally render footer or place "Add to Cart" button differently for embedded mode */}
         <footer className="fixed bottom-0 left-0 right-0 h-16 border-t bg-card shadow-md px-4 py-2 flex items-center justify-between gap-4 z-40">
             <div className="text-md font-medium text-muted-foreground truncate max-w-xs sm:max-w-sm md:max-w-md" title={currentProductName}>
                 {currentProductName}
@@ -779,7 +783,7 @@ function CustomizerLayoutAndLogic() {
             </div>
         </footer>
 
-        <AlertDialog open={isLeaveConfirmOpen} onOpenChange={setIsLeaveConfirmOpen}>
+        {!isEmbedded && <AlertDialog open={isLeaveConfirmOpen} onOpenChange={setIsLeaveConfirmOpen}>
           <AlertDialogContent>
             <AlertDialogHeader>
               <AlertDialogTitle>Unsaved Changes</AlertDialogTitle>
@@ -808,7 +812,7 @@ function CustomizerLayoutAndLogic() {
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
-        </AlertDialog>
+        </AlertDialog>}
 
       </div>
   );
@@ -828,6 +832,5 @@ export default function CustomizerPage() {
     </UploadProvider>
   );
 }
-
 
     
