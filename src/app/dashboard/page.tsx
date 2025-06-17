@@ -75,7 +75,7 @@ export default function DashboardPage() {
   const getLocallyHiddenProductIds = useCallback((): string[] => {
     if (!user) return [];
     try {
-      const storedIds = localStorage.getItem(`${LOCALLY_HIDDEN_PRODUCTS_KEY_PREFIX}${user.id}`);
+      const storedIds = localStorage.getItem(`${LOCALLY_HIDDEN_PRODUCTS_KEY_PREFIX}${user.uid}`);
       return storedIds ? JSON.parse(storedIds) : [];
     } catch (e) {
       console.error("Error getting locally hidden product IDs:", e);
@@ -86,7 +86,7 @@ export default function DashboardPage() {
   const setLocallyHiddenProductIds = useCallback((ids: string[]): void => {
     if (!user) return;
     try {
-      localStorage.setItem(`${LOCALLY_HIDDEN_PRODUCTS_KEY_PREFIX}${user.id}`, JSON.stringify(ids));
+      localStorage.setItem(`${LOCALLY_HIDDEN_PRODUCTS_KEY_PREFIX}${user.uid}`, JSON.stringify(ids));
     } catch (e) {
       console.error("Error setting locally hidden product IDs:", e);
       toast({
@@ -113,9 +113,9 @@ export default function DashboardPage() {
 
     let userCredentials: WooCommerceCredentials | undefined;
     try {
-      const userStoreUrl = localStorage.getItem(`wc_store_url_${user.id}`);
-      const userConsumerKey = localStorage.getItem(`wc_consumer_key_${user.id}`);
-      const userConsumerSecret = localStorage.getItem(`wc_consumer_secret_${user.id}`);
+      const userStoreUrl = localStorage.getItem(`wc_store_url_${user.uid}`);
+      const userConsumerKey = localStorage.getItem(`wc_consumer_key_${user.uid}`);
+      const userConsumerSecret = localStorage.getItem(`wc_consumer_secret_${user.uid}`);
 
       if (userStoreUrl && userConsumerKey && userConsumerSecret) {
         userCredentials = { storeUrl: userStoreUrl, consumerKey: userConsumerKey, consumerSecret: userConsumerSecret };
@@ -149,7 +149,6 @@ export default function DashboardPage() {
 
       if (fetchError) {
         setError(fetchError);
-        // Toast for fetch error is removed as per new instruction, main error block will show it
         setProducts([]);
       } else if (fetchedProducts) {
         const hiddenProductIds = ignoreHiddenList ? [] : getLocallyHiddenProductIds();
@@ -182,7 +181,6 @@ export default function DashboardPage() {
     } catch (err) {
       const message = err instanceof Error ? err.message : "An unexpected error occurred during product fetch.";
       setError(message);
-      // Toast for catch error is removed, main error block will show it
       setProducts([]);
     } finally {
       setIsLoadingProducts(false);
@@ -193,9 +191,9 @@ export default function DashboardPage() {
     if (user) {
       setIsLoadingCredentials(true);
       try {
-        const savedStoreUrl = localStorage.getItem(`wc_store_url_${user.id}`);
-        const savedConsumerKey = localStorage.getItem(`wc_consumer_key_${user.id}`);
-        const savedConsumerSecret = localStorage.getItem(`wc_consumer_secret_${user.id}`);
+        const savedStoreUrl = localStorage.getItem(`wc_store_url_${user.uid}`);
+        const savedConsumerKey = localStorage.getItem(`wc_consumer_key_${user.uid}`);
+        const savedConsumerSecret = localStorage.getItem(`wc_consumer_secret_${user.uid}`);
 
         setStoreUrl(savedStoreUrl || '');
         setConsumerKey(savedConsumerKey || '');
@@ -224,9 +222,9 @@ export default function DashboardPage() {
 
     setIsSavingCredentials(true);
     try {
-      localStorage.setItem(`wc_store_url_${user.id}`, storeUrl);
-      localStorage.setItem(`wc_consumer_key_${user.id}`, consumerKey);
-      localStorage.setItem(`wc_consumer_secret_${user.id}`, consumerSecret);
+      localStorage.setItem(`wc_store_url_${user.uid}`, storeUrl);
+      localStorage.setItem(`wc_consumer_key_${user.uid}`, consumerKey);
+      localStorage.setItem(`wc_consumer_secret_${user.uid}`, consumerSecret);
       setCredentialsExist(true);
       toast({
         title: "Credentials Saved (Locally)",
@@ -253,9 +251,9 @@ export default function DashboardPage() {
     if (!user || isSavingCredentials) return;
     setIsSavingCredentials(true); 
     try {
-      localStorage.removeItem(`wc_store_url_${user.id}`);
-      localStorage.removeItem(`wc_consumer_key_${user.id}`);
-      localStorage.removeItem(`wc_consumer_secret_${user.id}`);
+      localStorage.removeItem(`wc_store_url_${user.uid}`);
+      localStorage.removeItem(`wc_consumer_key_${user.uid}`);
+      localStorage.removeItem(`wc_consumer_secret_${user.uid}`);
       setStoreUrl('');
       setConsumerKey('');
       setConsumerSecret('');
@@ -287,7 +285,7 @@ export default function DashboardPage() {
       } else {
          setError("WooCommerce store not connected. Please go to 'Store Integration' to connect your store.");
          setProducts([]);
-         toast({ // This toast is for user action, not a system error, so it can stay.
+         toast({ 
             title: "Cannot Refresh",
             description: "Please connect your WooCommerce store first.",
             variant: "default",
@@ -417,19 +415,19 @@ export default function DashboardPage() {
                           </div>
                         ) : error ? (
                           <div className="text-center py-10">
-                            <AlertTriangle className="mx-auto h-12 w-12 text-orange-500" /> {/* Changed color */}
-                            <p className="mt-4 text-orange-600 font-semibold"> {/* Changed color */}
+                            <AlertTriangle className="mx-auto h-12 w-12 text-orange-500" />
+                            <p className="mt-4 text-orange-600 font-semibold">
                               {isStoreNotConnectedError
                                 ? "Store Not Connected"
-                                : "No Products Found"} {/* Changed title based on error type */}
+                                : "No Products Found"}
                             </p>
                             <p className="text-sm text-muted-foreground mt-1 px-4">
                               {isStoreNotConnectedError
-                                ? <>Your WooCommerce store is not connected.<br />Please go to 'Store Integration' to connect your store.</> /* Added line break */
+                                ? <>Your WooCommerce store is not connected.<br />Please go to 'Store Integration' to connect your store.</>
                                 : error}
                             </p>
                             {isStoreNotConnectedError && (
-                              <Button variant="link" onClick={() => setActiveTab('storeIntegration')} className="mt-3 text-orange-600 hover:text-orange-700"> {/* Changed color */}
+                              <Button variant="link" onClick={() => setActiveTab('storeIntegration')} className="mt-3 text-orange-600 hover:text-orange-700">
                                 Go to Store Integration
                               </Button>
                             )}
@@ -495,12 +493,12 @@ export default function DashboardPage() {
                           </div>
                         ) : ( 
                            <div className="text-center py-10">
-                            <PlugZap className="mx-auto h-12 w-12 text-orange-500" /> {/* Changed color */}
-                            <p className="mt-4 text-orange-600 font-semibold">Store Not Connected</p> {/* Changed color */}
+                            <PlugZap className="mx-auto h-12 w-12 text-orange-500" />
+                            <p className="mt-4 text-orange-600 font-semibold">Store Not Connected</p>
                             <p className="text-sm text-muted-foreground mt-1 px-4">
                                Your WooCommerce store is not connected.<br />Please go to the 'Store Integration' tab to set up your WooCommerce connection.
                             </p>
-                             <Button variant="link" onClick={() => setActiveTab('storeIntegration')} className="mt-3 text-orange-600 hover:text-orange-700"> {/* Changed color */}
+                             <Button variant="link" onClick={() => setActiveTab('storeIntegration')} className="mt-3 text-orange-600 hover:text-orange-700">
                                 Connect Store
                               </Button>
                           </div>
@@ -645,6 +643,4 @@ export default function DashboardPage() {
     </UploadProvider>
   );
 }
-
-
     
