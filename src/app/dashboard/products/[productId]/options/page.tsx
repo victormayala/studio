@@ -280,32 +280,41 @@ export default function ProductOptionsPage() {
 
   }, [productId, user?.uid, toast]); 
 
+
   useEffect(() => {
     if (authIsLoading) {
-      setIsLoading(true); 
-      setError(null);
+      setError(null); // Clear errors while auth is loading
+      // setIsLoading(true) is the initial state, loader UI condition handles it
       return;
     }
+  
+    // Auth state is determined
     if (!user) {
       setError("User not authenticated. Please sign in.");
-      setIsLoading(false);
-      setProductOptions(null);
-      return;
-    }
-    if (!productId) {
-      setError("Product ID is missing.");
-      setIsLoading(false);
+      setIsLoading(false); // Stop page loading, error will be displayed
       setProductOptions(null);
       return;
     }
   
-    setError(null);
-    if (!productOptions && !isLoading) { 
-      fetchAndSetProductData(false);
-    } else if (productOptions) {
-      setIsLoading(false); 
+    if (!productId) {
+      setError("Product ID is missing.");
+      setIsLoading(false); // Stop page loading, error will be displayed
+      setProductOptions(null);
+      return;
     }
-  }, [productId, authIsLoading, user, productOptions, fetchAndSetProductData, isLoading]);
+  
+    // User is authenticated and productId is present
+    setError(null); // Clear any previous errors like "User not authenticated"
+  
+    if (!productOptions) { // Only fetch if productOptions are not already loaded
+      fetchAndSetProductData(false); // This function will set its own isLoading
+    } else {
+      // productOptions are already loaded (e.g., from navigation or prior fetch),
+      // ensure the page's isLoading state is false.
+      setIsLoading(false);
+    }
+  }, [productId, authIsLoading, user, fetchAndSetProductData]); // Removed productOptions to avoid loop
+  // isLoading is managed by fetchAndSetProductData for its own execution
 
 
   const handleRefreshData = () => {
@@ -632,6 +641,8 @@ export default function ProductOptionsPage() {
     setHasUnsavedChanges(true);
   };
 
+
+  // Main loader condition
   if (authIsLoading || (isLoading && !error && !productOptions)) {
     return <div className="flex items-center justify-center min-h-screen bg-background"><Loader2 className="h-10 w-10 animate-spin text-primary" /><p className="ml-3">Loading product options...</p></div>;
   }
@@ -655,6 +666,8 @@ export default function ProductOptionsPage() {
   }
   
   if (!productOptions) { 
+    // This case should ideally be covered by the main loader or error state, 
+    // but as a fallback:
     return (
         <div className="flex flex-col items-center justify-center min-h-screen bg-background p-4">
             <AlertTriangle className="h-12 w-12 text-muted-foreground mb-4" />
@@ -866,7 +879,7 @@ export default function ProductOptionsPage() {
             setIsDeleteViewDialogOpen={setIsDeleteViewDialogOpen}
             viewIdToDelete={viewIdToDelete}
             setViewIdToDelete={setViewIdToDelete} 
-            confirmDeleteView={confirmDeleteDefaultView}
+            confirmDeleteView={confirmDeleteView}
           />
 
           <Card className="shadow-md sticky top-8">
