@@ -17,9 +17,9 @@ import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { fetchWooCommerceProductById, fetchWooCommerceProductVariations, type WooCommerceCredentials } from '@/app/actions/woocommerceActions';
-import { saveProductOptionsToFirestore, loadProductOptionsFromFirestore, type ProductOptionsFirestoreData } from '@/app/actions/productOptionsActions';
-import { db } from '@/lib/firebase'; // Import db for client-side Firestore operations
-import { doc, getDoc } from 'firebase/firestore'; // Import Firestore functions
+// Removed: import { saveProductOptionsToFirestore, loadProductOptionsFromFirestore, type ProductOptionsFirestoreData } from '@/app/actions/productOptionsActions';
+import { db } from '@/lib/firebase'; 
+import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore'; 
 import type { UserWooCommerceCredentials } from '@/app/actions/userCredentialsActions';
 import type { WCCustomProduct, WCVariation, WCVariationAttribute } from '@/types/woocommerce';
 import { Alert as ShadCnAlert, AlertDescription as ShadCnAlertDescription, AlertTitle as ShadCnAlertTitle } from "@/components/ui/alert";
@@ -49,6 +49,24 @@ interface ColorGroupOptions {
   variantViewImages: Record<string, { imageUrl: string; aiHint?: string }>; 
 }
 
+// This interface defines the structure for data stored in Firestore for product options.
+// It includes fields that will have server timestamps.
+export interface ProductOptionsFirestoreData {
+  id: string; // Product ID
+  name: string;
+  description: string;
+  price: number;
+  type: 'simple' | 'variable' | 'grouped' | 'external';
+  defaultViews: ProductView[];
+  optionsByColor: Record<string, ColorGroupOptions>;
+  groupingAttributeName: string | null;
+  lastSaved?: any; // Firestore server timestamp
+  createdAt?: any; // Firestore server timestamp
+}
+
+
+// This interface is used for the component's state, primarily.
+// It doesn't include serverTimestamps as those are handled by Firestore.
 interface ProductOptionsData {
   id: string; 
   name: string; 
@@ -210,10 +228,23 @@ export default function ProductOptionsPage() {
     let loadedOptionsByColor: Record<string, ColorGroupOptions> = {};
     let loadedGroupingAttributeName: string | null = null;
     
-    const { options: firestoreOptions, error: firestoreError } = await loadProductOptionsFromFirestore(user.uid, productId);
-    if (firestoreError) {
-        console.warn("Error loading from Firestore, will use defaults or WC data:", firestoreError);
-        toast({ title: "Loading Issue", description: `Could not load saved settings: ${firestoreError}. Using defaults.`, variant: "default" });
+    // Client-side loading of product options from Firestore
+    let firestoreOptions: ProductOptionsFirestoreData | undefined;
+    let firestoreLoadError: string | undefined;
+    try {
+      const optionsDocRef = doc(db, 'userProductOptions', user.uid, 'products', productId);
+      const optionsDocSnap = await getDoc(optionsDocRef);
+      if (optionsDocSnap.exists()) {
+        firestoreOptions = optionsDocSnap.data() as ProductOptionsFirestoreData;
+      }
+    } catch (e: any) {
+      console.error("Error loading product options from Firestore (client-side):", e);
+      firestoreLoadError = `Failed to load customizer settings: ${e.message || "Unknown Firestore error"}`;
+    }
+
+    if (firestoreLoadError) {
+        console.warn("Error loading from Firestore, will use defaults or WC data:", firestoreLoadError);
+        toast({ title: "Loading Issue", description: `Could not load saved settings: ${firestoreLoadError}. Using defaults.`, variant: "default" });
     }
 
     if (firestoreOptions) {
@@ -368,8 +399,8 @@ export default function ProductOptionsPage() {
   }, [activeDrag, handleDragging, handleInteractionEnd]);
 
   const handleSaveChanges = async () => {
-    if (!productOptions || !user?.uid) {
-      toast({ title: "Error", description: "Product data or user session is missing. Cannot save.", variant: "destructive" });
+    if (!productOptions || !user?.uid || !db) {
+      toast({ title: "Error", description: "Product data, user session, or DB is missing. Cannot save.", variant: "destructive" });
       return;
     }
     if (!productOptions.id) {
@@ -378,7 +409,7 @@ export default function ProductOptionsPage() {
     }
 
     setIsSaving(true);
-    const dataToSave: Omit<ProductOptionsFirestoreData, 'lastSaved' | 'createdAt'> = {
+    const dataToSave: Omit<ProductOptionsFirestoreData, 'createdAt' | 'lastSaved'> & { lastSaved: any; createdAt?: any } = {
       id: productOptions.id, 
       name: productOptions.name,
       description: productOptions.description,
@@ -387,16 +418,24 @@ export default function ProductOptionsPage() {
       defaultViews: productOptions.defaultViews,
       optionsByColor: productOptions.optionsByColor,
       groupingAttributeName: productOptions.groupingAttributeName,
+      lastSaved: serverTimestamp(),
     };
 
-    const result = await saveProductOptionsToFirestore(user.uid, productOptions.id, dataToSave);
-    setIsSaving(false);
-
-    if (result.success) {
+    try {
+      const docRef = doc(db, 'userProductOptions', user.uid, 'products', productOptions.id);
+      const docSnap = await getDoc(docRef);
+      if (!docSnap.exists()) {
+        dataToSave.createdAt = serverTimestamp();
+      }
+      await setDoc(docRef, dataToSave, { merge: true });
+      
       toast({ title: "Saved", description: "Custom views, areas, and variation selections saved to your account." });
       setHasUnsavedChanges(false);
-    } else {
-      toast({ title: "Save Error", description: result.error || "Could not save product options to Firestore.", variant: "destructive" });
+    } catch (error: any) {
+      console.error('Error saving product options to Firestore (client-side):', error);
+      toast({ title: "Save Error", description: `Failed to save options: ${error.message || "Unknown Firestore error"}`, variant: "destructive" });
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -894,5 +933,4 @@ export default function ProductOptionsPage() {
     </div>
   );
 }
-
     
