@@ -177,9 +177,9 @@ function CustomizerLayoutAndLogic() {
 
     if (user) {
       try {
-        const userStoreUrl = localStorage.getItem(`wc_store_url_${user.id}`);
-        const userConsumerKey = localStorage.getItem(`wc_consumer_key_${user.id}`);
-        const userConsumerSecret = localStorage.getItem(`wc_consumer_secret_${user.id}`);
+        const userStoreUrl = localStorage.getItem(`wc_store_url_${user.uid}`);
+        const userConsumerKey = localStorage.getItem(`wc_consumer_key_${user.uid}`);
+        const userConsumerSecret = localStorage.getItem(`wc_consumer_secret_${user.uid}`);
         if (userStoreUrl && userConsumerKey && userConsumerSecret) {
           userCredentials = { storeUrl: userStoreUrl, consumerKey: userConsumerKey, consumerSecret: userConsumerSecret };
         }
@@ -209,7 +209,7 @@ function CustomizerLayoutAndLogic() {
     let tempLoadedOptionsByColor: Record<string, ColorGroupOptionsForCustomizer> | null = null;
     let tempLoadedGroupingAttributeName: string | null = null;
 
-    const localStorageKey = user ? `customizer_studio_product_options_${user.id}_${productId}` : `customizer_studio_product_options_anonymous_${productId}`;
+    const localStorageKey = user ? `customizer_studio_product_options_${user.uid}_${productId}` : `customizer_studio_product_options_anonymous_${productId}`;
     try {
       const savedOptionsString = localStorage.getItem(localStorageKey);
       if (savedOptionsString) {
@@ -308,7 +308,7 @@ function CustomizerLayoutAndLogic() {
     }
 
     setIsLoading(false);
-  }, [productId, user?.id, authLoading, toast]);
+  }, [productId, user?.uid, authLoading, toast]); // Changed user.id to user.uid here
 
   useEffect(() => {
     if (productId && !authLoading) { 
@@ -489,7 +489,7 @@ function CustomizerLayoutAndLogic() {
       texts: canvasTexts.filter(item => item.viewId === activeViewId),
       shapes: canvasShapes.filter(item => item.viewId === activeViewId),
       productId: currentProductIdFromParams, 
-      userId: user?.id, 
+      userId: user?.uid,  // Changed user.id to user.uid
       activeViewId: activeViewId, 
       selectedVariationOptions: selectedVariationOptions, 
       baseProductPrice: baseProductPrice,
@@ -681,4 +681,6 @@ export default function CustomizerPage() {
     </UploadProvider>
   );
 }
+    
+
     
