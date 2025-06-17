@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import Link from 'next/link';
-import { useState, FormEvent } from 'react'; // Added FormEvent
+import { useState, FormEvent } from 'react';
 import { useAuth } from '@/contexts/AuthContext'; 
 import { Loader2, LogIn, AlertCircle } from 'lucide-react'; 
 import { FcGoogle } from 'react-icons/fc'; 
@@ -20,7 +20,7 @@ export default function SignInPage() {
   const [localIsLoading, setLocalIsLoading] = useState(false);
   const [localError, setLocalError] = useState<string | null>(null);
 
-  const handleSubmit = async (e: FormEvent) => { // Typed event
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     if (authIsLoading || localIsLoading) return;
 
@@ -31,7 +31,7 @@ export default function SignInPage() {
       // Navigation is handled by AuthContext's onAuthStateChanged effect
     } catch (error: any) {
       // AuthContext's signIn method already toasts. We set localError for inline display.
-      setLocalError(error.message || "Sign in failed. Please check your credentials.");
+      setLocalError(error.message || "Sign in failed. Please check your email and password, or sign up if you don't have an account.");
     } finally {
       setLocalIsLoading(false);
     }
