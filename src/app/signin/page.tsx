@@ -8,38 +8,51 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import Link from 'next/link';
-import { useState } from 'react';
+import { useState, FormEvent } from 'react'; // Added FormEvent
 import { useAuth } from '@/contexts/AuthContext'; 
-import { useToast } from '@/hooks/use-toast'; 
-import { Loader2, LogIn } from 'lucide-react'; 
-import { FcGoogle } from 'react-icons/fc'; // Using react-icons for Google logo
+import { Loader2, LogIn, AlertCircle } from 'lucide-react'; 
+import { FcGoogle } from 'react-icons/fc'; 
 
 export default function SignInPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const { signIn, signInWithGoogle, isLoading } = useAuth(); 
-  const { toast } = useToast(); 
+  const { signIn, signInWithGoogle, isLoading: authIsLoading } = useAuth(); 
+  const [localIsLoading, setLocalIsLoading] = useState(false);
+  const [localError, setLocalError] = useState<string | null>(null);
 
-  const handleSubmit = async (e: React.FormEvent) => { 
+  const handleSubmit = async (e: FormEvent) => { // Typed event
     e.preventDefault();
-    if (isLoading) return;
+    if (authIsLoading || localIsLoading) return;
+
+    setLocalIsLoading(true);
+    setLocalError(null);
     try {
       await signIn(email, password);
-      // Navigation is handled by AuthContext
-    } catch (error) {
-      // Error toast is handled within signIn method
+      // Navigation is handled by AuthContext's onAuthStateChanged effect
+    } catch (error: any) {
+      // AuthContext's signIn method already toasts. We set localError for inline display.
+      setLocalError(error.message || "Sign in failed. Please check your credentials.");
+    } finally {
+      setLocalIsLoading(false);
     }
   };
 
   const handleGoogleSignIn = async () => {
-    if (isLoading) return;
+    if (authIsLoading || localIsLoading) return;
+    setLocalIsLoading(true);
+    setLocalError(null);
     try {
       await signInWithGoogle();
       // Navigation is handled by AuthContext
-    } catch (error) {
-      // Error toast is handled within signInWithGoogle method
+    } catch (error: any) {
+      // AuthContext's signInWithGoogle method already toasts.
+      setLocalError(error.message || "Google sign-in failed. Please try again.");
+    } finally {
+      setLocalIsLoading(false);
     }
   };
+
+  const currentIsLoading = authIsLoading || localIsLoading;
 
   return (
     <div className="flex flex-col min-h-screen bg-background">
@@ -62,7 +75,7 @@ export default function SignInPage() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   className="bg-input/50"
-                  disabled={isLoading}
+                  disabled={currentIsLoading}
                 />
               </div>
               <div className="space-y-2">
@@ -80,11 +93,19 @@ export default function SignInPage() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   className="bg-input/50"
-                  disabled={isLoading}
+                  disabled={currentIsLoading}
                 />
               </div>
-              <Button type="submit" className="w-full bg-primary text-primary-foreground hover:bg-primary/90" size="lg" disabled={isLoading}>
-                {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <LogIn className="mr-2 h-4 w-4" />}
+
+              {localError && (
+                <div className="flex items-center p-3 text-sm text-destructive bg-destructive/10 border border-destructive/30 rounded-md">
+                  <AlertCircle className="mr-2 h-4 w-4" />
+                  {localError}
+                </div>
+              )}
+
+              <Button type="submit" className="w-full bg-primary text-primary-foreground hover:bg-primary/90" size="lg" disabled={currentIsLoading}>
+                {currentIsLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <LogIn className="mr-2 h-4 w-4" />}
                 Sign In
               </Button>
             </form>
@@ -93,8 +114,8 @@ export default function SignInPage() {
               <span className="mx-4 text-xs uppercase text-muted-foreground">Or continue with</span>
               <div className="flex-grow border-t border-muted-foreground/20"></div>
             </div>
-            <Button variant="outline" className="w-full" onClick={handleGoogleSignIn} disabled={isLoading}>
-              {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FcGoogle className="mr-2 h-5 w-5" />}
+            <Button variant="outline" className="w-full" onClick={handleGoogleSignIn} disabled={currentIsLoading}>
+              {currentIsLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FcGoogle className="mr-2 h-5 w-5" />}
               Sign In with Google
             </Button>
             <div className="text-center mt-6">

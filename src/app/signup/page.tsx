@@ -8,55 +8,62 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import Link from 'next/link';
-import { useState } from 'react';
+import { useState, FormEvent } from 'react'; // Added FormEvent
 import { useAuth } from '@/contexts/AuthContext'; 
-import { useToast } from '@/hooks/use-toast'; 
-import { Loader2, UserPlus } from 'lucide-react'; 
-import { FcGoogle } from 'react-icons/fc'; // Using react-icons for Google logo
+import { Loader2, UserPlus, AlertCircle } from 'lucide-react'; 
+import { FcGoogle } from 'react-icons/fc'; 
 
 export default function SignUpPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const { signUp, signInWithGoogle, isLoading } = useAuth(); 
-  const { toast } = useToast(); 
+  const { signUp, signInWithGoogle, isLoading: authIsLoading } = useAuth(); 
+  const [localIsLoading, setLocalIsLoading] = useState(false);
+  const [localError, setLocalError] = useState<string | null>(null);
 
-  const handleSubmit = async (e: React.FormEvent) => { 
+  const handleSubmit = async (e: FormEvent) => { // Typed event
     e.preventDefault();
-    if (isLoading) return;
+    if (authIsLoading || localIsLoading) return;
+    
+    setLocalError(null); // Clear previous errors
+
     if (password !== confirmPassword) {
-      toast({ 
-        title: "Passwords Mismatch",
-        description: "The passwords you entered do not match.",
-        variant: "destructive",
-      });
+      setLocalError("The passwords you entered do not match.");
       return;
     }
     if (password.length < 6) {
-      toast({
-        title: "Weak Password",
-        description: "Password should be at least 6 characters long.",
-        variant: "destructive",
-      });
+      setLocalError("Password should be at least 6 characters long.");
       return;
     }
+
+    setLocalIsLoading(true);
     try {
       await signUp(email, password);
-      // Navigation is handled by AuthContext
-    } catch (error) {
-      // Error toast is handled within signUp method
+      // Navigation is handled by AuthContext's onAuthStateChanged effect
+    } catch (error: any) {
+      // AuthContext's signUp method already toasts. We set localError for inline display.
+      setLocalError(error.message || "Sign up failed. Please try again.");
+    } finally {
+      setLocalIsLoading(false);
     }
   };
 
   const handleGoogleSignUp = async () => {
-    if (isLoading) return;
+    if (authIsLoading || localIsLoading) return;
+    setLocalIsLoading(true);
+    setLocalError(null);
     try {
-      await signInWithGoogle(); // Firebase handles account creation or sign-in seamlessly
+      await signInWithGoogle(); 
       // Navigation is handled by AuthContext
-    } catch (error) {
-      // Error toast is handled within signInWithGoogle method
+    } catch (error: any) {
+      // AuthContext's signInWithGoogle method already toasts.
+      setLocalError(error.message || "Google sign-up failed. Please try again.");
+    } finally {
+      setLocalIsLoading(false);
     }
   };
+
+  const currentIsLoading = authIsLoading || localIsLoading;
 
   return (
     <div className="flex flex-col min-h-screen bg-background">
@@ -79,7 +86,7 @@ export default function SignUpPage() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   className="bg-input/50"
-                  disabled={isLoading}
+                  disabled={currentIsLoading}
                 />
               </div>
               <div className="space-y-2">
@@ -92,7 +99,7 @@ export default function SignUpPage() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   className="bg-input/50"
-                  disabled={isLoading}
+                  disabled={currentIsLoading}
                 />
               </div>
                <div className="space-y-2">
@@ -105,11 +112,19 @@ export default function SignUpPage() {
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   className="bg-input/50"
-                  disabled={isLoading}
+                  disabled={currentIsLoading}
                 />
               </div>
-              <Button type="submit" className="w-full bg-primary text-primary-foreground hover:bg-primary/90" size="lg" disabled={isLoading}>
-                {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <UserPlus className="mr-2 h-4 w-4" />}
+
+              {localError && (
+                <div className="flex items-center p-3 text-sm text-destructive bg-destructive/10 border border-destructive/30 rounded-md">
+                  <AlertCircle className="mr-2 h-4 w-4" />
+                  {localError}
+                </div>
+              )}
+
+              <Button type="submit" className="w-full bg-primary text-primary-foreground hover:bg-primary/90" size="lg" disabled={currentIsLoading}>
+                {currentIsLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <UserPlus className="mr-2 h-4 w-4" />}
                 Sign Up
               </Button>
             </form>
@@ -118,8 +133,8 @@ export default function SignUpPage() {
               <span className="mx-4 text-xs uppercase text-muted-foreground">Or continue with</span>
               <div className="flex-grow border-t border-muted-foreground/20"></div>
             </div>
-            <Button variant="outline" className="w-full" onClick={handleGoogleSignUp} disabled={isLoading}>
-              {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FcGoogle className="mr-2 h-5 w-5" />}
+            <Button variant="outline" className="w-full" onClick={handleGoogleSignUp} disabled={currentIsLoading}>
+              {currentIsLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FcGoogle className="mr-2 h-5 w-5" />}
               Sign Up with Google
             </Button>
             <div className="text-center mt-4">
