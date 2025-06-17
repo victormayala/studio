@@ -14,9 +14,9 @@ import Link from "next/link";
 import { useRouter } from 'next/navigation';
 import NextImage from 'next/image';
 import { fetchWooCommerceProducts, type WooCommerceCredentials } from "@/app/actions/woocommerceActions";
-import { loadWooCommerceCredentials, deleteWooCommerceCredentials, type UserWooCommerceCredentials } from "@/app/actions/userCredentialsActions"; // saveWooCommerceCredentials removed
-import { db } from '@/lib/firebase'; // Import db for client-side Firestore operations
-import { doc, setDoc, serverTimestamp } from 'firebase/firestore'; // Import Firestore functions
+import { deleteWooCommerceCredentials, type UserWooCommerceCredentials } from "@/app/actions/userCredentialsActions"; 
+import { db } from '@/lib/firebase'; 
+import { doc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore'; 
 import type { WCCustomProduct } from '@/types/woocommerce';
 import {format} from 'date-fns';
 import { useAuth } from "@/contexts/AuthContext";
@@ -114,12 +114,8 @@ export default function DashboardPage() {
     setError(null);
     const startTime = Date.now();
 
-    let userCredentialsToUse: WooCommerceCredentials | undefined;
-    const { credentials, error: credError } = await loadWooCommerceCredentials(user.uid);
-
-    if (credError || !credentials) {
-      setCredentialsExist(false);
-      setError(credError || "WooCommerce store not connected. Please go to 'Store Integration' to connect your store.");
+    if (!credentialsExist || !storeUrl || !consumerKey || !consumerSecret) {
+      setError("WooCommerce store not connected. Please go to 'Store Integration' to connect your store.");
       setProducts([]);
       setIsLoadingProducts(false);
       if (isManualRefresh) {
@@ -132,14 +128,12 @@ export default function DashboardPage() {
       return;
     }
     
-    userCredentialsToUse = { 
-      storeUrl: credentials.storeUrl, 
-      consumerKey: credentials.consumerKey, 
-      consumerSecret: credentials.consumerSecret 
+    const userCredentialsToUse: WooCommerceCredentials = { 
+      storeUrl, 
+      consumerKey, 
+      consumerSecret 
     };
-    setCredentialsExist(true);
     
-
     try {
       const { products: fetchedProducts, error: fetchError } = await fetchWooCommerceProducts(userCredentialsToUse);
       const duration = Date.now() - startTime;
@@ -182,14 +176,16 @@ export default function DashboardPage() {
     } finally {
       setIsLoadingProducts(false);
     }
-  }, [user, toast, getLocallyHiddenProductIds]);
+  }, [user, toast, getLocallyHiddenProductIds, credentialsExist, storeUrl, consumerKey, consumerSecret]);
 
   useEffect(() => {
-    if (user && user.uid) {
+    if (user && user.uid && db) {
       setIsLoadingCredentials(true);
-      loadWooCommerceCredentials(user.uid)
-        .then(({ credentials, error: credError }) => {
-          if (credentials) {
+      const docRef = doc(db, 'userWooCommerceCredentials', user.uid);
+      getDoc(docRef)
+        .then((docSnap) => {
+          if (docSnap.exists()) {
+            const credentials = docSnap.data() as UserWooCommerceCredentials;
             setStoreUrl(credentials.storeUrl || '');
             setConsumerKey(credentials.consumerKey || '');
             setConsumerSecret(credentials.consumerSecret || '');
@@ -199,34 +195,30 @@ export default function DashboardPage() {
             setConsumerKey('');
             setConsumerSecret('');
             setCredentialsExist(false);
-            if (credError) {
-              toast({ title: "Credential Load Error", description: `Could not read saved credentials: ${credError}`, variant: "default"});
-            }
           }
         })
         .catch(e => {
-          console.error("Error loading credentials from Firestore:", e);
+          console.error("Error loading credentials from Firestore (client-side):", e);
           toast({ title: "Credential Load Error", description: "Could not read saved credentials from the cloud.", variant: "destructive"});
           setCredentialsExist(false);
         })
         .finally(() => {
           setIsLoadingCredentials(false);
         });
-    } else {
+    } else if (!user) {
       setStoreUrl('');
       setConsumerKey('');
       setConsumerSecret('');
       setCredentialsExist(false);
       setIsLoadingCredentials(false); 
     }
-  }, [user, toast]);
+  }, [user, toast, db]);
 
 
   const handleSaveCredentials = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!user || !user.uid || isSavingCredentials) return;
-    if (!db) {
-      toast({ title: "Database Error", description: "Firestore is not available. Cannot save.", variant: "destructive" });
+    if (!user || !user.uid || isSavingCredentials || !db) {
+      toast({ title: "Error", description: "User not authenticated or database unavailable.", variant: "destructive" });
       return;
     }
 
@@ -265,7 +257,7 @@ export default function DashboardPage() {
     if (!user || !user.uid || isSavingCredentials) return;
     setIsSavingCredentials(true); 
     
-    const result = await deleteWooCommerceCredentials(user.uid); // This is still a server action
+    const result = await deleteWooCommerceCredentials(user.uid); 
 
     if (result.success) {
       setStoreUrl('');
@@ -524,7 +516,7 @@ export default function DashboardPage() {
                       <CardHeader>
                         <CardTitle className="font-headline text-xl text-card-foreground">WooCommerce Store Connection</CardTitle>
                         <CardDescription className="text-muted-foreground">
-                          Connect your WooCommerce store to fetch and manage products. Your credentials are saved to your user account.
+                          Connect your WooCommerce store to fetch and manage products. Your credentials are saved to your account.
                         </CardDescription>
                       </CardHeader>
                       <CardContent>
@@ -655,4 +647,6 @@ export default function DashboardPage() {
     </UploadProvider>
   );
 }
+    
+
     

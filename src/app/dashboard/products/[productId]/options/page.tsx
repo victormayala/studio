@@ -16,9 +16,11 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
-import { fetchWooCommerceProductById, fetchWooCommerceProductVariations } from '@/app/actions/woocommerceActions';
+import { fetchWooCommerceProductById, fetchWooCommerceProductVariations, type WooCommerceCredentials } from '@/app/actions/woocommerceActions';
 import { saveProductOptionsToFirestore, loadProductOptionsFromFirestore, type ProductOptionsFirestoreData } from '@/app/actions/productOptionsActions';
-import { loadWooCommerceCredentials, type UserWooCommerceCredentials } from '@/app/actions/userCredentialsActions'; // NEW IMPORT
+import { db } from '@/lib/firebase'; // Import db for client-side Firestore operations
+import { doc, getDoc } from 'firebase/firestore'; // Import Firestore functions
+import type { UserWooCommerceCredentials } from '@/app/actions/userCredentialsActions';
 import type { WCCustomProduct, WCVariation, WCVariationAttribute } from '@/types/woocommerce';
 import { Alert as ShadCnAlert, AlertDescription as ShadCnAlertDescription, AlertTitle as ShadCnAlertTitle } from "@/components/ui/alert";
 import ProductViewSetup from '@/components/product-options/ProductViewSetup'; 
@@ -109,8 +111,8 @@ export default function ProductOptionsPage() {
 
 
   const fetchAndSetProductData = useCallback(async (isRefresh = false) => {
-    if (!user?.uid || !productId) { 
-        setError("User or Product ID became invalid during fetch setup.");
+    if (!user?.uid || !productId || !db) { 
+        setError("User or Product ID invalid, or DB not ready.");
         setIsLoading(false); setIsRefreshing(false);
         return;
     }
@@ -125,20 +127,30 @@ export default function ProductOptionsPage() {
     setVariationsError(null); setVariations([]);
     setGroupedVariations(null); 
 
-    let userWCCredentials: UserWooCommerceCredentials | undefined;
-    const { credentials, error: credError } = await loadWooCommerceCredentials(user.uid);
-
-    if (credError || !credentials) {
+    let userWCCredentialsToUse: WooCommerceCredentials | undefined;
+    try {
+      const credDocRef = doc(db, 'userWooCommerceCredentials', user.uid);
+      const credDocSnap = await getDoc(credDocRef);
+      if (credDocSnap.exists()) {
+        const credData = credDocSnap.data() as UserWooCommerceCredentials;
+        userWCCredentialsToUse = { 
+          storeUrl: credData.storeUrl, 
+          consumerKey: credData.consumerKey, 
+          consumerSecret: credData.consumerSecret 
+        };
+        setCredentialsExist(true);
+      } else {
         setCredentialsExist(false);
-        setError(credError || "WooCommerce store not connected. Please go to Dashboard > 'Store Integration' to connect your store first.");
-        setProductOptions(null); setIsLoading(false); setIsRefreshing(false);
-        return;
+        throw new Error("WooCommerce store not connected. Please go to Dashboard > 'Store Integration' to connect your store first.");
+      }
+    } catch (credError: any) {
+      setError(credError.message);
+      setProductOptions(null); setIsLoading(false); setIsRefreshing(false);
+      toast({ title: "Credential Error", description: credError.message, variant: "destructive"});
+      return;
     }
-    userWCCredentials = credentials;
-    setCredentialsExist(true);
 
-
-    const { product: wcProduct, error: fetchError } = await fetchWooCommerceProductById(productId, userWCCredentials);
+    const { product: wcProduct, error: fetchError } = await fetchWooCommerceProductById(productId, userWCCredentialsToUse);
     if (fetchError || !wcProduct) {
       setError(fetchError || `Product with ID ${productId} not found in your connected store.`);
       setProductOptions(null); setIsLoading(false); setIsRefreshing(false);
@@ -151,7 +163,7 @@ export default function ProductOptionsPage() {
 
     if (wcProduct.type === 'variable') {
       setIsLoadingVariations(true);
-      const { variations: fetchedVars, error: varsError } = await fetchWooCommerceProductVariations(productId, userWCCredentials);
+      const { variations: fetchedVars, error: varsError } = await fetchWooCommerceProductVariations(productId, userWCCredentialsToUse);
       if (varsError) {
         setVariationsError(varsError);
       } else if (fetchedVars && fetchedVars.length > 0) {
@@ -882,3 +894,5 @@ export default function ProductOptionsPage() {
     </div>
   );
 }
+
+    

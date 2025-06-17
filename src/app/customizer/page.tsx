@@ -7,10 +7,12 @@ import AppHeader from '@/components/layout/AppHeader';
 import DesignCanvas from '@/components/customizer/DesignCanvas';
 import RightPanel from '@/components/customizer/RightPanel';
 import { UploadProvider, useUploads } from "@/contexts/UploadContext";
-import { fetchWooCommerceProductById, fetchWooCommerceProductVariations } from '@/app/actions/woocommerceActions';
+import { fetchWooCommerceProductById, fetchWooCommerceProductVariations, type WooCommerceCredentials } from '@/app/actions/woocommerceActions';
 import { loadProductOptionsFromFirestore, type ProductOptionsFirestoreData } from '@/app/actions/productOptionsActions';
-import { loadWooCommerceCredentials } from '@/app/actions/userCredentialsActions'; // NEW IMPORT
 import { useAuth } from '@/contexts/AuthContext';
+import { db } from '@/lib/firebase'; // Import db for client-side Firestore operations
+import { doc, getDoc } from 'firebase/firestore'; // Import Firestore functions
+import type { UserWooCommerceCredentials } from '@/app/actions/userCredentialsActions';
 import {
   Loader2, AlertTriangle, ShoppingCart, UploadCloud, Layers, Type, Shapes as ShapesIconLucide, Smile, Palette, Gem as GemIcon, Settings2 as SettingsIcon,
   PanelLeftClose, PanelRightOpen, PanelRightClose, PanelLeftOpen, Sparkles
@@ -231,18 +233,31 @@ function CustomizerLayoutAndLogic() {
       return;
     }
 
-    if (authLoading || !user?.uid) { 
+    if (authLoading || !user?.uid || !db) { 
+      if (!db && user?.uid) console.error("Customizer: Firestore db instance not available for loading credentials.");
       return;
     }
 
     let wcProduct: WCCustomProduct | undefined;
     let fetchError: string | undefined;
-    let userWCCredentials;
+    let userWCCredentialsToUse: WooCommerceCredentials | undefined;
 
-    const { credentials, error: credError } = await loadWooCommerceCredentials(user.uid);
-    if (credError || !credentials) {
-        toast({ title: "WooCommerce Connection Error", description: credError || "Could not load your WooCommerce store credentials. Please set them in Dashboard > Store Integration.", variant: "destructive" });
-        setError(credError || `Failed to load product (ID: ${productId}) due to missing store credentials. Displaying default.`);
+    try {
+      const credDocRef = doc(db, 'userWooCommerceCredentials', user.uid);
+      const credDocSnap = await getDoc(credDocRef);
+      if (credDocSnap.exists()) {
+        const credData = credDocSnap.data() as UserWooCommerceCredentials;
+        userWCCredentialsToUse = { 
+          storeUrl: credData.storeUrl, 
+          consumerKey: credData.consumerKey, 
+          consumerSecret: credData.consumerSecret 
+        };
+      } else {
+        throw new Error("WooCommerce store credentials not found for this user.");
+      }
+    } catch (credError: any) {
+        toast({ title: "WooCommerce Connection Error", description: credError.message || "Could not load your WooCommerce store credentials. Please set them in Dashboard > Store Integration.", variant: "destructive" });
+        setError(credError.message || `Failed to load product (ID: ${productId}) due to missing store credentials. Displaying default.`);
         const defaultViewsError = defaultFallbackProduct.views;
         const baseImagesMapError: Record<string, {url: string, aiHint?: string, price?: number}> = {};
         defaultViewsError.forEach(view => { baseImagesMapError[view.id] = { url: view.imageUrl, aiHint: view.aiHint, price: view.price ?? 0 }; });
@@ -252,10 +267,9 @@ function CustomizerLayoutAndLogic() {
         setIsLoading(false);
         return;
     }
-    userWCCredentials = { storeUrl: credentials.storeUrl, consumerKey: credentials.consumerKey, consumerSecret: credentials.consumerSecret };
 
 
-    ({ product: wcProduct, error: fetchError } = await fetchWooCommerceProductById(productId, userWCCredentials));
+    ({ product: wcProduct, error: fetchError } = await fetchWooCommerceProductById(productId, userWCCredentialsToUse));
 
     if (fetchError || !wcProduct) {
       setError(fetchError || `Failed to load product (ID: ${productId}). Displaying default.`);
@@ -323,7 +337,7 @@ function CustomizerLayoutAndLogic() {
     setActiveViewId(finalDefaultViews[0]?.id || null);
 
     if (wcProduct.type === 'variable') {
-      const { variations: fetchedVariations, error: variationsError } = await fetchWooCommerceProductVariations(productId, userWCCredentials);
+      const { variations: fetchedVariations, error: variationsError } = await fetchWooCommerceProductVariations(productId, userWCCredentialsToUse);
       if (variationsError) {
         toast({ title: "Variations Load Error", description: variationsError, variant: "destructive" });
         setProductVariations(null);
@@ -774,3 +788,5 @@ export default function CustomizerPage() {
     </UploadProvider>
   );
 }
+
+    
