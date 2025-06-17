@@ -6,10 +6,10 @@ import Link from 'next/link';
 import { Button } from "@/components/ui/button";
 import { Logo } from "@/components/icons/Logo";
 import { EmbedCodeModal } from "@/components/customizer/EmbedCodeModal";
-import { CodeXml, LayoutDashboard, LogOut, Settings } from "lucide-react"; 
+import { CodeXml, LayoutDashboard, LogOut, Settings, X as CloseIcon } from "lucide-react";
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
-import { usePathname, useSearchParams } from 'next/navigation';
+import { usePathname, useSearchParams, useRouter } from 'next/navigation';
 
 export default function AppHeader() {
   const [isEmbedModalOpen, setIsEmbedModalOpen] = useState(false);
@@ -17,6 +17,7 @@ export default function AppHeader() {
   const { toast } = useToast();
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const router = useRouter();
 
   const [customizerShareUrlPath, setCustomizerShareUrlPath] = useState<string | null>(null);
   const [currentProductId, setCurrentProductId] = useState<string | null>(null);
@@ -28,14 +29,14 @@ export default function AppHeader() {
     if (pathname.startsWith('/customizer')) {
       if (productIdFromParams) {
         let urlPath = `/customizer?productId=${productIdFromParams}`;
-        if (user?.id) {
-          urlPath += `&userId=${user.id}`;
+        if (user?.uid) { // Changed user.id to user.uid
+          urlPath += `&userId=${user.uid}`; // Changed user.id to user.uid
         }
         setCustomizerShareUrlPath(urlPath);
       } else {
         let urlPath = `/customizer`;
-        if (user?.id) {
-          urlPath += `?userId=${user.id}`; 
+        if (user?.uid) { // Changed user.id to user.uid
+          urlPath += `?userId=${user.uid}`; // Changed user.id to user.uid
         }
          setCustomizerShareUrlPath(urlPath);
       }
@@ -54,6 +55,11 @@ export default function AppHeader() {
     }
   };
 
+  const handleCloseCustomizer = () => {
+    // Navigate to dashboard or a relevant previous page
+    router.push(user ? '/dashboard' : '/');
+  };
+
   const showCustomizerSpecificButtons = pathname.startsWith('/customizer');
 
   return (
@@ -65,11 +71,11 @@ export default function AppHeader() {
       </div>
       <div className="flex items-center gap-2">
         {showCustomizerSpecificButtons && (
-          <Button 
-            onClick={() => setIsEmbedModalOpen(true)} 
-            variant="outline" 
+          <Button
+            onClick={() => setIsEmbedModalOpen(true)}
+            variant="outline"
             className="hover:bg-accent hover:text-accent-foreground"
-            disabled={!customizerShareUrlPath} 
+            disabled={!customizerShareUrlPath}
           >
             <CodeXml className="mr-2 h-4 w-4" />
             Embed Code
@@ -89,10 +95,22 @@ export default function AppHeader() {
             Dashboard
           </Link>
         </Button>
-        {user && (
-          <Button 
-            onClick={handleSignOut} 
-            variant="outline" 
+        {user && showCustomizerSpecificButtons && (
+          <Button
+            onClick={handleCloseCustomizer}
+            variant="outline"
+            size="icon"
+            className="hover:bg-destructive/10 hover:text-destructive"
+            title="Close Customizer"
+            aria-label="Close Customizer"
+          >
+            <CloseIcon className="h-5 w-5" />
+          </Button>
+        )}
+        {user && !showCustomizerSpecificButtons && (
+          <Button
+            onClick={handleSignOut}
+            variant="outline"
             className="hover:bg-destructive/10 hover:text-destructive"
             disabled={authIsLoading}
           >
@@ -101,10 +119,10 @@ export default function AppHeader() {
           </Button>
         )}
       </div>
-      <EmbedCodeModal 
-        isOpen={isEmbedModalOpen} 
+      <EmbedCodeModal
+        isOpen={isEmbedModalOpen}
         onOpenChange={setIsEmbedModalOpen}
-        customizerUrlPath={customizerShareUrlPath} 
+        customizerUrlPath={customizerShareUrlPath}
       />
     </header>
   );

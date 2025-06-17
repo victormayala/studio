@@ -1,15 +1,15 @@
 
-"use client"; 
+"use client";
 
 import { useSearchParams } from 'next/navigation';
-import React, { useEffect, useState, useCallback, Suspense } from 'react'; 
+import React, { useEffect, useState, useCallback, Suspense } from 'react';
 import AppHeader from '@/components/layout/AppHeader';
 import DesignCanvas from '@/components/customizer/DesignCanvas';
 import RightPanel from '@/components/customizer/RightPanel';
-import { UploadProvider, useUploads } from "@/contexts/UploadContext"; 
+import { UploadProvider, useUploads } from "@/contexts/UploadContext";
 import { fetchWooCommerceProductById, fetchWooCommerceProductVariations } from '@/app/actions/woocommerceActions';
 import { useAuth } from '@/contexts/AuthContext';
-import { 
+import {
   Loader2, AlertTriangle, ShoppingCart, UploadCloud, Layers, Type, Shapes as ShapesIconLucide, Smile, Palette, Gem as GemIcon, Settings2 as SettingsIcon,
   PanelLeftClose, PanelRightOpen, PanelRightClose, PanelLeftOpen, Sparkles
 } from 'lucide-react';
@@ -18,7 +18,7 @@ import Link from 'next/link';
 import type { WCCustomProduct, WCVariation, WCVariationAttribute } from '@/types/woocommerce';
 import { useToast } from '@/hooks/use-toast';
 import CustomizerIconNav, { type CustomizerTool } from '@/components/customizer/CustomizerIconNav';
-import { cn } from '@/lib/utils'; 
+import { cn } from '@/lib/utils';
 
 // Panel Content Components
 import UploadArea from '@/components/customizer/UploadArea';
@@ -29,7 +29,7 @@ import ClipartPanel from '@/components/customizer/ClipartPanel';
 import FreeDesignsPanel from '@/components/customizer/FreeDesignsPanel';
 import PremiumDesignsPanel from '@/components/customizer/PremiumDesignsPanel';
 import VariantSelector from '@/components/customizer/VariantSelector';
-import AiAssistant from '@/components/customizer/AiAssistant'; 
+import AiAssistant from '@/components/customizer/AiAssistant';
 
 interface BoundaryBox {
   id: string;
@@ -40,21 +40,21 @@ interface BoundaryBox {
   height: number;
 }
 
-export interface ProductView { 
+export interface ProductView {
   id: string;
   name: string;
   imageUrl: string;
   aiHint?: string;
   boundaryBoxes: BoundaryBox[];
-  price?: number; 
+  price?: number;
 }
 
-interface ColorGroupOptionsForCustomizer { 
-  selectedVariationIds: string[]; 
-  variantViewImages: Record<string, { imageUrl: string; aiHint?: string }>; 
+interface ColorGroupOptionsForCustomizer {
+  selectedVariationIds: string[];
+  variantViewImages: Record<string, { imageUrl: string; aiHint?: string }>;
 }
 
-interface LocalStorageCustomizerOptions { 
+interface LocalStorageCustomizerOptions {
   defaultViews: ProductView[];
   optionsByColor: Record<string, ColorGroupOptionsForCustomizer>;
   groupingAttributeName: string | null;
@@ -64,8 +64,8 @@ export interface ProductForCustomizer {
   id: string;
   name: string;
   basePrice: number;
-  views: ProductView[]; 
-  type?: 'simple' | 'variable' | 'grouped' | 'external'; 
+  views: ProductView[];
+  type?: 'simple' | 'variable' | 'grouped' | 'external';
 }
 
 export interface ConfigurableAttribute {
@@ -76,7 +76,7 @@ export interface ConfigurableAttribute {
 const defaultFallbackProduct: ProductForCustomizer = {
   id: 'fallback_product',
   name: 'Product Customizer (Default)',
-  basePrice: 25.00, 
+  basePrice: 25.00,
   views: [
     {
       id: 'fallback_view_1',
@@ -94,7 +94,7 @@ const defaultFallbackProduct: ProductForCustomizer = {
 
 const toolItems: CustomizerTool[] = [
   { id: "layers", label: "Layers", icon: Layers },
-  { id: "ai-assistant", label: "AI Assistant", icon: Sparkles }, 
+  { id: "ai-assistant", label: "AI Assistant", icon: Sparkles },
   { id: "uploads", label: "Uploads", icon: UploadCloud },
   { id: "text", label: "Text", icon: Type },
   { id: "shapes", label: "Shapes", icon: ShapesIconLucide },
@@ -109,7 +109,7 @@ function CustomizerLayoutAndLogic() {
   const productId = searchParams.get('productId');
   const { user, isLoading: authLoading } = useAuth();
   const { toast } = useToast();
-  const { canvasImages, canvasTexts, canvasShapes } = useUploads(); 
+  const { canvasImages, canvasTexts, canvasShapes } = useUploads();
 
   const [productDetails, setProductDetails] = useState<ProductForCustomizer | null>(null);
   const [activeViewId, setActiveViewId] = useState<string | null>(null);
@@ -117,7 +117,7 @@ function CustomizerLayoutAndLogic() {
   const [error, setError] = useState<string | null>(null);
   const [activeTool, setActiveTool] = useState<string>(toolItems[0]?.id || "layers");
   const [showGrid, setShowGrid] = useState(false);
-  const [showBoundaryBoxes, setShowBoundaryBoxes] = useState(true); 
+  const [showBoundaryBoxes, setShowBoundaryBoxes] = useState(true);
 
   const [isToolPanelOpen, setIsToolPanelOpen] = useState(true);
   const [isRightSidebarOpen, setIsRightSidebarOpen] = useState(true);
@@ -125,11 +125,36 @@ function CustomizerLayoutAndLogic() {
   const [productVariations, setProductVariations] = useState<WCVariation[] | null>(null);
   const [configurableAttributes, setConfigurableAttributes] = useState<ConfigurableAttribute[] | null>(null);
   const [selectedVariationOptions, setSelectedVariationOptions] = useState<Record<string, string>>({});
-  
+
   const [loadedOptionsByColor, setLoadedOptionsByColor] = useState<Record<string, ColorGroupOptionsForCustomizer> | null>(null);
   const [loadedGroupingAttributeName, setLoadedGroupingAttributeName] = useState<string | null>(null);
   const [viewBaseImages, setViewBaseImages] = useState<Record<string, {url: string, aiHint?: string, price?: number}>>({});
   const [totalCustomizationPrice, setTotalCustomizationPrice] = useState<number>(0);
+
+  const [hasCanvasElements, setHasCanvasElements] = useState(false);
+
+  useEffect(() => {
+    const anyElementsExist = canvasImages.length > 0 || canvasTexts.length > 0 || canvasShapes.length > 0;
+    setHasCanvasElements(anyElementsExist);
+  }, [canvasImages, canvasTexts, canvasShapes]);
+
+  useEffect(() => {
+    const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+      if (hasCanvasElements) {
+        event.preventDefault();
+        // Standard way to trigger the browser's generic confirmation dialog
+        event.returnValue = 'You have unsaved changes. Are you sure you want to leave?';
+      }
+    };
+
+    if (hasCanvasElements) {
+      window.addEventListener('beforeunload', handleBeforeUnload);
+    }
+
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, [hasCanvasElements]);
 
 
   const toggleGrid = () => setShowGrid(prev => !prev);
@@ -145,16 +170,16 @@ function CustomizerLayoutAndLogic() {
   };
 
   const loadCustomizerData = useCallback(async () => {
-    setIsLoading(true); 
+    setIsLoading(true);
     setError(null);
     setProductVariations(null);
-    setConfigurableAttributes(null); 
-    setSelectedVariationOptions({}); 
+    setConfigurableAttributes(null);
+    setSelectedVariationOptions({});
     setViewBaseImages({});
     setLoadedOptionsByColor(null);
     setLoadedGroupingAttributeName(null);
     setTotalCustomizationPrice(0);
-    
+
     if (!productId) {
       setError("No product ID provided. Displaying default customizer.");
       const defaultViews = defaultFallbackProduct.views;
@@ -167,10 +192,10 @@ function CustomizerLayoutAndLogic() {
       return;
     }
 
-    if (authLoading) { 
+    if (authLoading) {
       return;
     }
-    
+
     let wcProduct: WCCustomProduct | undefined;
     let fetchError: string | undefined;
     let userCredentials;
@@ -187,7 +212,7 @@ function CustomizerLayoutAndLogic() {
         console.warn("Customizer: Could not access localStorage for WC credentials:", storageError);
       }
     }
-    
+
     ({ product: wcProduct, error: fetchError } = await fetchWooCommerceProductById(productId, userCredentials));
 
     if (fetchError || !wcProduct) {
@@ -196,10 +221,10 @@ function CustomizerLayoutAndLogic() {
       const baseImagesMapError: Record<string, {url: string, aiHint?: string, price?: number}> = {};
       defaultViewsError.forEach(view => { baseImagesMapError[view.id] = { url: view.imageUrl, aiHint: view.aiHint, price: view.price ?? 0 }; });
       setViewBaseImages(baseImagesMapError);
-      setProductDetails(defaultFallbackProduct); 
+      setProductDetails(defaultFallbackProduct);
       setActiveViewId(defaultViewsError[0]?.id || null);
-      setConfigurableAttributes([]); 
-      setSelectedVariationOptions({}); 
+      setConfigurableAttributes([]);
+      setSelectedVariationOptions({});
       setIsLoading(false);
       toast({ title: "Product Load Error", description: fetchError || `Product ${productId} not found.`, variant: "destructive"});
       return;
@@ -214,11 +239,11 @@ function CustomizerLayoutAndLogic() {
       const savedOptionsString = localStorage.getItem(localStorageKey);
       if (savedOptionsString) {
         const parsedOptions = JSON.parse(savedOptionsString) as LocalStorageCustomizerOptions;
-        if (parsedOptions.defaultViews && parsedOptions.optionsByColor) { 
+        if (parsedOptions.defaultViews && parsedOptions.optionsByColor) {
           finalDefaultViews = parsedOptions.defaultViews.map(v => ({...v, price: v.price ?? 0})) || [];
           tempLoadedOptionsByColor = parsedOptions.optionsByColor || {};
           tempLoadedGroupingAttributeName = parsedOptions.groupingAttributeName || null;
-        } else if ((parsedOptions as any).views && (parsedOptions as any).cstmzrSelectedVariationIds) { 
+        } else if ((parsedOptions as any).views && (parsedOptions as any).cstmzrSelectedVariationIds) {
           console.warn("Customizer: Found old Customizer Studio options format. Using basic views.");
           finalDefaultViews = (parsedOptions as any).views.map((v:any) => ({...v, price: v.price ?? 0})) || [];
         }
@@ -227,10 +252,10 @@ function CustomizerLayoutAndLogic() {
       console.warn("Customizer: Error parsing Customizer Studio options from localStorage:", e);
       toast({ title: "Local Settings Note", description: "Could not load saved Customizer Studio settings. Using defaults."});
     }
-    
+
     if (finalDefaultViews.length === 0) {
         finalDefaultViews = [
-            { 
+            {
                 id: `default_view_wc_${wcProduct.id}`,
                 name: "Front View",
                 imageUrl: wcProduct.images && wcProduct.images.length > 0 ? wcProduct.images[0].src : defaultFallbackProduct.views[0].imageUrl,
@@ -240,36 +265,36 @@ function CustomizerLayoutAndLogic() {
             }
         ];
     }
-    
+
     setLoadedOptionsByColor(tempLoadedOptionsByColor);
     setLoadedGroupingAttributeName(tempLoadedGroupingAttributeName);
 
     const baseImagesMapFinal: Record<string, {url: string, aiHint?: string, price?:number}> = {};
     finalDefaultViews.forEach(view => { baseImagesMapFinal[view.id] = { url: view.imageUrl, aiHint: view.aiHint, price: view.price ?? 0 }; });
     setViewBaseImages(baseImagesMapFinal);
-    
+
     const productBasePrice = parseFloat(wcProduct.price || wcProduct.regular_price || '0');
 
     setProductDetails({
       id: wcProduct.id.toString(),
       name: wcProduct.name || `Product ${productId}`,
       basePrice: productBasePrice,
-      views: finalDefaultViews, 
+      views: finalDefaultViews,
       type: wcProduct.type,
     });
 
     setActiveViewId(finalDefaultViews[0]?.id || null);
-    
+
     if (wcProduct.type === 'variable') {
       const { variations: fetchedVariations, error: variationsError } = await fetchWooCommerceProductVariations(productId, userCredentials);
       if (variationsError) {
         toast({ title: "Variations Load Error", description: variationsError, variant: "destructive" });
-        setProductVariations(null); 
-        setConfigurableAttributes([]); 
+        setProductVariations(null);
+        setConfigurableAttributes([]);
         setSelectedVariationOptions({});
       } else if (fetchedVariations && fetchedVariations.length > 0) {
         setProductVariations(fetchedVariations);
-        
+
         const attributesMap: Record<string, Set<string>> = {};
         fetchedVariations.forEach(variation => {
           variation.attributes.forEach(attr => {
@@ -289,7 +314,7 @@ function CustomizerLayoutAndLogic() {
           const initialSelectedOptions: Record<string, string> = {};
           allConfigurableAttributes.forEach(attr => {
             if (attr.options.length > 0) {
-              initialSelectedOptions[attr.name] = attr.options[0]; 
+              initialSelectedOptions[attr.name] = attr.options[0];
             }
           });
           setSelectedVariationOptions(initialSelectedOptions);
@@ -298,22 +323,22 @@ function CustomizerLayoutAndLogic() {
         }
       } else {
          setProductVariations(null);
-         setConfigurableAttributes([]); 
+         setConfigurableAttributes([]);
          setSelectedVariationOptions({});
       }
     } else {
         setProductVariations(null);
-        setConfigurableAttributes([]); 
+        setConfigurableAttributes([]);
         setSelectedVariationOptions({});
     }
 
     setIsLoading(false);
-  }, [productId, user?.uid, authLoading, toast]); // Changed user.id to user.uid here
+  }, [productId, user?.uid, authLoading, toast]);
 
   useEffect(() => {
-    if (productId && !authLoading) { 
+    if (productId && !authLoading) {
         loadCustomizerData();
-    } else if (!productId) { 
+    } else if (!productId) {
         loadCustomizerData();
     }
   }, [productId, authLoading, loadCustomizerData]);
@@ -328,7 +353,7 @@ function CustomizerLayoutAndLogic() {
     }
 
     const matchingVariation = productDetails.type === 'variable' && productVariations ? productVariations.find(variation => {
-      if (Object.keys(selectedVariationOptions).length === 0 && configurableAttributes && configurableAttributes.length > 0) return false; 
+      if (Object.keys(selectedVariationOptions).length === 0 && configurableAttributes && configurableAttributes.length > 0) return false;
       return variation.attributes.every(
         attr => selectedVariationOptions[attr.name] === attr.option
       );
@@ -346,7 +371,7 @@ function CustomizerLayoutAndLogic() {
     if (loadedGroupingAttributeName && selectedVariationOptions[loadedGroupingAttributeName]) {
       currentColorKey = selectedVariationOptions[loadedGroupingAttributeName];
     }
-    
+
     const currentVariantViewImages = currentColorKey && loadedOptionsByColor ? loadedOptionsByColor[currentColorKey]?.variantViewImages : null;
 
     setProductDetails(prevProductDetails => {
@@ -355,16 +380,16 @@ function CustomizerLayoutAndLogic() {
       const updatedViews = prevProductDetails.views.map(view => {
         let finalImageUrl: string | undefined = undefined;
         let finalAiHint: string | undefined = undefined;
-        
+
         const baseImageInfo = viewBaseImages[view.id];
-        const baseImageUrl = baseImageInfo?.url || defaultFallbackProduct.views[0].imageUrl; 
+        const baseImageUrl = baseImageInfo?.url || defaultFallbackProduct.views[0].imageUrl;
         const baseAiHint = baseImageInfo?.aiHint || defaultFallbackProduct.views[0].aiHint;
 
         if (currentVariantViewImages && currentVariantViewImages[view.id]?.imageUrl) {
           finalImageUrl = currentVariantViewImages[view.id].imageUrl;
-          finalAiHint = currentVariantViewImages[view.id].aiHint || baseAiHint; 
-        } 
-        else if (primaryVariationImageSrc && view.id === activeViewId) { 
+          finalAiHint = currentVariantViewImages[view.id].aiHint || baseAiHint;
+        }
+        else if (primaryVariationImageSrc && view.id === activeViewId) {
           finalImageUrl = primaryVariationImageSrc;
           finalAiHint = primaryVariationImageAiHint || baseAiHint;
         }
@@ -372,23 +397,23 @@ function CustomizerLayoutAndLogic() {
           finalImageUrl = baseImageUrl;
           finalAiHint = baseAiHint;
         }
-        
+
         return { ...view, imageUrl: finalImageUrl!, aiHint: finalAiHint, price: view.price ?? 0 };
       });
-      
+
       return { ...prevProductDetails, views: updatedViews };
     });
 
   }, [
-    selectedVariationOptions, 
-    productVariations, 
-    productDetails?.id, 
-    activeViewId, 
-    viewBaseImages, 
-    loadedOptionsByColor, 
+    selectedVariationOptions,
+    productVariations,
+    productDetails?.id,
+    activeViewId,
+    viewBaseImages,
+    loadedOptionsByColor,
     loadedGroupingAttributeName,
-    configurableAttributes, 
-    productDetails?.type 
+    configurableAttributes,
+    productDetails?.type
   ]);
 
   useEffect(() => {
@@ -399,7 +424,7 @@ function CustomizerLayoutAndLogic() {
 
     const viewsToPrice = new Set<string>(usedViewIdsWithElements);
     if (activeViewId) {
-      viewsToPrice.add(activeViewId); 
+      viewsToPrice.add(activeViewId);
     }
 
     let viewSurcharges = 0;
@@ -455,23 +480,23 @@ function CustomizerLayoutAndLogic() {
       toast({
         title: "Cannot Add to Cart",
         description: "Please add some design elements or sign in.",
-        variant: "default", 
-      });
-      return;
-    }
-    
-    if (!user && (canvasImages.length > 0 || canvasTexts.length > 0 || canvasShapes.length > 0)) {
-       toast({
-        title: "Please Sign In",
-        description: "Sign in to save your design and add to cart.",
-        variant: "default", 
+        variant: "default",
       });
       return;
     }
 
-    const currentProductIdFromParams = searchParams.get('productId'); 
+    if (!user && (canvasImages.length > 0 || canvasTexts.length > 0 || canvasShapes.length > 0)) {
+       toast({
+        title: "Please Sign In",
+        description: "Sign in to save your design and add to cart.",
+        variant: "default",
+      });
+      return;
+    }
+
+    const currentProductIdFromParams = searchParams.get('productId');
     const baseProductPrice = productDetails?.basePrice ?? 0;
-    
+
     const viewsUsedForSurcharge = new Set<string>();
     canvasImages.forEach(item => { if(item.viewId) viewsUsedForSurcharge.add(item.viewId); });
     canvasTexts.forEach(item => { if(item.viewId) viewsUsedForSurcharge.add(item.viewId); });
@@ -485,23 +510,23 @@ function CustomizerLayoutAndLogic() {
 
 
     const designData = {
-      images: canvasImages.filter(item => item.viewId === activeViewId), 
+      images: canvasImages.filter(item => item.viewId === activeViewId),
       texts: canvasTexts.filter(item => item.viewId === activeViewId),
       shapes: canvasShapes.filter(item => item.viewId === activeViewId),
-      productId: currentProductIdFromParams, 
-      userId: user?.uid,  // Changed user.id to user.uid
-      activeViewId: activeViewId, 
-      selectedVariationOptions: selectedVariationOptions, 
+      productId: currentProductIdFromParams,
+      userId: user?.uid,
+      activeViewId: activeViewId,
+      selectedVariationOptions: selectedVariationOptions,
       baseProductPrice: baseProductPrice,
       totalViewSurcharge: totalViewSurcharge,
-      totalCustomizationPrice: totalCustomizationPrice, 
+      totalCustomizationPrice: totalCustomizationPrice,
     };
 
-    let targetOrigin = '*'; 
+    let targetOrigin = '*';
     if (process.env.NODE_ENV === 'production' && process.env.NEXT_PUBLIC_WORDPRESS_SITE_ORIGIN) {
         targetOrigin = process.env.NEXT_PUBLIC_WORDPRESS_SITE_ORIGIN;
     }
-    
+
     if (window.parent !== window) {
       window.parent.postMessage({ customizerStudioDesignData: designData }, targetOrigin);
       toast({
@@ -512,14 +537,14 @@ function CustomizerLayoutAndLogic() {
        toast({
         title: "Add to Cart Clicked (Standalone)",
         description: "This action would normally send data to an embedded store. Design data logged to console.",
-        variant: "default" 
+        variant: "default"
       });
       console.log("Add to Cart - Design Data:", designData);
     }
   };
 
 
-  if (isLoading || authLoading) { 
+  if (isLoading || authLoading) {
     return (
       <div className="flex min-h-svh h-screen w-full items-center justify-center bg-background">
         <Loader2 className="h-10 w-10 animate-spin text-primary" />
@@ -527,9 +552,9 @@ function CustomizerLayoutAndLogic() {
       </div>
     );
   }
-  
+
   const activeViewData = productDetails?.views.find(v => v.id === activeViewId);
-  
+
   const currentProductImage = activeViewData?.imageUrl || defaultFallbackProduct.views[0].imageUrl;
   const currentProductAlt = activeViewData?.name || defaultFallbackProduct.views[0].name;
   const currentProductAiHint = activeViewData?.aiHint || defaultFallbackProduct.views[0].aiHint;
@@ -537,7 +562,7 @@ function CustomizerLayoutAndLogic() {
   const currentProductName = productDetails?.name || defaultFallbackProduct.name;
 
 
-  if (error && !productDetails) { 
+  if (error && !productDetails) {
     return (
       <div className="flex flex-col min-h-svh h-w-full items-center justify-center bg-background p-4">
         <AlertTriangle className="h-12 w-12 text-destructive mb-4" />
@@ -553,11 +578,11 @@ function CustomizerLayoutAndLogic() {
   return (
       <div className="flex flex-col min-h-svh h-screen w-full bg-muted/20">
         <AppHeader />
-        <div className="relative flex flex-1 overflow-hidden"> 
+        <div className="relative flex flex-1 overflow-hidden">
           <CustomizerIconNav
-            tools={toolItems} 
-            activeTool={activeTool} 
-            setActiveTool={setActiveTool} 
+            tools={toolItems}
+            activeTool={activeTool}
+            setActiveTool={setActiveTool}
           />
 
           <div
@@ -574,12 +599,12 @@ function CustomizerLayoutAndLogic() {
             </div>
             <div className={cn(
               "flex-1 h-full overflow-y-auto overflow-x-hidden pb-20 [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:rounded-full [&::-webkit-scrollbar-track]:bg-gray-100 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-gray-300 dark:[&::-webkit-scrollbar-track]:bg-neutral-700 dark:[&::-webkit-scrollbar-thumb]:bg-neutral-500",
-              !isToolPanelOpen && "invisible opacity-0" 
+              !isToolPanelOpen && "invisible opacity-0"
             )}>
                {renderActiveToolPanelContent()}
             </div>
           </div>
-          
+
           <Button
             onClick={toggleToolPanel}
             variant="outline"
@@ -595,16 +620,16 @@ function CustomizerLayoutAndLogic() {
           >
             {isToolPanelOpen ? <PanelLeftClose className="h-5 w-5"/> : <PanelRightOpen className="h-5 w-5"/>}
           </Button>
-          
-          <main className="flex-1 p-4 md:p-6 flex flex-col min-h-0"> 
-            {error && productDetails?.id === defaultFallbackProduct.id && ( 
+
+          <main className="flex-1 p-4 md:p-6 flex flex-col min-h-0">
+            {error && productDetails?.id === defaultFallbackProduct.id && (
                <div className="w-full max-w-4xl p-3 mb-4 border border-destructive bg-destructive/10 rounded-md text-destructive text-sm flex-shrink-0">
                  <AlertTriangle className="inline h-4 w-4 mr-1" /> {error} Using default product view.
                </div>
             )}
-            
+
              <div className="w-full flex flex-col flex-1 min-h-0 pb-4">
-              <DesignCanvas 
+              <DesignCanvas
                 productImageUrl={currentProductImage}
                 productImageAlt={`${currentProductName} - ${currentProductAlt}`}
                 productImageAiHint={currentProductAiHint}
@@ -631,10 +656,10 @@ function CustomizerLayoutAndLogic() {
           >
             {isRightSidebarOpen ? <PanelRightClose className="h-5 w-5"/> : <PanelLeftOpen className="h-5 w-5"/>}
           </Button>
-          
-          <RightPanel 
-            showGrid={showGrid} 
-            toggleGrid={toggleGrid} 
+
+          <RightPanel
+            showGrid={showGrid}
+            toggleGrid={toggleGrid}
             showBoundaryBoxes={showBoundaryBoxes}
             toggleBoundaryBoxes={toggleBoundaryBoxes}
             productDetails={productDetails}
@@ -643,14 +668,14 @@ function CustomizerLayoutAndLogic() {
             configurableAttributes={configurableAttributes}
             selectedVariationOptions={selectedVariationOptions}
             onVariantOptionSelect={handleVariantOptionSelect}
-            productVariations={productVariations} 
+            productVariations={productVariations}
             className={cn(
               "transition-all duration-300 ease-in-out flex-shrink-0 h-full",
               isRightSidebarOpen ? "w-72 md:w-80 lg:w-96 opacity-100" : "w-0 opacity-0 pointer-events-none"
             )}
-          /> 
+          />
         </div>
-        
+
         <footer className="fixed bottom-0 left-0 right-0 h-16 border-t bg-card shadow-md px-4 py-2 flex items-center justify-between gap-4 z-40">
             <div className="text-md font-medium text-muted-foreground truncate max-w-xs sm:max-w-sm md:max-w-md" title={currentProductName}>
                 {currentProductName}
@@ -670,7 +695,7 @@ function CustomizerLayoutAndLogic() {
 export default function CustomizerPage() {
   return (
     <UploadProvider>
-      <Suspense fallback={ 
+      <Suspense fallback={
         <div className="flex min-h-svh h-screen w-full items-center justify-center bg-background">
           <Loader2 className="h-10 w-10 animate-spin text-primary" />
           <p className="ml-3 text-muted-foreground">Loading customizer page...</p>
@@ -681,6 +706,3 @@ export default function CustomizerPage() {
     </UploadProvider>
   );
 }
-    
-
-    
