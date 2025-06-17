@@ -117,8 +117,7 @@ export default function ProductOptionsPage() {
 
 
   const fetchAndSetProductData = useCallback(async (isRefresh = false) => {
-    if (!user?.id || !productId) {
-        // This case should be caught by the useEffect, but as a safeguard:
+    if (!user?.uid || !productId) { // Corrected: user.uid instead of user.id
         setError("User or Product ID became invalid during fetch setup.");
         setIsLoading(false); setIsRefreshing(false);
         return;
@@ -137,9 +136,9 @@ export default function ProductOptionsPage() {
 
     let userCredentials: WooCommerceCredentials | undefined;
     try {
-      const userStoreUrl = localStorage.getItem(`wc_store_url_${user.id}`);
-      const userConsumerKey = localStorage.getItem(`wc_consumer_key_${user.id}`);
-      const userConsumerSecret = localStorage.getItem(`wc_consumer_secret_${user.id}`);
+      const userStoreUrl = localStorage.getItem(`wc_store_url_${user.uid}`); // Corrected: user.uid
+      const userConsumerKey = localStorage.getItem(`wc_consumer_key_${user.uid}`); // Corrected: user.uid
+      const userConsumerSecret = localStorage.getItem(`wc_consumer_secret_${user.uid}`); // Corrected: user.uid
       if (userStoreUrl && userConsumerKey && userConsumerSecret) {
         userCredentials = { storeUrl: userStoreUrl, consumerKey: userConsumerKey, consumerSecret: userConsumerSecret };
         setCredentialsExist(true);
@@ -216,7 +215,7 @@ export default function ProductOptionsPage() {
     let loadedOptionsByColor: Record<string, ColorGroupOptions> = {};
     let loadedGroupingAttributeName: string | null = null;
     let localDataFoundAndParsed = false;
-    const localStorageKey = `customizer_studio_product_options_${user.id}_${productId}`; 
+    const localStorageKey = `customizer_studio_product_options_${user.uid}_${productId}`; // Corrected: user.uid
 
     try {
       const savedOptionsString = localStorage.getItem(localStorageKey);
@@ -280,42 +279,36 @@ export default function ProductOptionsPage() {
     setIsLoading(false); setIsRefreshing(false);
     if (isRefresh) toast({ title: "Product Data Refreshed", description: "Details updated from your store."});
 
-  }, [productId, user?.id, toast]);
+  }, [productId, user?.uid, toast]); // Corrected: user.uid
 
   useEffect(() => {
     if (authIsLoading) {
-      setError(null); // Clear any page-specific error while auth is loading
-      // No need to set setIsLoading(true) here, as the top-level loader uses authIsLoading
+      setError(null); 
       return;
     }
   
     if (!user) {
       setError("User not authenticated. Please sign in.");
-      setIsLoading(false); // Ensure page's isLoading is false
+      setIsLoading(false); 
       setProductOptions(null);
       return;
     }
   
     if (!productId) {
       setError("Product ID is missing.");
-      setIsLoading(false); // Ensure page's isLoading is false
+      setIsLoading(false); 
       setProductOptions(null);
       return;
     }
   
-    // Auth is done, user and productId are present.
-    setError(null); // Clear any "User not auth" or "Product ID missing" errors
+    setError(null); 
   
-    if (!productOptions) { // Only fetch if productOptions are not yet loaded
-      fetchAndSetProductData(false); // This will set its own isLoading(true) then isLoading(false)
+    if (!productOptions) { 
+        fetchAndSetProductData(false); 
     } else {
-      // Product options already loaded (e.g., from previous navigation or refresh)
-      // Ensure the page's isLoading is false if fetchAndSetProductData isn't called.
       setIsLoading(false); 
     }
-  // Removed productOptions from dependencies to prevent re-fetch unless productId, user, or authIsLoading change.
-  // fetchAndSetProductData is memoized and only changes if productId or user.id change.
-  }, [productId, authIsLoading, user, fetchAndSetProductData]);
+  }, [productId, authIsLoading, user, productOptions, fetchAndSetProductData]);
 
 
   const handleRefreshData = () => {
@@ -412,7 +405,7 @@ export default function ProductOptionsPage() {
         toast({ title: "Error", description: "Product data or user session is missing.", variant: "destructive"});
         return;
     }
-    const localStorageKey = `customizer_studio_product_options_${user.id}_${productOptions.id}`; 
+    const localStorageKey = `customizer_studio_product_options_${user.uid}_${productOptions.id}`; // Corrected: user.uid
     const dataToSave: LocalStorageData_New = {
       defaultViews: productOptions.defaultViews,
       optionsByColor: productOptions.optionsByColor,
@@ -642,7 +635,6 @@ export default function ProductOptionsPage() {
     setHasUnsavedChanges(true);
   };
 
-  // Main loader condition
   if (authIsLoading || (isLoading && !error && !productOptions)) {
     return <div className="flex items-center justify-center min-h-screen bg-background"><Loader2 className="h-10 w-10 animate-spin text-primary" /><p className="ml-3">Loading product options...</p></div>;
   }
