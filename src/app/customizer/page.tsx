@@ -269,7 +269,6 @@ function CustomizerLayoutAndLogic() {
     }
 
     if (authLoading && user === undefined) { 
-      // If auth is still genuinely loading (user is undefined, not just null)
       return; 
     }
 
@@ -288,11 +287,13 @@ function CustomizerLayoutAndLogic() {
             consumerKey: credData.consumerKey, 
             consumerSecret: credData.consumerSecret 
           };
-        } else if (!isEmbedded) { // Only toast if not embedded and no creds
+        } else if (!isEmbedded && !user?.uid) { 
+           // No specific message needed here for embedded unauth scenario, error will come from fetchWooCommerceProductById
+        } else if (!isEmbedded && user?.uid) { // Only toast if not embedded AND user is logged in to THIS app
           toast({ title: "WooCommerce Credentials Note", description: "No saved WooCommerce credentials for this user. Product data might be limited or use defaults.", variant: "default" });
         }
       } catch (credError: any) {
-          if (!isEmbedded) { // Only toast if not embedded
+          if (!isEmbedded && user?.uid) { // Only toast if not embedded AND user logged in
             toast({ title: "WooCommerce Connection Error", description: credError.message || "Could not load your WooCommerce store credentials.", variant: "destructive" });
           }
       }
@@ -302,7 +303,12 @@ function CustomizerLayoutAndLogic() {
 
 
     if (fetchError || !wcProduct) {
-      setError(fetchError || `Failed to load product (ID: ${productId}). Displaying default.`);
+      let displayError = fetchError || `Failed to load product (ID: ${productId}).`;
+      if (isEmbedded && (!user?.uid || (fetchError && (fetchError.includes("credentials are not configured") || fetchError.includes("required.")))) ) {
+         displayError = `This product customizer (ID: ${productId}) could not load data from the store. The embedding store might need to configure its connection with Customizer Studio. (Details: ${displayError})`;
+      }
+      setError(displayError + " Displaying default customizer view.");
+      
       const defaultViewsError = defaultFallbackProduct.views;
       const baseImagesMapError: Record<string, {url: string, aiHint?: string, price?: number}> = {};
       defaultViewsError.forEach(view => { baseImagesMapError[view.id] = { url: view.imageUrl, aiHint: view.aiHint, price: view.price ?? 0 }; });
@@ -312,7 +318,7 @@ function CustomizerLayoutAndLogic() {
       setConfigurableAttributes([]);
       setSelectedVariationOptions({});
       setIsLoading(false);
-      if (!isEmbedded) { // Only toast if not embedded
+      if (!isEmbedded && user?.uid) { 
         toast({ title: "Product Load Error", description: fetchError || `Product ${productId} not found.`, variant: "destructive"});
       }
       return;
@@ -373,7 +379,7 @@ function CustomizerLayoutAndLogic() {
     if (wcProduct.type === 'variable') {
       const { variations: fetchedVariations, error: variationsError } = await fetchWooCommerceProductVariations(productId, userWCCredentialsToUse);
       if (variationsError) {
-        if (!isEmbedded) toast({ title: "Variations Load Error", description: variationsError, variant: "destructive" });
+        if (!isEmbedded || user?.uid) toast({ title: "Variations Load Error", description: variationsError, variant: "destructive" });
         setProductVariations(null);
         setConfigurableAttributes([]);
         setSelectedVariationOptions({});
@@ -418,34 +424,29 @@ function CustomizerLayoutAndLogic() {
     }
 
     setIsLoading(false);
-  }, [productId, user?.uid, authLoading, toast, isEmbedded, productDetails]); // Added productDetails to dep array
+  }, [productId, user?.uid, authLoading, toast, isEmbedded, productDetails, viewMode]);
 
   useEffect(() => {
     if (authLoading) {
-      return; // Wait for auth to fully resolve
+      return; 
     }
 
-    if (typeof productId === 'string' && productId.trim() !== '') {
-      // We have a valid productId from the URL.
-      // Load if productDetails isn't set for this ID, or if there was a prior error we want to retry from.
-      if ((!productDetails || productDetails.id !== productId) && !error) {
+    const currentProductId = searchParams.get('productId');
+    
+    if (typeof currentProductId === 'string' && currentProductId.trim() !== '') {
+      if ((!productDetails || productDetails.id !== currentProductId) && (!error || (error && !error.includes(`ID: ${currentProductId}`)))) { // Add check to ensure error is not for current ProductId already
         loadCustomizerData();
-      } else if (productDetails && productDetails.id === productId) {
-        // Product already loaded, ensure loading spinner is off.
-        setIsLoading(false);
-      } else if (error) {
-        // Error state, ensure loading spinner is off.
+      } else if ((productDetails && productDetails.id === currentProductId) || error) {
         setIsLoading(false);
       }
     } else {
-      // No valid productId in URL. Load default/fallback if not already loaded.
       if (!productDetails && !error) {
-        loadCustomizerData(); // loadCustomizerData will handle the null productId case
+        loadCustomizerData(); 
       } else if (productDetails || error) {
         setIsLoading(false);
       }
     }
-  }, [authLoading, productId, loadCustomizerData, productDetails, error]);
+  }, [authLoading, searchParams, loadCustomizerData, productDetails, error]); // searchParams in dep array
 
 
  useEffect(() => {
@@ -493,7 +494,7 @@ function CustomizerLayoutAndLogic() {
           finalImageUrl = currentVariantViewImages[view.id].imageUrl;
           finalAiHint = currentVariantViewImages[view.id].aiHint || baseAiHint;
         }
-        else if (primaryVariationImageSrc && view.id === activeViewId) { // Apply primary variation image only to the active view if no specific variant view image exists
+        else if (primaryVariationImageSrc && view.id === activeViewId) { 
           finalImageUrl = primaryVariationImageSrc;
           finalAiHint = primaryVariationImageAiHint || baseAiHint;
         }
@@ -616,7 +617,6 @@ function CustomizerLayoutAndLogic() {
     canvasTexts.forEach(item => { if(item.viewId) viewsUsedForSurcharge.add(item.viewId); });
     canvasShapes.forEach(item => { if(item.viewId) viewsUsedForSurcharge.add(item.viewId); });
     
-    // Ensure activeViewId is only added if it actually has elements or is the only view.
     if (activeViewId && (viewsUsedForSurcharge.has(activeViewId) || viewsUsedForSurcharge.size === 0)) {
         viewsUsedForSurcharge.add(activeViewId);
     }
@@ -654,10 +654,10 @@ function CustomizerLayoutAndLogic() {
         const referrerOrigin = new URL(document.referrer).origin;
         targetOrigin = referrerOrigin;
       } catch (e) {
-        console.warn("Could not parse document.referrer for targetOrigin. Defaulting to '*'. Ensure parent page validates event.origin.", e);
+        console.warn("Could not parse document.referrer for targetOrigin. Defaulting to '*'. Parent site MUST validate event.origin.", e);
       }
     } else if (window.parent !== window) {
-        console.warn("document.referrer is empty, but app is in an iframe. Defaulting to targetOrigin '*' for postMessage. Ensure parent page validates event.origin.");
+        console.warn("document.referrer is empty, but app is in an iframe. Defaulting to targetOrigin '*' for postMessage. Parent site MUST validate event.origin.");
     }
 
 
@@ -665,7 +665,7 @@ function CustomizerLayoutAndLogic() {
       window.parent.postMessage({ customizerStudioDesignData: designData }, targetOrigin);
       toast({
         title: "Design Sent!",
-        description: "Your design details have been sent. The embedding site must verify the origin of this message for security.",
+        description: `Your design details have been sent. The embedding site must verify the origin of this message (${targetOrigin === '*' ? 'any origin, or a specific one if referrer was available' : targetOrigin}) for security.`,
       });
     } else {
        toast({
@@ -678,7 +678,7 @@ function CustomizerLayoutAndLogic() {
   };
 
 
-  if (isLoading || (authLoading && user === undefined)) { // Show loader if global isLoading or if auth is truly still loading (user is undefined)
+  if (isLoading || (authLoading && user === undefined)) { 
     return (
       <div className="flex min-h-svh h-screen w-full items-center justify-center bg-background">
         <Loader2 className="h-10 w-10 animate-spin text-primary" />
@@ -696,13 +696,13 @@ function CustomizerLayoutAndLogic() {
   const currentProductName = productDetails?.name || defaultFallbackProduct.name;
 
 
-  if (error && !productDetails) { // Show error if productDetails is null and an error exists
+  if (error && !productDetails) { 
     return (
       <div className="flex flex-col min-h-svh h-w-full items-center justify-center bg-background p-4">
         <AlertTriangle className="h-12 w-12 text-destructive mb-4" />
         <h2 className="text-xl font-semibold text-destructive mb-2">Customizer Error</h2>
         <p className="text-muted-foreground text-center mb-6">{error}</p>
-        {!isEmbedded && ( // Only show back to dashboard if not embedded
+        {!isEmbedded && ( 
           <Button variant="outline" asChild>
             <Link href="/dashboard">Back to Dashboard</Link>
           </Button>
@@ -760,10 +760,10 @@ function CustomizerLayoutAndLogic() {
           <main className="flex-1 p-4 md:p-6 flex flex-col min-h-0">
             {error && productDetails?.id === defaultFallbackProduct.id && (
                <div className="w-full max-w-4xl p-3 mb-4 border border-destructive bg-destructive/10 rounded-md text-destructive text-sm flex-shrink-0">
-                 <AlertTriangle className="inline h-4 w-4 mr-1" /> {error} Using default product view.
+                 <AlertTriangle className="inline h-4 w-4 mr-1" /> {error}
                </div>
             )}
-             {error && productDetails && productDetails.id !== defaultFallbackProduct.id && ( // For errors when a specific product was requested but failed to load fully
+             {error && productDetails && productDetails.id !== defaultFallbackProduct.id && ( 
                 <div className="w-full max-w-4xl p-3 mb-4 border border-destructive bg-destructive/10 rounded-md text-destructive text-sm flex-shrink-0">
                     <AlertTriangle className="inline h-4 w-4 mr-1" /> {error}
                 </div>
