@@ -11,12 +11,13 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, Shirt, RefreshCcw, ExternalLink, Loader2, AlertTriangle, LayersIcon, Tag, Image as ImageIconLucide, Edit2, DollarSign, PlugZap, Edit3 } from 'lucide-react';
+import { ArrowLeft, Shirt, RefreshCcw, ExternalLink, Loader2, AlertTriangle, LayersIcon, Tag, Image as ImageIconLucide, Edit2, DollarSign, PlugZap, Edit3, Save } from 'lucide-react';
 import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { fetchWooCommerceProductById, fetchWooCommerceProductVariations, type WooCommerceCredentials } from '@/app/actions/woocommerceActions';
+import { saveProductOptionsToFirestore, loadProductOptionsFromFirestore, type ProductOptionsFirestoreData } from '@/app/actions/productOptionsActions'; // NEW IMPORTS
 import type { WCCustomProduct, WCVariation, WCVariationAttribute } from '@/types/woocommerce';
 import { Alert as ShadCnAlert, AlertDescription as ShadCnAlertDescription, AlertTitle as ShadCnAlertTitle } from "@/components/ui/alert";
 import ProductViewSetup from '@/components/product-options/ProductViewSetup'; 
@@ -45,28 +46,18 @@ interface ColorGroupOptions {
   variantViewImages: Record<string, { imageUrl: string; aiHint?: string }>; 
 }
 
+// This interface defines the structure of the options state within this component
 interface ProductOptionsData {
-  id: string;
-  name: string;
-  description: string;
-  price: number; 
-  type: 'simple' | 'variable' | 'grouped' | 'external';
+  id: string; // Product ID, matches wcProduct.id
+  name: string; // Product name from wcProduct
+  description: string; // from wcProduct
+  price: number; // from wcProduct
+  type: 'simple' | 'variable' | 'grouped' | 'external'; // from wcProduct
   defaultViews: ProductView[]; 
   optionsByColor: Record<string, ColorGroupOptions>; 
   groupingAttributeName: string | null;
 }
 
-interface LocalStorageData_Old { 
-  views: ProductView[]; 
-  cstmzrSelectedVariationIds?: string[]; 
-  customizerStudioSelectedVariationIds?: string[]; 
-}
-
-interface LocalStorageData_New { 
-  defaultViews: ProductView[];
-  optionsByColor: Record<string, ColorGroupOptions>;
-  groupingAttributeName: string | null;
-}
 
 interface ActiveDragState {
   type: 'move' | 'resize_br' | 'resize_bl' | 'resize_tr' | 'resize_tl';
@@ -95,6 +86,7 @@ export default function ProductOptionsPage() {
   const [activeViewIdForSetup, setActiveViewIdForSetup] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true); 
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null); 
   const [credentialsExist, setCredentialsExist] = useState(false);
 
@@ -213,53 +205,30 @@ export default function ProductOptionsPage() {
     let loadedDefaultViews: ProductView[] = [];
     let loadedOptionsByColor: Record<string, ColorGroupOptions> = {};
     let loadedGroupingAttributeName: string | null = null;
-    let localDataFoundAndParsed = false;
-    const localStorageKey = `customizer_studio_product_options_${user.uid}_${productId}`; 
+    
+    // Load from Firestore
+    const { options: firestoreOptions, error: firestoreError } = await loadProductOptionsFromFirestore(user.uid, productId);
+    if (firestoreError) {
+        console.warn("Error loading from Firestore, will use defaults or WC data:", firestoreError);
+        toast({ title: "Loading Issue", description: `Could not load saved settings: ${firestoreError}. Using defaults.`, variant: "default" });
+    }
 
-    try {
-      const savedOptionsString = localStorage.getItem(localStorageKey);
-      if (savedOptionsString) {
-        const parsedOptions = JSON.parse(savedOptionsString);
-        if (parsedOptions.optionsByColor && parsedOptions.defaultViews) { 
-          loadedDefaultViews = parsedOptions.defaultViews.map((view: any) => ({ ...view, price: view.price ?? 0 })) || [];
-          loadedOptionsByColor = parsedOptions.optionsByColor || {};
-          loadedGroupingAttributeName = parsedOptions.groupingAttributeName || null;
-          localDataFoundAndParsed = true;
-        } else if (parsedOptions.views) { 
-          loadedDefaultViews = parsedOptions.views.map((view: any) => ({ ...view, price: view.price ?? 0 })) || [];
-          const oldFormat = parsedOptions as LocalStorageData_Old;
-          const migratedSelectedVariationIds = oldFormat.customizerStudioSelectedVariationIds || oldFormat.cstmzrSelectedVariationIds || [];
-          
-          if (identifiedGroupingAttr && tempGroupedVariationsData && Object.keys(tempGroupedVariationsData).length > 0) {
-            const firstColorKey = Object.keys(tempGroupedVariationsData)[0];
-            loadedOptionsByColor[firstColorKey] = {
-              selectedVariationIds: migratedSelectedVariationIds,
-              variantViewImages: {}, 
-            };
-            Object.keys(tempGroupedVariationsData).forEach(key => { 
-              if (!loadedOptionsByColor[key]) {
-                loadedOptionsByColor[key] = { selectedVariationIds: [], variantViewImages: {} };
-              }
-            });
-            loadedGroupingAttributeName = identifiedGroupingAttr;
-          } else { 
-            loadedOptionsByColor['default'] = { selectedVariationIds: migratedSelectedVariationIds, variantViewImages: {} };
-          }
-          toast({title: "Settings Migrated", description: "Product options updated to new format.", variant: "default"});
-          localDataFoundAndParsed = true;
-        }
-      }
-    } catch (e) { console.error("Error parsing local Customizer Studio options:", e); }
+    if (firestoreOptions) {
+        loadedDefaultViews = firestoreOptions.defaultViews.map((view: any) => ({ ...view, price: view.price ?? 0 })) || [];
+        loadedOptionsByColor = firestoreOptions.optionsByColor || {};
+        loadedGroupingAttributeName = firestoreOptions.groupingAttributeName || null;
+    }
+
 
     const finalDefaultViews = loadedDefaultViews.length > 0 ? loadedDefaultViews : initialDefaultViews;
     
     let finalOptionsByColor = loadedOptionsByColor;
-    if (!localDataFoundAndParsed && tempGroupedVariationsData) { 
+    if (!firestoreOptions && tempGroupedVariationsData) { 
         finalOptionsByColor = {};
         Object.keys(tempGroupedVariationsData).forEach(colorKey => {
             finalOptionsByColor[colorKey] = { selectedVariationIds: [], variantViewImages: {} };
         });
-    } else if (!localDataFoundAndParsed && wcProduct.type !== 'variable') { 
+    } else if (!firestoreOptions && wcProduct.type !== 'variable') { 
         finalOptionsByColor = { 'default': { selectedVariationIds: [], variantViewImages: {} }};
     }
 
@@ -274,46 +243,31 @@ export default function ProductOptionsPage() {
 
     setActiveViewIdForSetup(finalDefaultViews[0]?.id || null);
     setSelectedBoundaryBoxId(null);
-    setHasUnsavedChanges(isRefresh); 
+    setHasUnsavedChanges(isRefresh ? hasUnsavedChanges : false); // Keep unsaved changes if it's a manual refresh, reset otherwise
     setIsLoading(false); setIsRefreshing(false);
     if (isRefresh) toast({ title: "Product Data Refreshed", description: "Details updated from your store."});
 
-  }, [productId, user?.uid, toast]); 
+  }, [productId, user?.uid, toast, hasUnsavedChanges]); // Added hasUnsavedChanges to dependencies
 
 
   useEffect(() => {
     if (authIsLoading) {
-      // Still waiting for auth state to resolve
-      setIsLoading(true);
-      setError(null);
-      return;
+      setIsLoading(true); setError(null); return;
     }
-  
-    // Auth state is resolved
     if (!user) {
-      setError("User not authenticated. Please sign in.");
-      setIsLoading(false);
-      setProductOptions(null);
-      return;
+      setError("User not authenticated. Please sign in."); setIsLoading(false); setProductOptions(null); return;
     }
-  
     if (!productId) {
-      setError("Product ID is missing.");
-      setIsLoading(false);
-      setProductOptions(null);
-      return;
+      setError("Product ID is missing."); setIsLoading(false); setProductOptions(null); return;
     }
+    setError(null);
   
-    // User is authenticated and productId is present
-    setError(null); // Clear any "User not authenticated" error
-  
-    if (!productOptions) { // Fetch only if productOptions are not already loaded
-      fetchAndSetProductData(false); // This will set isLoading to true itself
+    if (!productOptions && !error) { 
+      fetchAndSetProductData(false);
     } else {
-      // productOptions are already loaded, ensure page isLoading is false
       setIsLoading(false);
     }
-  }, [authIsLoading, user, productId, fetchAndSetProductData]); // Removed productOptions from deps to avoid re-fetch loop
+  }, [authIsLoading, user, productId, fetchAndSetProductData, productOptions, error]);
 
 
   const handleRefreshData = () => {
@@ -405,24 +359,36 @@ export default function ProductOptionsPage() {
     };
   }, [activeDrag, handleDragging, handleInteractionEnd]);
 
-  const handleSaveChanges = () => {
-    if (!productOptions || !user) {
-        toast({ title: "Error", description: "Product data or user session is missing.", variant: "destructive"});
-        return;
+  const handleSaveChanges = async () => {
+    if (!productOptions || !user?.uid) {
+      toast({ title: "Error", description: "Product data or user session is missing. Cannot save.", variant: "destructive" });
+      return;
     }
-    const localStorageKey = `customizer_studio_product_options_${user.uid}_${productOptions.id}`; 
-    const dataToSave: LocalStorageData_New = {
+    if (!productOptions.id) {
+      toast({ title: "Error", description: "Product ID is missing from options data. Cannot save.", variant: "destructive" });
+      return;
+    }
+
+    setIsSaving(true);
+    const dataToSave: Omit<ProductOptionsFirestoreData, 'lastSaved' | 'createdAt'> = {
+      id: productOptions.id, // product id
+      name: productOptions.name,
+      description: productOptions.description,
+      price: productOptions.price,
+      type: productOptions.type,
       defaultViews: productOptions.defaultViews,
       optionsByColor: productOptions.optionsByColor,
       groupingAttributeName: productOptions.groupingAttributeName,
     };
-    try {
-      localStorage.setItem(localStorageKey, JSON.stringify(dataToSave));
-      toast({ title: "Saved", description: "Custom views, areas and variation selections saved locally." });
+
+    const result = await saveProductOptionsToFirestore(user.uid, productOptions.id, dataToSave);
+    setIsSaving(false);
+
+    if (result.success) {
+      toast({ title: "Saved", description: "Custom views, areas, and variation selections saved to your account." });
       setHasUnsavedChanges(false);
-    } catch (e) {
-      console.error("Error saving to localStorage:", e);
-      toast({ title: "Save Error", description: "Could not save Customizer Studio options.", variant: "destructive"});
+    } else {
+      toast({ title: "Save Error", description: result.error || "Could not save product options to Firestore.", variant: "destructive" });
     }
   };
 
@@ -641,7 +607,6 @@ export default function ProductOptionsPage() {
   };
 
 
-  // Main loader condition
   if (authIsLoading || (isLoading && !error && !productOptions)) {
     return <div className="flex items-center justify-center min-h-screen bg-background"><Loader2 className="h-10 w-10 animate-spin text-primary" /><p className="ml-3">Loading product options...</p></div>;
   }
@@ -665,8 +630,6 @@ export default function ProductOptionsPage() {
   }
   
   if (!productOptions) { 
-    // This case should ideally be covered by the main loader or error state, 
-    // but as a fallback:
     return (
         <div className="flex flex-col items-center justify-center min-h-screen bg-background p-4">
             <AlertTriangle className="h-12 w-12 text-muted-foreground mb-4" />
@@ -911,7 +874,10 @@ export default function ProductOptionsPage() {
               {hasUnsavedChanges && (<p className="mt-3 text-sm text-yellow-600 flex items-center"><AlertTriangle className="h-4 w-4 mr-1.5 text-yellow-500" />You have unsaved changes.</p>)}
             </CardContent>
             <CardFooter className="flex-col items-stretch gap-3">
-              <Button onClick={handleSaveChanges} size="lg" className="bg-primary text-primary-foreground hover:bg-primary/90">Save All Configurations</Button>
+              <Button onClick={handleSaveChanges} size="lg" className="bg-primary text-primary-foreground hover:bg-primary/90" disabled={isSaving}>
+                {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" /> }
+                Save All Configurations
+              </Button>
               <Button variant="outline" size="lg" onClick={handleOpenInCustomizer} disabled={hasUnsavedChanges} className="hover:bg-accent hover:text-accent-foreground"><ExternalLink className="mr-2 h-4 w-4" />Open in Customizer</Button>
             </CardFooter>
           </Card>

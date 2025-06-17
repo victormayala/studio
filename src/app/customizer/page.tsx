@@ -8,6 +8,7 @@ import DesignCanvas from '@/components/customizer/DesignCanvas';
 import RightPanel from '@/components/customizer/RightPanel';
 import { UploadProvider, useUploads } from "@/contexts/UploadContext";
 import { fetchWooCommerceProductById, fetchWooCommerceProductVariations } from '@/app/actions/woocommerceActions';
+import { loadProductOptionsFromFirestore, type ProductOptionsFirestoreData } from '@/app/actions/productOptionsActions'; // NEW IMPORT
 import { useAuth } from '@/contexts/AuthContext';
 import {
   Loader2, AlertTriangle, ShoppingCart, UploadCloud, Layers, Type, Shapes as ShapesIconLucide, Smile, Palette, Gem as GemIcon, Settings2 as SettingsIcon,
@@ -64,7 +65,8 @@ interface ColorGroupOptionsForCustomizer {
   variantViewImages: Record<string, { imageUrl: string; aiHint?: string }>;
 }
 
-interface LocalStorageCustomizerOptions {
+// This structure is for the loaded options from Firestore/localStorage for the customizer
+interface LoadedCustomizerOptions {
   defaultViews: ProductView[];
   optionsByColor: Record<string, ColorGroupOptionsForCustomizer>;
   groupingAttributeName: string | null;
@@ -152,12 +154,11 @@ function CustomizerLayoutAndLogic() {
     setHasCanvasElements(anyElementsExist);
   }, [canvasImages, canvasTexts, canvasShapes]);
 
-  // Handles browser close/refresh with generic dialog
   useEffect(() => {
     const handleBeforeUnload = (event: BeforeUnloadEvent) => {
       if (hasCanvasElements) {
         event.preventDefault();
-        event.returnValue = 'You have unsaved changes. Are you sure you want to leave?'; // Standard message
+        event.returnValue = 'You have unsaved changes. Are you sure you want to leave?';
       }
     };
 
@@ -167,7 +168,6 @@ function CustomizerLayoutAndLogic() {
     };
   }, [hasCanvasElements]);
 
-  // Handles custom "attemptCloseCustomizer" event from AppHeader for the AlertDialog
   useEffect(() => {
     const handleAttemptClose = () => {
       if (hasCanvasElements) {
@@ -180,7 +180,6 @@ function CustomizerLayoutAndLogic() {
         });
         setIsLeaveConfirmOpen(true);
       } else {
-        // No unsaved changes, proceed with close action
         if (user) {
           router.push('/dashboard');
         } else {
@@ -193,7 +192,7 @@ function CustomizerLayoutAndLogic() {
     return () => {
       window.removeEventListener('attemptCloseCustomizer', handleAttemptClose);
     };
-  }, [hasCanvasElements, router, user]); // Dependencies ensure the handler uses fresh state
+  }, [hasCanvasElements, router, user]); 
 
 
   const toggleGrid = () => setShowGrid(prev => !prev);
@@ -231,7 +230,7 @@ function CustomizerLayoutAndLogic() {
       return;
     }
 
-    if (authLoading) {
+    if (authLoading || !user?.uid) { // Wait for auth and ensure user.uid is available for Firestore
       return;
     }
 
@@ -239,17 +238,16 @@ function CustomizerLayoutAndLogic() {
     let fetchError: string | undefined;
     let userCredentials;
 
-    if (user) {
-      try {
-        const userStoreUrl = localStorage.getItem(`wc_store_url_${user.uid}`);
-        const userConsumerKey = localStorage.getItem(`wc_consumer_key_${user.uid}`);
-        const userConsumerSecret = localStorage.getItem(`wc_consumer_secret_${user.uid}`);
-        if (userStoreUrl && userConsumerKey && userConsumerSecret) {
-          userCredentials = { storeUrl: userStoreUrl, consumerKey: userConsumerKey, consumerSecret: userConsumerSecret };
-        }
-      } catch (storageError) {
-        console.warn("Customizer: Could not access localStorage for WC credentials:", storageError);
+    // Fetch WC Credentials from localStorage (this part remains client-side for now)
+    try {
+      const userStoreUrl = localStorage.getItem(`wc_store_url_${user.uid}`);
+      const userConsumerKey = localStorage.getItem(`wc_consumer_key_${user.uid}`);
+      const userConsumerSecret = localStorage.getItem(`wc_consumer_secret_${user.uid}`);
+      if (userStoreUrl && userConsumerKey && userConsumerSecret) {
+        userCredentials = { storeUrl: userStoreUrl, consumerKey: userConsumerKey, consumerSecret: userConsumerSecret };
       }
+    } catch (storageError) {
+      console.warn("Customizer: Could not access localStorage for WC credentials:", storageError);
     }
 
     ({ product: wcProduct, error: fetchError } = await fetchWooCommerceProductById(productId, userCredentials));
@@ -273,33 +271,30 @@ function CustomizerLayoutAndLogic() {
     let tempLoadedOptionsByColor: Record<string, ColorGroupOptionsForCustomizer> | null = null;
     let tempLoadedGroupingAttributeName: string | null = null;
 
-    const localStorageKey = user ? `customizer_studio_product_options_${user.uid}_${productId}` : `customizer_studio_product_options_anonymous_${productId}`;
-    try {
-      const savedOptionsString = localStorage.getItem(localStorageKey);
-      if (savedOptionsString) {
-        const parsedOptions = JSON.parse(savedOptionsString) as LocalStorageCustomizerOptions;
-        if (parsedOptions.defaultViews && parsedOptions.optionsByColor) {
-          finalDefaultViews = parsedOptions.defaultViews.map(v => ({...v, price: v.price ?? 0})) || [];
-          tempLoadedOptionsByColor = parsedOptions.optionsByColor || {};
-          tempLoadedGroupingAttributeName = parsedOptions.groupingAttributeName || null;
-        } else if ((parsedOptions as any).views && (parsedOptions as any).cstmzrSelectedVariationIds) {
-          console.warn("Customizer: Found old Customizer Studio options format. Using basic views.");
-          finalDefaultViews = (parsedOptions as any).views.map((v:any) => ({...v, price: v.price ?? 0})) || [];
-        }
-      }
-    } catch (e) {
-      console.warn("Customizer: Error parsing Customizer Studio options from localStorage:", e);
-      toast({ title: "Local Settings Note", description: "Could not load saved Customizer Studio settings. Using defaults."});
+    // Load options from Firestore
+    const { options: firestoreOptions, error: firestoreLoadError } = await loadProductOptionsFromFirestore(user.uid, productId);
+
+    if (firestoreLoadError) {
+      console.warn("Customizer: Error loading options from Firestore:", firestoreLoadError);
+      toast({ title: "Settings Load Error", description: "Could not load saved Customizer Studio settings from cloud. Using product defaults.", variant: "default"});
     }
 
+    if (firestoreOptions) {
+        finalDefaultViews = firestoreOptions.defaultViews.map(v => ({...v, price: v.price ?? 0})) || [];
+        tempLoadedOptionsByColor = firestoreOptions.optionsByColor || {};
+        tempLoadedGroupingAttributeName = firestoreOptions.groupingAttributeName || null;
+    }
+
+
     if (finalDefaultViews.length === 0) {
+        // Fallback to WC product image if no views from Firestore
         finalDefaultViews = [
             {
                 id: `default_view_wc_${wcProduct.id}`,
                 name: "Front View",
                 imageUrl: wcProduct.images && wcProduct.images.length > 0 ? wcProduct.images[0].src : defaultFallbackProduct.views[0].imageUrl,
                 aiHint: wcProduct.images && wcProduct.images.length > 0 && wcProduct.images[0].alt ? wcProduct.images[0].alt.split(" ").slice(0,2).join(" ") : defaultFallbackProduct.views[0].aiHint,
-                boundaryBoxes: defaultFallbackProduct.views[0].boundaryBoxes,
+                boundaryBoxes: defaultFallbackProduct.views[0].boundaryBoxes, // Keep default boundary boxes
                 price: defaultFallbackProduct.views[0].price ?? 0,
             }
         ];
@@ -372,15 +367,15 @@ function CustomizerLayoutAndLogic() {
     }
 
     setIsLoading(false);
-  }, [productId, user?.uid, authLoading, toast]);
+  }, [productId, user?.uid, authLoading, toast]); // user.uid is crucial here
 
   useEffect(() => {
-    if (productId && !authLoading) {
+    if (productId && !authLoading && user?.uid) { // Check for user.uid availability
         loadCustomizerData();
-    } else if (!productId) {
+    } else if (!productId && !authLoading) { // Handle no productId case (default customizer)
         loadCustomizerData();
     }
-  }, [productId, authLoading, loadCustomizerData]);
+  }, [productId, authLoading, user?.uid, loadCustomizerData]);
 
 
  useEffect(() => {
@@ -446,13 +441,13 @@ function CustomizerLayoutAndLogic() {
   }, [
     selectedVariationOptions,
     productVariations,
-    productDetails?.id, // Replaced productDetails with productDetails?.id for stability
+    productDetails?.id, 
     activeViewId,
     viewBaseImages,
     loadedOptionsByColor,
     loadedGroupingAttributeName,
-    configurableAttributes, // Added configurableAttributes as it's used in condition
-    productDetails?.type // Added type as it's used in condition
+    configurableAttributes, 
+    productDetails?.type 
   ]);
 
   useEffect(() => {
@@ -762,7 +757,6 @@ function CustomizerLayoutAndLogic() {
   );
 }
 
-// Main page component that provides the context
 export default function CustomizerPage() {
   return (
     <UploadProvider>
@@ -777,5 +771,3 @@ export default function CustomizerPage() {
     </UploadProvider>
   );
 }
-
-    
