@@ -273,14 +273,13 @@ export default function ProductOptionsPage() {
 
     const loadInitialData = async () => {
         if (authIsLoading) {
-            // Waiting for auth to resolve. isLoading should be true from initial useState.
             return;
         }
 
         if (!user?.uid) {
             if (!didCancel) {
                 setError("User not authenticated. Please sign in.");
-                setIsLoading(false); // Auth determined, no user, stop loading.
+                setIsLoading(false); 
                 setProductOptions(null);
             }
             return;
@@ -288,22 +287,17 @@ export default function ProductOptionsPage() {
         if (!productId) {
             if (!didCancel) {
                 setError("Product ID is missing.");
-                setIsLoading(false); // No product ID, stop loading.
+                setIsLoading(false); 
                 setProductOptions(null);
             }
             return;
         }
         
-        // If we have all prerequisites, productOptions is not yet loaded, and no error has occurred
         if (!productOptions && !error) {
-            // fetchAndSetProductData will manage its own isLoading for this fetch
-            await fetchAndSetProductData(false); // isRefresh = false
+            await fetchAndSetProductData(false); 
         } else if (productOptions || error) {
-            // Data is already present, or an error occurred from a previous attempt.
-            // Ensure the page-level isLoading (for the initial spinner) is false.
             if (!didCancel) setIsLoading(false);
         }
-        // If isLoading is true here, it implies fetchAndSetProductData is currently running.
     };
     
     loadInitialData();
@@ -311,11 +305,6 @@ export default function ProductOptionsPage() {
     return () => {
         didCancel = true;
     };
-  // Dependencies:
-  // - authIsLoading, user?.uid, productId: Define the context for loading.
-  // - productOptions, error: Allow re-evaluation if these states change (e.g., error cleared, or options set/cleared externally).
-  // - fetchAndSetProductData: Memoized callback.
-  // - isLoading is NOT a dependency here to prevent loops based on its own changes.
   }, [authIsLoading, user?.uid, productId, productOptions, error, fetchAndSetProductData]);
 
 
@@ -642,11 +631,19 @@ export default function ProductOptionsPage() {
     value: string
   ) => {
     setProductOptions(prev => {
-      if (!prev) return null;
-      const updatedOptionsByColor = JSON.parse(JSON.stringify(prev.optionsByColor));
+      if (!prev) return null; 
+
+      const baseOptionsByColor = typeof prev.optionsByColor === 'object' && prev.optionsByColor !== null
+                                 ? prev.optionsByColor
+                                 : {};
+      // Deep clone to avoid direct state mutation
+      const updatedOptionsByColor = JSON.parse(JSON.stringify(baseOptionsByColor));
 
       if (!updatedOptionsByColor[colorKey]) {
         updatedOptionsByColor[colorKey] = { selectedVariationIds: [], variantViewImages: {} };
+      }
+      if (!updatedOptionsByColor[colorKey].variantViewImages) { 
+          updatedOptionsByColor[colorKey].variantViewImages = {};
       }
       if (!updatedOptionsByColor[colorKey].variantViewImages[viewId]) {
         updatedOptionsByColor[colorKey].variantViewImages[viewId] = { imageUrl: '', aiHint: '' };
@@ -943,4 +940,7 @@ export default function ProductOptionsPage() {
     </div>
   );
 }
+    
+
+
     

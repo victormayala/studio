@@ -76,18 +76,31 @@ export default function DashboardPage() {
   const [productToDelete, setProductToDelete] = useState<ProductToDelete | null>(null);
 
   const getLocallyHiddenProductIds = useCallback((): string[] => {
-    if (!user) return [];
+    if (typeof window === 'undefined' || !user || !user.uid) { // Ensure client-side and user.uid exists
+        return [];
+    }
+    const key = `${LOCALLY_HIDDEN_PRODUCTS_KEY_PREFIX}${user.uid}`;
     try {
-      const storedIds = localStorage.getItem(`${LOCALLY_HIDDEN_PRODUCTS_KEY_PREFIX}${user.uid}`);
-      return storedIds ? JSON.parse(storedIds) : [];
+      const storedIds = localStorage.getItem(key);
+      if (storedIds === null || storedIds === undefined) { // Explicitly check for null/undefined
+        return [];
+      }
+      // At this point, storedIds is a string.
+      return JSON.parse(storedIds);
     } catch (e) {
-      console.error("Error getting locally hidden product IDs:", e);
+      console.error("Error parsing locally hidden product IDs from localStorage:", e);
+      // If parsing fails, it's safer to assume no IDs are hidden or clear the malformed data.
+      try {
+        localStorage.removeItem(key);
+      } catch (removeError) {
+        console.error("Error removing malformed item from localStorage:", removeError);
+      }
       return [];
     }
   }, [user]);
 
   const setLocallyHiddenProductIds = useCallback((ids: string[]): void => {
-    if (!user) return;
+    if (typeof window === 'undefined' || !user || !user.uid) return; // Ensure client-side and user.uid exists
     try {
       localStorage.setItem(`${LOCALLY_HIDDEN_PRODUCTS_KEY_PREFIX}${user.uid}`, JSON.stringify(ids));
     } catch (e) {
@@ -647,6 +660,8 @@ export default function DashboardPage() {
     </UploadProvider>
   );
 }
+    
+
     
 
     
