@@ -212,12 +212,14 @@ function CustomizerLayoutAndLogic() {
         }
       }
     };
-
-    window.addEventListener('attemptCloseCustomizer', handleAttemptClose);
+    
+    const eventListener = () => handleAttemptClose();
+    window.addEventListener('attemptCloseCustomizer', eventListener);
+    
     return () => {
-      window.removeEventListener('attemptCloseCustomizer', handleAttemptClose);
+      window.removeEventListener('attemptCloseCustomizer', eventListener);
     };
-  }, [hasCanvasElements, router, user]); 
+  }, [hasCanvasElements, router, user]);
 
 
   const toggleGrid = () => setShowGrid(prev => !prev);
@@ -602,19 +604,17 @@ function CustomizerLayoutAndLogic() {
       userId: user?.uid,
     };
 
-    let targetOrigin = '*'; // Default for development or if not set
-    if (process.env.NODE_ENV === 'production' && process.env.NEXT_PUBLIC_WORDPRESS_SITE_ORIGIN) {
-        targetOrigin = process.env.NEXT_PUBLIC_WORDPRESS_SITE_ORIGIN;
-    } else if (process.env.NODE_ENV !== 'production' && typeof window !== 'undefined' && window.parent !== window) {
-        // For local dev, if embedded, try to dynamically get parent origin for testing,
-        // but this can be tricky and might be blocked by browser security.
-        // The WordPress site should still check event.origin.
-        // For production, always use the explicit NEXT_PUBLIC_WORDPRESS_SITE_ORIGIN.
-        try {
-            targetOrigin = new URL(document.referrer).origin;
-        } catch (e) {
-            console.warn("Could not determine parent origin, using '*' for postMessage. Ensure parent checks event.origin.");
-        }
+    let targetOrigin = '*'; // Default for development or if not determined
+    if (window.parent !== window && document.referrer) {
+      try {
+        const referrerOrigin = new URL(document.referrer).origin;
+        targetOrigin = referrerOrigin;
+        console.log(`Using document.referrer for targetOrigin: ${targetOrigin}`);
+      } catch (e) {
+        console.warn("Could not parse document.referrer, falling back to targetOrigin '*' for postMessage. Ensure parent page validates event.origin.", e);
+      }
+    } else if (window.parent !== window) {
+        console.warn("document.referrer is empty, falling back to targetOrigin '*' for postMessage. Ensure parent page validates event.origin.");
     }
 
 
@@ -622,7 +622,7 @@ function CustomizerLayoutAndLogic() {
       window.parent.postMessage({ customizerStudioDesignData: designData }, targetOrigin);
       toast({
         title: "Design Sent!",
-        description: "Your design details have been sent to the store.",
+        description: "Your design details have been sent to the store. The store must verify the origin of this message for security.",
       });
     } else {
        toast({
@@ -828,3 +828,6 @@ export default function CustomizerPage() {
     </UploadProvider>
   );
 }
+
+
+    
