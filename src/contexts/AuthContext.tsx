@@ -3,7 +3,7 @@
 
 import type { ReactNode } from 'react';
 import { createContext, useContext, useState, useEffect, useCallback }  from 'react';
-import { useRouter, usePathname } from 'next/navigation';
+import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import { 
   getAuth, 
   onAuthStateChanged, 
@@ -41,11 +41,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const { toast } = useToast();
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (firebaseUser: FirebaseUser | null) => {
-      setIsLoading(true); // Set loading true at the start of auth state evaluation
+      setIsLoading(true); 
       if (firebaseUser) {
         setUser({
           uid: firebaseUser.uid,
@@ -53,32 +54,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           displayName: firebaseUser.displayName,
           photoURL: firebaseUser.photoURL,
         });
-        // User is authenticated
-        if (pathname === '/signin' || pathname === '/signup' || pathname === '/access-login') {
-          const searchParams = new URLSearchParams(window.location.search);
-          const redirectUrl = searchParams.get('redirect');
-          // Redirect to intended URL or dashboard, but not if redirect is to root (marketing page)
+        
+        const redirectUrl = searchParams.get('redirect');
+        const isAuthPage = pathname === '/signin' || pathname === '/signup';
+
+        if (isAuthPage) {
           router.push(redirectUrl && redirectUrl !== '/' && !redirectUrl.startsWith('/signin') && !redirectUrl.startsWith('/signup') ? redirectUrl : '/dashboard');
+        } else if (redirectUrl && redirectUrl !== '/' && !redirectUrl.startsWith('/signin') && !redirectUrl.startsWith('/signup')) {
+          // If there's a valid redirectUrl from being sent to signin from a protected route
+          router.push(redirectUrl);
         }
+        // If already on a protected page or dashboard, no specific redirect needed here as user is auth'd
+        
       } else {
         setUser(null);
-        // User is NOT authenticated
-        const protectedUserPaths = ['/dashboard', '/customizer']; // Add more base paths as needed
-        // Check if current path starts with any of the protected base paths
+        const protectedUserPaths = ['/dashboard', '/customizer', '/dashboard/products']; 
         const isCurrentlyOnProtectedPath = protectedUserPaths.some(p => pathname.startsWith(p));
 
         if (isCurrentlyOnProtectedPath) {
-          // User is on a protected path but not logged in. Redirect to signin.
-          // Preserve original path and query params for redirection after login.
-          const fullPath = pathname + window.location.search;
+          const fullPath = pathname + (searchParams.toString() ? `?${searchParams.toString()}` : '');
           router.push(`/signin?redirect=${encodeURIComponent(fullPath)}`);
         }
       }
-      setIsLoading(false); // Set loading false after processing auth state
+      setIsLoading(false); 
     });
 
     return () => unsubscribe();
-  }, [auth, router, pathname]); // Ensure pathname is a dependency
+  }, [auth, router, pathname, searchParams]); 
 
   const signIn = useCallback(async (email: string, pass: string) => {
     setIsLoading(true);
@@ -93,8 +95,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         description: error.message || "Invalid credentials or user not found.",
         variant: "destructive",
       });
-      setIsLoading(false); // Ensure loading is false on error
-      throw error;
+      setIsLoading(false); 
+      throw error; 
     }
   }, [auth, toast]);
 
@@ -111,7 +113,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         description: error.message || "Could not create account. Please try again.",
         variant: "destructive",
       });
-      setIsLoading(false); // Ensure loading is false on error
+      setIsLoading(false); 
       throw error;
     }
   }, [auth, toast]);
@@ -136,7 +138,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         description,
         variant: "destructive",
       });
-      setIsLoading(false); // Ensure loading is false on error
+      setIsLoading(false); 
       throw error;
     }
   }, [auth, toast]);
@@ -147,8 +149,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       await firebaseSignOut(auth);
       await clearAccessCookie(); 
       toast({ title: "Signed Out", description: "You have been successfully signed out." });
-      // onAuthStateChanged will set user to null, and the useEffect will redirect if needed,
-      // but explicitly pushing to /signin ensures a clean state.
       router.push('/signin'); 
     } catch (error: any)      {
       console.error("Sign out error:", error);
@@ -156,7 +156,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setIsLoading(false); 
       throw error;
     }
-    // setIsLoading(false) will be handled by onAuthStateChanged
   }, [auth, router, toast]);
 
   return (
