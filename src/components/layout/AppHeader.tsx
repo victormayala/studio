@@ -6,18 +6,18 @@ import Link from 'next/link';
 import { Button } from "@/components/ui/button";
 import { Logo } from "@/components/icons/Logo";
 import { EmbedCodeModal } from "@/components/customizer/EmbedCodeModal";
-import { CodeXml, LayoutDashboard, Settings, X as CloseIcon } from "lucide-react"; // Removed LogOut
+import { CodeXml, LayoutDashboard, Settings, X as CloseIcon, LogOut } from "lucide-react"; // Added LogOut
 import { useAuth } from '@/contexts/AuthContext';
-// import { useToast } from '@/hooks/use-toast'; // No longer directly used for sign out toast
 import { usePathname, useSearchParams, useRouter } from 'next/navigation';
+import { useToast } from '@/hooks/use-toast'; // Added useToast
 
 export default function AppHeader() {
   const [isEmbedModalOpen, setIsEmbedModalOpen] = useState(false);
-  const { user } = useAuth(); // Removed signOut and authIsLoading as signout is now part of customizer close
-  // const { toast } = useToast(); // Removed
+  const { user, signOut: authSignOut } = useAuth(); // Destructure signOut as authSignOut
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const router = useRouter(); // Kept router for dashboard link
+  const router = useRouter();
+  const { toast } = useToast(); // Initialize toast
 
   const [customizerShareUrlPath, setCustomizerShareUrlPath] = useState<string | null>(null);
   const [currentProductId, setCurrentProductId] = useState<string | null>(null);
@@ -47,8 +47,21 @@ export default function AppHeader() {
 
 
   const handleAttemptCloseCustomizer = () => {
-    // Dispatch a custom event that the CustomizerPage will listen for
     window.dispatchEvent(new CustomEvent('attemptCloseCustomizer'));
+  };
+
+  const handleSignOut = async () => {
+    try {
+      await authSignOut();
+      // Toast for sign out is handled by AuthContext now
+    } catch (error) {
+      console.error("AppHeader sign out error:", error);
+      toast({
+        title: "Sign Out Failed",
+        description: "Could not sign you out at this time. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   const showCustomizerSpecificButtons = pathname.startsWith('/customizer');
@@ -88,7 +101,7 @@ export default function AppHeader() {
         </Button>
         {user && showCustomizerSpecificButtons && (
           <Button
-            onClick={handleAttemptCloseCustomizer} // Changed from direct navigation/signout
+            onClick={handleAttemptCloseCustomizer}
             variant="outline"
             size="icon"
             className="hover:bg-destructive/10 hover:text-destructive"
@@ -98,8 +111,19 @@ export default function AppHeader() {
             <CloseIcon className="h-5 w-5" />
           </Button>
         )}
-        {/* Sign Out button for non-customizer app pages - assuming AuthContext handles sign out now */}
-        {/* If a global sign out is needed here, it should call useAuth().signOut() */}
+        {user && !showCustomizerSpecificButtons && (
+          <Button
+            onClick={handleSignOut}
+            variant="outline"
+            size="sm" // Changed to sm for consistency or icon
+            className="hover:bg-accent hover:text-accent-foreground"
+            title="Sign Out"
+            aria-label="Sign Out"
+          >
+            <LogOut className="mr-2 h-4 w-4" />
+            Sign Out
+          </Button>
+        )}
       </div>
       <EmbedCodeModal
         isOpen={isEmbedModalOpen}
