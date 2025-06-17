@@ -6,18 +6,18 @@ import Link from 'next/link';
 import { Button } from "@/components/ui/button";
 import { Logo } from "@/components/icons/Logo";
 import { EmbedCodeModal } from "@/components/customizer/EmbedCodeModal";
-import { CodeXml, LayoutDashboard, LogOut, Settings, X as CloseIcon } from "lucide-react";
+import { CodeXml, LayoutDashboard, Settings, X as CloseIcon } from "lucide-react"; // Removed LogOut
 import { useAuth } from '@/contexts/AuthContext';
-import { useToast } from '@/hooks/use-toast';
+// import { useToast } from '@/hooks/use-toast'; // No longer directly used for sign out toast
 import { usePathname, useSearchParams, useRouter } from 'next/navigation';
 
 export default function AppHeader() {
   const [isEmbedModalOpen, setIsEmbedModalOpen] = useState(false);
-  const { user, signOut, isLoading: authIsLoading } = useAuth();
-  const { toast } = useToast();
+  const { user } = useAuth(); // Removed signOut and authIsLoading as signout is now part of customizer close
+  // const { toast } = useToast(); // Removed
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const router = useRouter();
+  const router = useRouter(); // Kept router for dashboard link
 
   const [customizerShareUrlPath, setCustomizerShareUrlPath] = useState<string | null>(null);
   const [currentProductId, setCurrentProductId] = useState<string | null>(null);
@@ -29,14 +29,14 @@ export default function AppHeader() {
     if (pathname.startsWith('/customizer')) {
       if (productIdFromParams) {
         let urlPath = `/customizer?productId=${productIdFromParams}`;
-        if (user?.uid) { // Changed user.id to user.uid
-          urlPath += `&userId=${user.uid}`; // Changed user.id to user.uid
+        if (user?.uid) {
+          urlPath += `&userId=${user.uid}`;
         }
         setCustomizerShareUrlPath(urlPath);
       } else {
         let urlPath = `/customizer`;
-        if (user?.uid) { // Changed user.id to user.uid
-          urlPath += `?userId=${user.uid}`; // Changed user.id to user.uid
+        if (user?.uid) {
+          urlPath += `?userId=${user.uid}`;
         }
          setCustomizerShareUrlPath(urlPath);
       }
@@ -46,18 +46,9 @@ export default function AppHeader() {
   }, [pathname, searchParams, user]);
 
 
-  const handleSignOut = async () => {
-    try {
-      await signOut();
-    } catch (error) {
-      console.error("Sign out error:", error);
-      toast({ title: "Sign Out Failed", variant: "destructive" });
-    }
-  };
-
-  const handleCloseCustomizer = () => {
-    // Navigate to dashboard or a relevant previous page
-    router.push(user ? '/dashboard' : '/');
+  const handleAttemptCloseCustomizer = () => {
+    // Dispatch a custom event that the CustomizerPage will listen for
+    window.dispatchEvent(new CustomEvent('attemptCloseCustomizer'));
   };
 
   const showCustomizerSpecificButtons = pathname.startsWith('/customizer');
@@ -97,7 +88,7 @@ export default function AppHeader() {
         </Button>
         {user && showCustomizerSpecificButtons && (
           <Button
-            onClick={handleCloseCustomizer}
+            onClick={handleAttemptCloseCustomizer} // Changed from direct navigation/signout
             variant="outline"
             size="icon"
             className="hover:bg-destructive/10 hover:text-destructive"
@@ -107,17 +98,8 @@ export default function AppHeader() {
             <CloseIcon className="h-5 w-5" />
           </Button>
         )}
-        {user && !showCustomizerSpecificButtons && (
-          <Button
-            onClick={handleSignOut}
-            variant="outline"
-            className="hover:bg-destructive/10 hover:text-destructive"
-            disabled={authIsLoading}
-          >
-            <LogOut className="mr-2 h-4 w-4" />
-            Sign Out
-          </Button>
-        )}
+        {/* Sign Out button for non-customizer app pages - assuming AuthContext handles sign out now */}
+        {/* If a global sign out is needed here, it should call useAuth().signOut() */}
       </div>
       <EmbedCodeModal
         isOpen={isEmbedModalOpen}

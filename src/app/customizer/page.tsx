@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation'; // Added useRouter
 import React, { useEffect, useState, useCallback, Suspense } from 'react';
 import AppHeader from '@/components/layout/AppHeader';
 import DesignCanvas from '@/components/customizer/DesignCanvas';
@@ -13,7 +13,17 @@ import {
   Loader2, AlertTriangle, ShoppingCart, UploadCloud, Layers, Type, Shapes as ShapesIconLucide, Smile, Palette, Gem as GemIcon, Settings2 as SettingsIcon,
   PanelLeftClose, PanelRightOpen, PanelRightClose, PanelLeftOpen, Sparkles
 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Button, buttonVariants } from '@/components/ui/button'; // Added buttonVariants
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"; // Added AlertDialog
 import Link from 'next/link';
 import type { WCCustomProduct, WCVariation, WCVariationAttribute } from '@/types/woocommerce';
 import { useToast } from '@/hooks/use-toast';
@@ -106,8 +116,9 @@ const toolItems: CustomizerTool[] = [
 
 function CustomizerLayoutAndLogic() {
   const searchParams = useSearchParams();
+  const router = useRouter(); // Added router for navigation
   const productId = searchParams.get('productId');
-  const { user, isLoading: authLoading } = useAuth();
+  const { user, isLoading: authLoading, signOut } = useAuth(); // Added signOut
   const { toast } = useToast();
   const { canvasImages, canvasTexts, canvasShapes } = useUploads();
 
@@ -133,28 +144,63 @@ function CustomizerLayoutAndLogic() {
 
   const [hasCanvasElements, setHasCanvasElements] = useState(false);
 
+  // State for custom leave confirmation dialog
+  const [isLeaveConfirmOpen, setIsLeaveConfirmOpen] = useState(false);
+  const [onConfirmLeaveAction, setOnConfirmLeaveAction] = useState<(() => void) | null>(null);
+
+
   useEffect(() => {
     const anyElementsExist = canvasImages.length > 0 || canvasTexts.length > 0 || canvasShapes.length > 0;
     setHasCanvasElements(anyElementsExist);
   }, [canvasImages, canvasTexts, canvasShapes]);
 
+  // Handles browser close/refresh with generic dialog
   useEffect(() => {
     const handleBeforeUnload = (event: BeforeUnloadEvent) => {
       if (hasCanvasElements) {
         event.preventDefault();
-        // Standard way to trigger the browser's generic confirmation dialog
         event.returnValue = 'You have unsaved changes. Are you sure you want to leave?';
       }
     };
 
-    if (hasCanvasElements) {
-      window.addEventListener('beforeunload', handleBeforeUnload);
-    }
-
+    window.addEventListener('beforeunload', handleBeforeUnload);
     return () => {
       window.removeEventListener('beforeunload', handleBeforeUnload);
     };
   }, [hasCanvasElements]);
+
+  // Handles custom "attemptCloseCustomizer" event from AppHeader
+  useEffect(() => {
+    const handleAttemptClose = async () => {
+      if (hasCanvasElements) {
+        setOnConfirmLeaveAction(() => async () => {
+          // If user is logged in, they are typically navigated to dashboard.
+          // If not, to home. The original AppHeader logic can be replicated here.
+          // For simplicity, let's assume dashboard if user exists, else home.
+          if (user) {
+            router.push('/dashboard');
+          } else {
+            // Potentially sign out if no user but on customizer? Or just go home.
+            // Assuming go home if no user.
+            router.push('/');
+          }
+        });
+        setIsLeaveConfirmOpen(true);
+      } else {
+        // No unsaved changes, proceed with close action
+        if (user) {
+          router.push('/dashboard');
+        } else {
+          router.push('/');
+        }
+      }
+    };
+
+    window.addEventListener('attemptCloseCustomizer', handleAttemptClose);
+    return () => {
+      window.removeEventListener('attemptCloseCustomizer', handleAttemptClose);
+    };
+  }, [hasCanvasElements, router, user, signOut]);
 
 
   const toggleGrid = () => setShowGrid(prev => !prev);
@@ -687,6 +733,38 @@ function CustomizerLayoutAndLogic() {
                 </Button>
             </div>
         </footer>
+
+        <AlertDialog open={isLeaveConfirmOpen} onOpenChange={setIsLeaveConfirmOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Unsaved Changes</AlertDialogTitle>
+              <AlertDialogDescription>
+                You have unsaved changes on the canvas. Are you sure you want to leave? Your changes will be lost.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel onClick={() => {
+                setIsLeaveConfirmOpen(false);
+                setOnConfirmLeaveAction(null);
+              }}>
+                Stay
+              </AlertDialogCancel>
+              <AlertDialogAction
+                onClick={() => {
+                  if (onConfirmLeaveAction) {
+                    onConfirmLeaveAction();
+                  }
+                  setIsLeaveConfirmOpen(false);
+                  setOnConfirmLeaveAction(null);
+                }}
+                className={cn(buttonVariants({variant: "destructive"}))}
+              >
+                Leave
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
       </div>
   );
 }
