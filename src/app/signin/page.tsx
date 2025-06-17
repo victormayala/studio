@@ -30,8 +30,27 @@ export default function SignInPage() {
       await signIn(email, password);
       // Navigation is handled by AuthContext's onAuthStateChanged effect
     } catch (error: any) {
-      // AuthContext's signIn method already toasts. We set localError for inline display.
-      setLocalError(error.message || "Sign in failed. Please check your email and password, or sign up if you don't have an account.");
+      let friendlyMessage = "Oops! Sign-in failed. Please check your details and try again.";
+      if (error.code) {
+        switch (error.code) {
+          case 'auth/invalid-credential':
+          case 'auth/user-not-found':
+          case 'auth/wrong-password':
+            friendlyMessage = "Hmm, that email and password don't quite match. Please double-check or sign up if you're new!";
+            break;
+          case 'auth/too-many-requests':
+            friendlyMessage = "Too many attempts! For security, please try again in a little while, or you can reset your password.";
+            break;
+          case 'auth/network-request-failed':
+            friendlyMessage = "Could not connect to the authentication service. Please check your internet connection and try again.";
+            break;
+          default:
+            // Use the error message from Firebase if it's somewhat specific, otherwise our generic one.
+            friendlyMessage = error.message?.includes('Firebase') ? "An authentication error occurred. Please try again." : (error.message || friendlyMessage);
+        }
+      }
+      console.error("Sign in page local error:", error.message || error, "Code:", error.code);
+      setLocalError(friendlyMessage);
     } finally {
       setLocalIsLoading(false);
     }

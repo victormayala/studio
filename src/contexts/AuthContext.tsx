@@ -90,11 +90,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // Redirection is now handled by onAuthStateChanged useEffect
     } catch (error: any) {
       console.error("Firebase sign in error:", error);
-      toast({
-        title: "Sign In Failed",
-        description: error.message || "Invalid credentials or user not found.",
-        variant: "destructive",
-      });
+      // Toast removed from here to rely on inline form error
       setIsLoading(false); 
       throw error; 
     }
