@@ -14,7 +14,7 @@ import {
   signOut as firebaseSignOut,
   type User as FirebaseUser 
 } from 'firebase/auth';
-import { auth } from '@/lib/firebase'; // Import configured auth instance
+import { auth } from '@/lib/firebase'; 
 import { clearAccessCookie } from '@/app/access-login/actions';
 import { useToast } from '@/hooks/use-toast';
 
@@ -27,7 +27,7 @@ interface User {
 
 interface AuthContextType {
   user: User | null;
-  isLoading: boolean;
+  isLoading: boolean; // This isLoading is for the initial auth state check
   signIn: (email: string, pass: string) => Promise<void>;
   signUp: (email: string, pass: string) => Promise<void>;
   signInWithGoogle: () => Promise<void>;
@@ -38,7 +38,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(true); // True until initial auth state is known
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -46,7 +46,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (firebaseUser: FirebaseUser | null) => {
-      setIsLoading(true); 
       if (firebaseUser) {
         setUser({
           uid: firebaseUser.uid,
@@ -61,11 +60,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (isAuthPage) {
           router.push(redirectUrl && redirectUrl !== '/' && !redirectUrl.startsWith('/signin') && !redirectUrl.startsWith('/signup') ? redirectUrl : '/dashboard');
         } else if (redirectUrl && redirectUrl !== '/' && !redirectUrl.startsWith('/signin') && !redirectUrl.startsWith('/signup')) {
-          // If there's a valid redirectUrl from being sent to signin from a protected route
           router.push(redirectUrl);
         }
-        // If already on a protected page or dashboard, no specific redirect needed here as user is auth'd
-        
       } else {
         setUser(null);
         const protectedUserPaths = ['/dashboard', '/customizer', '/dashboard/products']; 
@@ -76,53 +72,59 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           router.push(`/signin?redirect=${encodeURIComponent(fullPath)}`);
         }
       }
-      setIsLoading(false); 
+      setIsLoading(false); // Auth state determined, set loading to false
     });
 
     return () => unsubscribe();
   }, [auth, router, pathname, searchParams]); 
 
   const signIn = useCallback(async (email: string, pass: string) => {
-    setIsLoading(true);
+    // This function's loading state is handled by localIsLoading in SignInPage
     try {
       await signInWithEmailAndPassword(auth, email, pass);
-      toast({ title: "Signed In", description: "Welcome back!" });
-      // Redirection is now handled by onAuthStateChanged useEffect
+      // Successful sign-in will trigger onAuthStateChanged, which handles redirection and global loading state.
     } catch (error: any) {
-      console.error("Firebase sign in error:", error);
-      // Toast removed from here to rely on inline form error
-      setIsLoading(false); 
+      console.error("Firebase sign in error in AuthContext:", error);
+      // Error is re-thrown to be handled by the calling component (SignInPage)
       throw error; 
     }
-  }, [auth, toast]);
+  }, [auth]);
 
   const signUp = useCallback(async (email: string, pass: string) => {
-    setIsLoading(true);
+    // This function's loading state is handled by localIsLoading in SignUpPage
     try {
       await createUserWithEmailAndPassword(auth, email, pass);
       toast({ title: "Sign Up Successful", description: "Welcome! Your account has been created." });
-      // Redirection is now handled by onAuthStateChanged useEffect
+      // Successful sign-up will trigger onAuthStateChanged.
     } catch (error: any) {
-      console.error("Firebase sign up error:", error);
+      console.error("Firebase sign up error in AuthContext:", error);
+      // Error is re-thrown to be handled by the calling component (SignUpPage)
+      let friendlyMessage = "Sign up failed. Please try again.";
+      if (error.code === 'auth/email-already-in-use') {
+        friendlyMessage = "This email is already registered. Please try signing in or use a different email.";
+      } else if (error.code === 'auth/weak-password') {
+        friendlyMessage = "Password is too weak. Please choose a stronger password (at least 6 characters).";
+      } else if (error.message) {
+        friendlyMessage = error.message;
+      }
       toast({
         title: "Sign Up Failed",
-        description: error.message || "Could not create account. Please try again.",
+        description: friendlyMessage,
         variant: "destructive",
       });
-      setIsLoading(false); 
       throw error;
     }
   }, [auth, toast]);
 
   const signInWithGoogle = useCallback(async () => {
-    setIsLoading(true);
+    // This function's loading state is handled by localIsLoading in the calling page
     const provider = new GoogleAuthProvider();
     try {
       await signInWithPopup(auth, provider);
       toast({ title: "Signed In with Google", description: "Welcome!" });
-      // Redirection is now handled by onAuthStateChanged useEffect
+      // Successful sign-in will trigger onAuthStateChanged.
     } catch (error: any) {
-      console.error("Google sign in error:", error);
+      console.error("Google sign in error in AuthContext:", error);
       let description = "Could not sign in with Google. Please try again.";
       if (error.code === 'auth/popup-closed-by-user') {
         description = "Sign-in popup closed. Please try again.";
@@ -134,22 +136,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         description,
         variant: "destructive",
       });
-      setIsLoading(false); 
       throw error;
     }
   }, [auth, toast]);
 
   const signOut = useCallback(async () => {
-    setIsLoading(true);
+    setIsLoading(true); // Okay to set isLoading true here as it's a global state change for nav
     try {
       await firebaseSignOut(auth);
       await clearAccessCookie(); 
       toast({ title: "Signed Out", description: "You have been successfully signed out." });
+      // onAuthStateChanged will set user to null and handle redirection.
+      // Explicitly push to prevent delay if onAuthStateChanged is slow.
       router.push('/signin'); 
     } catch (error: any)      {
       console.error("Sign out error:", error);
       toast({ title: "Sign Out Failed", description: error.message, variant: "destructive" });
-      setIsLoading(false); 
+      setIsLoading(false); // Reset loading on error
       throw error;
     }
   }, [auth, router, toast]);
