@@ -98,7 +98,7 @@ export default function ProductOptionsPage() {
 
   const [productOptions, setProductOptions] = useState<ProductOptionsData | null>(null);
   const [activeViewIdForSetup, setActiveViewIdForSetup] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(true); // Default to true for initial page load
+  const [isLoading, setIsLoading] = useState(true); 
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null); 
@@ -125,8 +125,7 @@ export default function ProductOptionsPage() {
   const fetchAndSetProductData = useCallback(async (isRefresh = false) => {
     if (!user?.uid || !productId || !db) { 
         setError("User or Product ID invalid, or DB not ready.");
-        setIsLoading(false); 
-        setIsRefreshing(false);
+        if (isRefresh) setIsRefreshing(false); else setIsLoading(false);
         return;
     }
     
@@ -157,7 +156,7 @@ export default function ProductOptionsPage() {
         }
       } catch (credError: any) {
         toast({ title: "Credential Error", description: credError.message, variant: "destructive"});
-        throw credError; // Propagate to outer catch
+        throw credError;
       }
 
       const { product: wcProduct, error: fetchError } = await fetchWooCommerceProductById(productId, userWCCredentialsToUse);
@@ -229,7 +228,6 @@ export default function ProductOptionsPage() {
       } catch (e: any) {
         console.error("Error loading product options from Firestore (client-side):", e);
         toast({ title: "Loading Issue", description: `Could not load saved settings: ${e.message || "Unknown Firestore error"}. Using defaults.`, variant: "default" });
-        // Not throwing here, will proceed with defaults if settings are missing or fail to load
       }
 
       if (firestoreOptions) {
@@ -266,23 +264,23 @@ export default function ProductOptionsPage() {
         setProductOptions(null);
     } finally {
         if (isRefresh) setIsRefreshing(false);
-        setIsLoading(false); // Ensure main loading is always set to false
+        else setIsLoading(false); 
     }
   }, [productId, user?.uid, toast, hasUnsavedChanges]); 
-
 
   useEffect(() => {
     let didCancel = false;
 
     const loadInitialData = async () => {
         if (authIsLoading) {
-            if (!didCancel) setIsLoading(true); // Keep page loading while auth resolves
+            // Waiting for auth to resolve. isLoading should be true from initial useState.
             return;
         }
-        if (!user) {
+
+        if (!user?.uid) {
             if (!didCancel) {
                 setError("User not authenticated. Please sign in.");
-                setIsLoading(false);
+                setIsLoading(false); // Auth determined, no user, stop loading.
                 setProductOptions(null);
             }
             return;
@@ -290,21 +288,22 @@ export default function ProductOptionsPage() {
         if (!productId) {
             if (!didCancel) {
                 setError("Product ID is missing.");
-                setIsLoading(false);
+                setIsLoading(false); // No product ID, stop loading.
                 setProductOptions(null);
             }
             return;
         }
-
-        // Fetch data only if productOptions are not yet loaded (initial load scenario)
-        // isLoading check prevents re-fetch if one is already in progress from another trigger (though less likely with this structure)
-        if (!productOptions && !isLoading && !error) { 
+        
+        // If we have all prerequisites, productOptions is not yet loaded, and no error has occurred
+        if (!productOptions && !error) {
+            // fetchAndSetProductData will manage its own isLoading for this fetch
             await fetchAndSetProductData(false); // isRefresh = false
         } else if (productOptions || error) {
-            // If data already loaded or an error previously occurred, ensure loading is off
+            // Data is already present, or an error occurred from a previous attempt.
+            // Ensure the page-level isLoading (for the initial spinner) is false.
             if (!didCancel) setIsLoading(false);
         }
-        // If isLoading is true, a fetch is in progress (likely initial from useState(true) or from fetchAndSetProductData itself), so do nothing more here.
+        // If isLoading is true here, it implies fetchAndSetProductData is currently running.
     };
     
     loadInitialData();
@@ -312,7 +311,12 @@ export default function ProductOptionsPage() {
     return () => {
         didCancel = true;
     };
-  }, [authIsLoading, user, productId, fetchAndSetProductData, productOptions, isLoading, error]);
+  // Dependencies:
+  // - authIsLoading, user?.uid, productId: Define the context for loading.
+  // - productOptions, error: Allow re-evaluation if these states change (e.g., error cleared, or options set/cleared externally).
+  // - fetchAndSetProductData: Memoized callback.
+  // - isLoading is NOT a dependency here to prevent loops based on its own changes.
+  }, [authIsLoading, user?.uid, productId, productOptions, error, fetchAndSetProductData]);
 
 
   const handleRefreshData = () => {
@@ -939,6 +943,4 @@ export default function ProductOptionsPage() {
     </div>
   );
 }
-    
-
     
