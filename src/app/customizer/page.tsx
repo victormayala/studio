@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useSearchParams, useRouter } from 'next/navigation'; // Added useRouter
+import { useSearchParams, useRouter } from 'next/navigation';
 import React, { useEffect, useState, useCallback, Suspense } from 'react';
 import AppHeader from '@/components/layout/AppHeader';
 import DesignCanvas from '@/components/customizer/DesignCanvas';
@@ -13,7 +13,7 @@ import {
   Loader2, AlertTriangle, ShoppingCart, UploadCloud, Layers, Type, Shapes as ShapesIconLucide, Smile, Palette, Gem as GemIcon, Settings2 as SettingsIcon,
   PanelLeftClose, PanelRightOpen, PanelRightClose, PanelLeftOpen, Sparkles
 } from 'lucide-react';
-import { Button, buttonVariants } from '@/components/ui/button'; // Added buttonVariants
+import { Button, buttonVariants } from '@/components/ui/button';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -23,7 +23,7 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "@/components/ui/alert-dialog"; // Added AlertDialog
+} from "@/components/ui/alert-dialog";
 import Link from 'next/link';
 import type { WCCustomProduct, WCVariation, WCVariationAttribute } from '@/types/woocommerce';
 import { useToast } from '@/hooks/use-toast';
@@ -116,9 +116,9 @@ const toolItems: CustomizerTool[] = [
 
 function CustomizerLayoutAndLogic() {
   const searchParams = useSearchParams();
-  const router = useRouter(); // Added router for navigation
+  const router = useRouter();
   const productId = searchParams.get('productId');
-  const { user, isLoading: authLoading, signOut } = useAuth(); // Added signOut
+  const { user, isLoading: authLoading } = useAuth();
   const { toast } = useToast();
   const { canvasImages, canvasTexts, canvasShapes } = useUploads();
 
@@ -143,8 +143,6 @@ function CustomizerLayoutAndLogic() {
   const [totalCustomizationPrice, setTotalCustomizationPrice] = useState<number>(0);
 
   const [hasCanvasElements, setHasCanvasElements] = useState(false);
-
-  // State for custom leave confirmation dialog
   const [isLeaveConfirmOpen, setIsLeaveConfirmOpen] = useState(false);
   const [onConfirmLeaveAction, setOnConfirmLeaveAction] = useState<(() => void) | null>(null);
 
@@ -159,7 +157,7 @@ function CustomizerLayoutAndLogic() {
     const handleBeforeUnload = (event: BeforeUnloadEvent) => {
       if (hasCanvasElements) {
         event.preventDefault();
-        event.returnValue = 'You have unsaved changes. Are you sure you want to leave?';
+        event.returnValue = 'You have unsaved changes. Are you sure you want to leave?'; // Standard message
       }
     };
 
@@ -169,19 +167,14 @@ function CustomizerLayoutAndLogic() {
     };
   }, [hasCanvasElements]);
 
-  // Handles custom "attemptCloseCustomizer" event from AppHeader
+  // Handles custom "attemptCloseCustomizer" event from AppHeader for the AlertDialog
   useEffect(() => {
-    const handleAttemptClose = async () => {
+    const handleAttemptClose = () => {
       if (hasCanvasElements) {
-        setOnConfirmLeaveAction(() => async () => {
-          // If user is logged in, they are typically navigated to dashboard.
-          // If not, to home. The original AppHeader logic can be replicated here.
-          // For simplicity, let's assume dashboard if user exists, else home.
+        setOnConfirmLeaveAction(() => () => {
           if (user) {
             router.push('/dashboard');
           } else {
-            // Potentially sign out if no user but on customizer? Or just go home.
-            // Assuming go home if no user.
             router.push('/');
           }
         });
@@ -200,7 +193,7 @@ function CustomizerLayoutAndLogic() {
     return () => {
       window.removeEventListener('attemptCloseCustomizer', handleAttemptClose);
     };
-  }, [hasCanvasElements, router, user, signOut]);
+  }, [hasCanvasElements, router, user]); // Dependencies ensure the handler uses fresh state
 
 
   const toggleGrid = () => setShowGrid(prev => !prev);
@@ -453,13 +446,13 @@ function CustomizerLayoutAndLogic() {
   }, [
     selectedVariationOptions,
     productVariations,
-    productDetails?.id,
+    productDetails?.id, // Replaced productDetails with productDetails?.id for stability
     activeViewId,
     viewBaseImages,
     loadedOptionsByColor,
     loadedGroupingAttributeName,
-    configurableAttributes,
-    productDetails?.type
+    configurableAttributes, // Added configurableAttributes as it's used in condition
+    productDetails?.type // Added type as it's used in condition
   ]);
 
   useEffect(() => {
@@ -784,3 +777,5 @@ export default function CustomizerPage() {
     </UploadProvider>
   );
 }
+
+    
