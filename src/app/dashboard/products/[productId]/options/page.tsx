@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from 'react';
@@ -116,20 +117,22 @@ export default function ProductOptionsPage() {
 
 
   const fetchAndSetProductData = useCallback(async (isRefresh = false) => {
-    if (!productId) {
+    if (!productId) { // Should be caught by useEffect, but here as safeguard
         setIsLoading(false); setIsRefreshing(false);
         setError("Product ID is missing.");
         return;
     }
-    // User presence is now primarily checked by the useEffect before calling this.
-    // However, keeping a check here as a safeguard.
-    if (!user?.id) {
+    if (!user?.id) { // Should be caught by useEffect, but here as safeguard for direct calls like refresh
         setIsLoading(false); setIsRefreshing(false);
         setError("User not authenticated. Please sign in.");
         return;
     }
     
-    setError(null); // Clear previous errors if we proceed
+    // Clear previous data-fetch specific errors if not a refresh where useEffect already cleared it
+    // Or if it is a refresh, definitely clear previous errors.
+    if (isRefresh) {
+        setError(null);
+    }
 
     if (isRefresh) setIsRefreshing(true); else setIsLoading(true);
     setVariationsError(null); setVariations([]);
@@ -287,17 +290,19 @@ export default function ProductOptionsPage() {
         setIsLoading(true); // Show main loader if auth is still loading
         return;
     }
-    if (!productId) {
+    // If auth is done, proceed.
+    if (!productId) { // Check productId first
         setError("Product ID is missing.");
         setIsLoading(false);
         return;
     }
-    if (!user) {
+    if (!user) { // Then check user
         setError("User not authenticated. Please sign in.");
         setIsLoading(false);
         return;
     }
-    // If auth is done, productId and user are present, proceed to fetch data
+    // If auth is done, productId and user are present, clear pre-existing errors and proceed.
+    setError(null);
     fetchAndSetProductData(false);
   }, [productId, authIsLoading, user, fetchAndSetProductData]);
 
@@ -627,26 +632,34 @@ export default function ProductOptionsPage() {
   };
 
 
-  if (isLoading || authIsLoading && !isRefreshing) { // Keep main loader if general isLoading is true OR auth is loading and it's not a refresh
+  if (isLoading || (authIsLoading && !isRefreshing)) {
     return <div className="flex items-center justify-center min-h-screen bg-background"><Loader2 className="h-10 w-10 animate-spin text-primary" /><p className="ml-3">Loading product options...</p></div>;
   }
   
-  if (error && !productOptions) return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-background p-4">
-      <AlertTriangle className="h-12 w-12 text-destructive mb-4" />
-      <h2 className="text-xl font-semibold text-destructive mb-2">Error Loading Product Options</h2>
-      <p className="text-muted-foreground text-center mb-6">{error}</p>
-      {error.includes("store not connected") && (
-         <Button variant="link" asChild>
-            <Link href="/dashboard"><PlugZap className="mr-2 h-4 w-4" />Go to Dashboard to Connect</Link>
+  if (error && !productOptions && !isLoading) { // Check !isLoading to ensure error is shown after loading attempt
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen bg-background p-4">
+        <AlertTriangle className="h-12 w-12 text-destructive mb-4" />
+        <h2 className="text-xl font-semibold text-destructive mb-2">Error Loading Product Options</h2>
+        <p className="text-muted-foreground text-center mb-6">{error}</p>
+        {error.includes("store not connected") && (
+           <Button variant="link" asChild>
+              <Link href="/dashboard"><PlugZap className="mr-2 h-4 w-4" />Go to Dashboard to Connect</Link>
+          </Button>
+        )}
+        <Button variant="outline" asChild className="mt-2">
+          <Link href="/dashboard"><ArrowLeft className="mr-2 h-4 w-4" />Back to Dashboard</Link>
         </Button>
-      )}
-      <Button variant="outline" asChild className="mt-2">
-        <Link href="/dashboard"><ArrowLeft className="mr-2 h-4 w-4" />Back to Dashboard</Link>
-      </Button>
-    </div>
-  );
-  if (!productOptions) return <div className="flex flex-col items-center justify-center min-h-screen bg-background p-4"><AlertTriangle className="h-12 w-12 text-muted-foreground mb-4" /><h2 className="text-xl font-semibold text-muted-foreground mb-2">Product Not Found</h2><p className="text-muted-foreground text-center mb-6">Could not load options for this product.</p><Button variant="outline" asChild><Link href="/dashboard"><ArrowLeft className="mr-2 h-4 w-4" />Back</Link></Button></div>;
+      </div>
+    );
+  }
+  if (!productOptions && !isLoading && !error) { // Fallback if no productOptions and not loading/error state
+    return <div className="flex flex-col items-center justify-center min-h-screen bg-background p-4"><AlertTriangle className="h-12 w-12 text-muted-foreground mb-4" /><h2 className="text-xl font-semibold text-muted-foreground mb-2">Product Not Found</h2><p className="text-muted-foreground text-center mb-6">Could not load options for this product.</p><Button variant="outline" asChild><Link href="/dashboard"><ArrowLeft className="mr-2 h-4 w-4" />Back</Link></Button></div>;
+  }
+  if (!productOptions) { // General fallback if productOptions is null after initial loading/error checks
+      return <div className="flex items-center justify-center min-h-screen bg-background"><Loader2 className="h-10 w-10 animate-spin text-primary" /><p className="ml-3">Preparing options...</p></div>;
+  }
+
 
   const currentSetupView = productOptions.views.find(v => v.id === activeViewIdForSetup);
   
@@ -835,7 +848,7 @@ export default function ProductOptionsPage() {
             setSelectedBoundaryBoxId={setSelectedBoundaryBoxId}
             handleSelectView={handleSelectViewForSetup}
             handleViewDetailChange={handleDefaultViewDetailChange}
-            handleDeleteView={handleDeleteDefaultView}
+            handleDeleteView={handleDeleteView}
             handleAddNewView={handleAddNewView}
             handleAddBoundaryBox={handleAddBoundaryBox}
             handleRemoveBoundaryBox={handleRemoveBoundaryBox}
@@ -848,7 +861,7 @@ export default function ProductOptionsPage() {
             setIsDeleteViewDialogOpen={setIsDeleteViewDialogOpen}
             viewIdToDelete={viewIdToDelete}
             setViewIdToDelete={setViewIdToDelete} 
-            confirmDeleteView={confirmDeleteDefaultView}
+            confirmDeleteView={confirmDeleteView}
           />
 
           <Card className="shadow-md sticky top-8">
@@ -890,3 +903,4 @@ export default function ProductOptionsPage() {
     </div>
   );
 }
+
