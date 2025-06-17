@@ -64,7 +64,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
       } else {
         setUser(null);
-        const protectedUserPaths = ['/dashboard', '/customizer', '/dashboard/products']; 
+        // Only protect dashboard and product options pages, /customizer can be accessed by guests (e.g. embedded)
+        const protectedUserPaths = ['/dashboard', '/dashboard/products']; 
         const isCurrentlyOnProtectedPath = protectedUserPaths.some(p => pathname.startsWith(p));
 
         if (isCurrentlyOnProtectedPath) {
