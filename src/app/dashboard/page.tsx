@@ -14,7 +14,9 @@ import Link from "next/link";
 import { useRouter } from 'next/navigation';
 import NextImage from 'next/image';
 import { fetchWooCommerceProducts, type WooCommerceCredentials } from "@/app/actions/woocommerceActions";
-import { saveWooCommerceCredentials, loadWooCommerceCredentials, deleteWooCommerceCredentials } from "@/app/actions/userCredentialsActions"; // NEW IMPORT
+import { loadWooCommerceCredentials, deleteWooCommerceCredentials, type UserWooCommerceCredentials } from "@/app/actions/userCredentialsActions"; // saveWooCommerceCredentials removed
+import { db } from '@/lib/firebase'; // Import db for client-side Firestore operations
+import { doc, setDoc, serverTimestamp } from 'firebase/firestore'; // Import Firestore functions
 import type { WCCustomProduct } from '@/types/woocommerce';
 import {format} from 'date-fns';
 import { useAuth } from "@/contexts/AuthContext";
@@ -112,7 +114,7 @@ export default function DashboardPage() {
     setError(null);
     const startTime = Date.now();
 
-    let userCredentials: WooCommerceCredentials | undefined;
+    let userCredentialsToUse: WooCommerceCredentials | undefined;
     const { credentials, error: credError } = await loadWooCommerceCredentials(user.uid);
 
     if (credError || !credentials) {
@@ -130,7 +132,7 @@ export default function DashboardPage() {
       return;
     }
     
-    userCredentials = { 
+    userCredentialsToUse = { 
       storeUrl: credentials.storeUrl, 
       consumerKey: credentials.consumerKey, 
       consumerSecret: credentials.consumerSecret 
@@ -139,7 +141,7 @@ export default function DashboardPage() {
     
 
     try {
-      const { products: fetchedProducts, error: fetchError } = await fetchWooCommerceProducts(userCredentials);
+      const { products: fetchedProducts, error: fetchError } = await fetchWooCommerceProducts(userCredentialsToUse);
       const duration = Date.now() - startTime;
 
       if (fetchError) {
@@ -223,37 +225,47 @@ export default function DashboardPage() {
   const handleSaveCredentials = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!user || !user.uid || isSavingCredentials) return;
+    if (!db) {
+      toast({ title: "Database Error", description: "Firestore is not available. Cannot save.", variant: "destructive" });
+      return;
+    }
 
     setIsSavingCredentials(true);
     const credentialsToSave: WooCommerceCredentials = { storeUrl, consumerKey, consumerSecret };
-    const result = await saveWooCommerceCredentials(user.uid, credentialsToSave);
-
-    if (result.success) {
+    
+    try {
+      const docRef = doc(db, 'userWooCommerceCredentials', user.uid);
+      const dataToSave: UserWooCommerceCredentials = {
+        ...credentialsToSave,
+        lastSaved: serverTimestamp(),
+      };
+      await setDoc(docRef, dataToSave);
+      
       setCredentialsExist(true);
       toast({
         title: "Credentials Saved",
         description: "Your WooCommerce credentials have been saved to your account.",
       });
-      
       if (activeTab === 'products') {
          loadProductsWithUserCredentials(true, false); 
       }
-    } else {
-      setCredentialsExist(false); // Potentially, or keep existing state if save failed but prior existed
+    } catch (error: any) {
+      console.error('Error saving WooCommerce credentials to Firestore (client-side):', error);
       toast({
         title: "Error Saving Credentials",
-        description: result.error || "Could not save credentials to your account.",
+        description: `Failed to save credentials: ${error.message || "Unknown Firestore error"}`,
         variant: "destructive",
       });
+    } finally {
+      setIsSavingCredentials(false);
     }
-    setIsSavingCredentials(false);
   };
 
   const handleClearCredentials = async () => {
     if (!user || !user.uid || isSavingCredentials) return;
     setIsSavingCredentials(true); 
     
-    const result = await deleteWooCommerceCredentials(user.uid);
+    const result = await deleteWooCommerceCredentials(user.uid); // This is still a server action
 
     if (result.success) {
       setStoreUrl('');

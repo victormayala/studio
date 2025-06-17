@@ -9,34 +9,9 @@ export interface UserWooCommerceCredentials extends WooCommerceCredentials {
   lastSaved?: any; // Firestore server timestamp
 }
 
-export async function saveWooCommerceCredentials(
-  userId: string,
-  credentials: WooCommerceCredentials
-): Promise<{ success: boolean; error?: string }> {
-  if (!userId) {
-    return { success: false, error: 'User ID is required.' };
-  }
-  if (!credentials.storeUrl || !credentials.consumerKey || !credentials.consumerSecret) {
-    return { success: false, error: 'Store URL, Consumer Key, and Consumer Secret are required.' };
-  }
-  if (!db) {
-    console.error("Firestore not initialized. Check firebase.ts");
-    return { success: false, error: 'Database service is not available.' };
-  }
-
-  try {
-    const docRef = doc(db, 'userWooCommerceCredentials', userId);
-    const dataToSave: UserWooCommerceCredentials = {
-      ...credentials,
-      lastSaved: serverTimestamp(),
-    };
-    await setDoc(docRef, dataToSave);
-    return { success: true };
-  } catch (error: any) {
-    console.error('Error saving WooCommerce credentials to Firestore:', error);
-    return { success: false, error: `Failed to save credentials: ${error.message}` };
-  }
-}
+// The saveWooCommerceCredentials function is removed from here as its logic
+// has been moved to the client-side in src/app/dashboard/page.tsx
+// to correctly use the client's Firebase auth context for Firestore security rules.
 
 export async function loadWooCommerceCredentials(
   userId: string
