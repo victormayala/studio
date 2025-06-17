@@ -93,9 +93,9 @@ export default function ProductOptionsPage() {
 
   const [productOptions, setProductOptions] = useState<ProductOptionsData | null>(null);
   const [activeViewIdForSetup, setActiveViewIdForSetup] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(true); // This is for the product data loading cycle
+  const [isLoading, setIsLoading] = useState(true); 
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [error, setError] = useState<string | null>(null); // General page error
+  const [error, setError] = useState<string | null>(null); 
   const [credentialsExist, setCredentialsExist] = useState(false);
 
   const [variations, setVariations] = useState<WCVariation[]>([]);
@@ -117,9 +117,8 @@ export default function ProductOptionsPage() {
 
 
   const fetchAndSetProductData = useCallback(async (isRefresh = false) => {
-    // user and productId are assumed to be valid by the calling useEffect
     if (!user?.id || !productId) {
-        // This case should ideally be caught by the useEffect, but as a safeguard:
+        // This case should be caught by the useEffect, but as a safeguard:
         setError("User or Product ID became invalid during fetch setup.");
         setIsLoading(false); setIsRefreshing(false);
         return;
@@ -284,46 +283,39 @@ export default function ProductOptionsPage() {
   }, [productId, user?.id, toast]);
 
   useEffect(() => {
-    // This effect manages the initial loading sequence and authentication checks
     if (authIsLoading) {
-        // AuthContext is still determining auth state. Show a page loader.
-        setIsLoading(true); // Use the product data loader for this page
-        setError(null);    // Clear any previous errors
-        return;
+      setError(null); // Clear any page-specific error while auth is loading
+      // No need to set setIsLoading(true) here, as the top-level loader uses authIsLoading
+      return;
     }
-
-    // AuthContext has determined auth state (authIsLoading is false)
+  
     if (!user) {
-        // User is definitively not authenticated
-        setError("User not authenticated. Please sign in.");
-        setIsLoading(false);     // Stop the page loader
-        setProductOptions(null); // Clear any stale product data
-        return;
+      setError("User not authenticated. Please sign in.");
+      setIsLoading(false); // Ensure page's isLoading is false
+      setProductOptions(null);
+      return;
     }
-
-    // User is authenticated, now check for productId
+  
     if (!productId) {
-        setError("Product ID is missing.");
-        setIsLoading(false);     // Stop the page loader
-        setProductOptions(null); // Clear any stale product data
-        return;
+      setError("Product ID is missing.");
+      setIsLoading(false); // Ensure page's isLoading is false
+      setProductOptions(null);
+      return;
     }
-
-    // All checks passed: user is authenticated, productId is present.
-    // It's safe to proceed with fetching product data.
-    // We only call fetchAndSetProductData if productOptions are not already loaded OR if it's a refresh
-    // This specific 'setError(null)' is to clear "User not auth" or "Product ID missing"
-    setError(null); 
-    
-    // fetchAndSetProductData will handle its own isLoading state for the API call.
-    // We don't want to call it if productOptions already exist unless dependencies change.
-    // The `fetchAndSetProductData` itself will be called if its dependencies (productId, user.id) change.
-    // This initial call ensures data is loaded on first valid mount.
-    if (!productOptions && !isLoading) { // Only fetch if not already loading and no product options yet
-      fetchAndSetProductData(false);
+  
+    // Auth is done, user and productId are present.
+    setError(null); // Clear any "User not auth" or "Product ID missing" errors
+  
+    if (!productOptions) { // Only fetch if productOptions are not yet loaded
+      fetchAndSetProductData(false); // This will set its own isLoading(true) then isLoading(false)
+    } else {
+      // Product options already loaded (e.g., from previous navigation or refresh)
+      // Ensure the page's isLoading is false if fetchAndSetProductData isn't called.
+      setIsLoading(false); 
     }
-    
-  }, [productId, authIsLoading, user, fetchAndSetProductData, productOptions, isLoading]);
+  // Removed productOptions from dependencies to prevent re-fetch unless productId, user, or authIsLoading change.
+  // fetchAndSetProductData is memoized and only changes if productId or user.id change.
+  }, [productId, authIsLoading, user, fetchAndSetProductData]);
 
 
   const handleRefreshData = () => {
@@ -650,12 +642,11 @@ export default function ProductOptionsPage() {
     setHasUnsavedChanges(true);
   };
 
-  // If initial auth is still loading, or if product data is loading, show loader.
-  if (authIsLoading || isLoading) {
+  // Main loader condition
+  if (authIsLoading || (isLoading && !error && !productOptions)) {
     return <div className="flex items-center justify-center min-h-screen bg-background"><Loader2 className="h-10 w-10 animate-spin text-primary" /><p className="ml-3">Loading product options...</p></div>;
   }
   
-  // If there's a page-level error (e.g., "User not authenticated", "Product ID missing")
   if (error) { 
     return (
       <div className="flex flex-col items-center justify-center min-h-screen bg-background p-4">
@@ -674,7 +665,6 @@ export default function ProductOptionsPage() {
     );
   }
   
-  // If loading is done, no error, but productOptions is still null (should ideally not happen if error handling is correct)
   if (!productOptions) { 
     return (
         <div className="flex flex-col items-center justify-center min-h-screen bg-background p-4">
@@ -687,7 +677,7 @@ export default function ProductOptionsPage() {
   }
 
 
-  const currentSetupView = productOptions.views.find(v => v.id === activeViewIdForSetup);
+  const currentSetupView = productOptions.defaultViews.find(v => v.id === activeViewIdForSetup);
   
   const allVariationsSelectedOverall = productOptions.type === 'variable' && variations.length > 0 && 
     Object.keys(groupedVariations || {}).length > 0 && 
@@ -706,7 +696,7 @@ export default function ProductOptionsPage() {
         <Button variant="outline" asChild className="hover:bg-accent hover:text-accent-foreground">
           <Link href="/dashboard"><ArrowLeft className="mr-2 h-4 w-4" />Back to Dashboard</Link>
         </Button>
-        <Button variant="outline" onClick={handleRefreshData} disabled={isRefreshing || isLoading /* product loading */} className="hover:bg-accent hover:text-accent-foreground">
+        <Button variant="outline" onClick={handleRefreshData} disabled={isRefreshing || isLoading} className="hover:bg-accent hover:text-accent-foreground">
           {isRefreshing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCcw className="mr-2 h-4 w-4" />}Refresh Product Data
         </Button>
       </div>
@@ -723,7 +713,6 @@ export default function ProductOptionsPage() {
             </ShadCnAlertDescription>
         </ShadCnAlert>
       )}
-      {/* This error block is for data fetch errors AFTER initial page load checks pass */}
       {error && credentialsExist && <ShadCnAlert variant="destructive" className="mb-6"><AlertTriangle className="h-4 w-4" /><ShadCnAlertTitle>Product Data Error</ShadCnAlertTitle><ShadCnAlertDescription>{error}</ShadCnAlertDescription></ShadCnAlert>}
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
