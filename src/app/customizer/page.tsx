@@ -8,10 +8,11 @@ import DesignCanvas from '@/components/customizer/DesignCanvas';
 import RightPanel from '@/components/customizer/RightPanel';
 import { UploadProvider, useUploads } from "@/contexts/UploadContext";
 import { fetchWooCommerceProductById, fetchWooCommerceProductVariations, type WooCommerceCredentials } from '@/app/actions/woocommerceActions';
-import { loadProductOptionsFromFirestore, type ProductOptionsFirestoreData } from '@/app/actions/productOptionsActions';
+// ProductOptionsFirestoreData is defined in options/page.tsx, loadProductOptionsFromFirestore is now client-side
+import type { ProductOptionsFirestoreData } from '@/app/dashboard/products/[productId]/options/page';
 import { useAuth } from '@/contexts/AuthContext';
-import { db } from '@/lib/firebase'; // Import db for client-side Firestore operations
-import { doc, getDoc } from 'firebase/firestore'; // Import Firestore functions
+import { db } from '@/lib/firebase'; 
+import { doc, getDoc } from 'firebase/firestore'; 
 import type { UserWooCommerceCredentials } from '@/app/actions/userCredentialsActions';
 import {
   Loader2, AlertTriangle, ShoppingCart, UploadCloud, Layers, Type, Shapes as ShapesIconLucide, Smile, Palette, Gem as GemIcon, Settings2 as SettingsIcon,
@@ -68,7 +69,6 @@ interface ColorGroupOptionsForCustomizer {
   variantViewImages: Record<string, { imageUrl: string; aiHint?: string }>;
 }
 
-// This structure is for the loaded options from Firestore/localStorage for the customizer
 interface LoadedCustomizerOptions {
   defaultViews: ProductView[];
   optionsByColor: Record<string, ColorGroupOptionsForCustomizer>;
@@ -117,6 +117,28 @@ const toolItems: CustomizerTool[] = [
   { id: "free-designs", label: "Free Designs", icon: Palette },
   { id: "premium-designs", label: "Premium Designs", icon: GemIcon },
 ];
+
+
+// Client-side load function for product options
+async function loadProductOptionsFromFirestore(
+  userId: string,
+  productId: string
+): Promise<{ options?: ProductOptionsFirestoreData; error?: string }> {
+  if (!userId || !productId || !db) {
+    return { error: 'User ID, Product ID, or DB service is missing.' };
+  }
+  try {
+    const docRef = doc(db, 'userProductOptions', userId, 'products', productId);
+    const docSnap = await getDoc(docRef);
+    if (docSnap.exists()) {
+      return { options: docSnap.data() as ProductOptionsFirestoreData };
+    }
+    return { options: undefined }; // No options found is not an error
+  } catch (error: any) {
+    console.error('Error loading product options from Firestore (client-side):', error);
+    return { error: `Failed to load options from cloud: ${error.message}` };
+  }
+}
 
 
 function CustomizerLayoutAndLogic() {
@@ -559,24 +581,42 @@ function CustomizerLayoutAndLogic() {
         totalViewSurcharge += productDetails?.views.find(v => v.id === vid)?.price ?? 0;
     });
 
-
     const designData = {
-      images: canvasImages.filter(item => item.viewId === activeViewId),
-      texts: canvasTexts.filter(item => item.viewId === activeViewId),
-      shapes: canvasShapes.filter(item => item.viewId === activeViewId),
       productId: currentProductIdFromParams,
+      variationId: productVariations?.find(v => v.attributes.every(attr => selectedVariationOptions[attr.name] === attr.option))?.id.toString() || null,
+      quantity: 1, // Default quantity to 1
+      customizationDetails: {
+        viewData: productDetails?.views.map(view => ({
+            viewId: view.id,
+            viewName: view.name,
+            images: canvasImages.filter(item => item.viewId === view.id).map(img => ({ src: img.dataUrl, name: img.name, type: img.type, x: img.x, y: img.y, scale: img.scale, rotation: img.rotation })),
+            texts: canvasTexts.filter(item => item.viewId === view.id).map(txt => ({ content: txt.content, fontFamily: txt.fontFamily, fontSize: txt.fontSize, color: txt.color, x: txt.x, y: txt.y, scale: txt.scale, rotation: txt.rotation })),
+            shapes: canvasShapes.filter(item => item.viewId === view.id).map(shp => ({ type: shp.shapeType, color: shp.color, strokeColor: shp.strokeColor, strokeWidth: shp.strokeWidth, x: shp.x, y: shp.y, scale: shp.scale, rotation: shp.rotation, width: shp.width, height: shp.height })),
+        })).filter(view => view.images.length > 0 || view.texts.length > 0 || view.shapes.length > 0), // Only include views with elements
+        selectedOptions: selectedVariationOptions,
+        baseProductPrice: baseProductPrice,
+        totalViewSurcharge: totalViewSurcharge,
+        totalCustomizationPrice: totalCustomizationPrice,
+        activeViewIdUsed: activeViewId,
+      },
       userId: user?.uid,
-      activeViewId: activeViewId,
-      selectedVariationOptions: selectedVariationOptions,
-      baseProductPrice: baseProductPrice,
-      totalViewSurcharge: totalViewSurcharge,
-      totalCustomizationPrice: totalCustomizationPrice,
     };
 
-    let targetOrigin = '*';
+    let targetOrigin = '*'; // Default for development or if not set
     if (process.env.NODE_ENV === 'production' && process.env.NEXT_PUBLIC_WORDPRESS_SITE_ORIGIN) {
         targetOrigin = process.env.NEXT_PUBLIC_WORDPRESS_SITE_ORIGIN;
+    } else if (process.env.NODE_ENV !== 'production' && typeof window !== 'undefined' && window.parent !== window) {
+        // For local dev, if embedded, try to dynamically get parent origin for testing,
+        // but this can be tricky and might be blocked by browser security.
+        // The WordPress site should still check event.origin.
+        // For production, always use the explicit NEXT_PUBLIC_WORDPRESS_SITE_ORIGIN.
+        try {
+            targetOrigin = new URL(document.referrer).origin;
+        } catch (e) {
+            console.warn("Could not determine parent origin, using '*' for postMessage. Ensure parent checks event.origin.");
+        }
     }
+
 
     if (window.parent !== window) {
       window.parent.postMessage({ customizerStudioDesignData: designData }, targetOrigin);
@@ -788,5 +828,3 @@ export default function CustomizerPage() {
     </UploadProvider>
   );
 }
-
-    
