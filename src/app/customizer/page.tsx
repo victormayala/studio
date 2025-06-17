@@ -8,7 +8,6 @@ import DesignCanvas from '@/components/customizer/DesignCanvas';
 import RightPanel from '@/components/customizer/RightPanel';
 import { UploadProvider, useUploads } from "@/contexts/UploadContext";
 import { fetchWooCommerceProductById, fetchWooCommerceProductVariations, type WooCommerceCredentials } from '@/app/actions/woocommerceActions';
-// ProductOptionsFirestoreData is defined in options/page.tsx, loadProductOptionsFromFirestore is now client-side
 import type { ProductOptionsFirestoreData } from '@/app/dashboard/products/[productId]/options/page';
 import { useAuth } from '@/contexts/AuthContext';
 import { db } from '@/lib/firebase'; 
@@ -35,7 +34,6 @@ import { useToast } from '@/hooks/use-toast';
 import CustomizerIconNav, { type CustomizerTool } from '@/components/customizer/CustomizerIconNav';
 import { cn } from '@/lib/utils';
 
-// Panel Content Components
 import UploadArea from '@/components/customizer/UploadArea';
 import LayersPanel from '@/components/customizer/LayersPanel';
 import TextToolPanel from '@/components/customizer/TextToolPanel';
@@ -118,13 +116,11 @@ const toolItems: CustomizerTool[] = [
   { id: "premium-designs", label: "Premium Designs", icon: GemIcon },
 ];
 
-
-// Client-side load function for product options
 async function loadProductOptionsFromFirestore(
   userId: string,
   productId: string
 ): Promise<{ options?: ProductOptionsFirestoreData; error?: string }> {
-  if (!userId || !productId || !db) { // Check for userId specifically
+  if (!userId || !productId || !db) { 
     return { error: 'User ID, Product ID, or DB service is missing for loading options.' };
   }
   try {
@@ -133,7 +129,7 @@ async function loadProductOptionsFromFirestore(
     if (docSnap.exists()) {
       return { options: docSnap.data() as ProductOptionsFirestoreData };
     }
-    return { options: undefined }; // No options found is not an error
+    return { options: undefined }; 
   } catch (error: any) {
     console.error('Error loading product options from Firestore (client-side):', error);
     return { error: `Failed to load options from cloud: ${error.message}` };
@@ -147,6 +143,7 @@ function CustomizerLayoutAndLogic() {
   const productId = searchParams.get('productId');
   const viewMode = searchParams.get('viewMode');
   const isEmbedded = viewMode === 'embedded';
+  const wpApiBaseUrl = searchParams.get('wpApiBaseUrl');
 
   const { user, isLoading: authLoading } = useAuth();
   const { toast } = useToast();
@@ -184,7 +181,7 @@ function CustomizerLayoutAndLogic() {
 
   useEffect(() => {
     const handleBeforeUnload = (event: BeforeUnloadEvent) => {
-      if (hasCanvasElements && !isEmbedded) { // Only block if not embedded
+      if (hasCanvasElements && !isEmbedded) { 
         event.preventDefault();
         event.returnValue = 'You have unsaved changes. Are you sure you want to leave?';
       }
@@ -198,7 +195,7 @@ function CustomizerLayoutAndLogic() {
 
   useEffect(() => {
     const handleAttemptClose = () => {
-      if (hasCanvasElements && !isEmbedded) { // Only confirm if not embedded
+      if (hasCanvasElements && !isEmbedded) { 
         setOnConfirmLeaveAction(() => () => {
           if (user) {
             router.push('/dashboard');
@@ -207,14 +204,13 @@ function CustomizerLayoutAndLogic() {
           }
         });
         setIsLeaveConfirmOpen(true);
-      } else if (!isEmbedded) { // If no elements and not embedded, just navigate
+      } else if (!isEmbedded) { 
         if (user) {
           router.push('/dashboard');
         } else {
           router.push('/');
         }
       }
-      // If embedded, the parent controls closing, so this event might not be relevant or needs different handling.
     };
     
     const eventListener = () => handleAttemptClose();
@@ -242,7 +238,6 @@ function CustomizerLayoutAndLogic() {
     setIsLoading(true);
     setError(null);
     
-    // Clear previous product specific states when loading new data
     if (productDetails && productId !== productDetails.id) {
         setProductDetails(null);
     } else if (!productId && productDetails && productDetails.id !== defaultFallbackProduct.id) {
@@ -256,7 +251,7 @@ function CustomizerLayoutAndLogic() {
     setLoadedGroupingAttributeName(null);
     setTotalCustomizationPrice(0);
 
-    if (!productId) {
+    if (!productId && !wpApiBaseUrl) { // If no productId and no proxy, show default
       setError("No product ID provided. Displaying default customizer.");
       const defaultViews = defaultFallbackProduct.views;
       const baseImagesMap: Record<string, {url: string, aiHint?: string, price?: number}> = {};
@@ -267,8 +262,21 @@ function CustomizerLayoutAndLogic() {
       setIsLoading(false);
       return;
     }
+    
+    if (!productId && wpApiBaseUrl) { // If proxy exists but no product ID, it's an error
+        setError("Product ID is missing from URL. Cannot load product via proxy.");
+        const defaultViewsError = defaultFallbackProduct.views;
+        const baseImagesMapError: Record<string, {url: string, aiHint?: string, price?: number}> = {};
+        defaultViewsError.forEach(view => { baseImagesMapError[view.id] = { url: view.imageUrl, aiHint: view.aiHint, price: view.price ?? 0 }; });
+        setViewBaseImages(baseImagesMapError);
+        setProductDetails(defaultFallbackProduct);
+        setActiveViewId(defaultViewsError[0]?.id || null);
+        setIsLoading(false);
+        return;
+    }
 
-    if (authLoading && user === undefined) { 
+
+    if (authLoading && user === undefined && !wpApiBaseUrl) { 
       return; 
     }
 
@@ -276,7 +284,7 @@ function CustomizerLayoutAndLogic() {
     let fetchError: string | undefined;
     let userWCCredentialsToUse: WooCommerceCredentials | undefined;
 
-    if (user?.uid && db) { 
+    if (user?.uid && db && !wpApiBaseUrl) { 
       try {
         const credDocRef = doc(db, 'userWooCommerceCredentials', user.uid);
         const credDocSnap = await getDoc(credDocRef);
@@ -287,25 +295,25 @@ function CustomizerLayoutAndLogic() {
             consumerKey: credData.consumerKey, 
             consumerSecret: credData.consumerSecret 
           };
-        } else if (!isEmbedded && !user?.uid) { 
-           // No specific message needed here for embedded unauth scenario, error will come from fetchWooCommerceProductById
-        } else if (!isEmbedded && user?.uid) { // Only toast if not embedded AND user is logged in to THIS app
+        } else if (!isEmbedded) { 
           toast({ title: "WooCommerce Credentials Note", description: "No saved WooCommerce credentials for this user. Product data might be limited or use defaults.", variant: "default" });
         }
       } catch (credError: any) {
-          if (!isEmbedded && user?.uid) { // Only toast if not embedded AND user logged in
+          if (!isEmbedded && user?.uid) { 
             toast({ title: "WooCommerce Connection Error", description: credError.message || "Could not load your WooCommerce store credentials.", variant: "destructive" });
           }
       }
     }
     
-    ({ product: wcProduct, error: fetchError } = await fetchWooCommerceProductById(productId, userWCCredentialsToUse));
+    ({ product: wcProduct, error: fetchError } = await fetchWooCommerceProductById(productId!, userWCCredentialsToUse, wpApiBaseUrl || undefined));
 
 
     if (fetchError || !wcProduct) {
       let displayError = fetchError || `Failed to load product (ID: ${productId}).`;
-      if (isEmbedded && (!user?.uid || (fetchError && (fetchError.includes("credentials are not configured") || fetchError.includes("required.")))) ) {
-         displayError = `This product customizer (ID: ${productId}) could not load data from the store. The embedding store might need to configure its connection with Customizer Studio. (Details: ${displayError})`;
+      if (isEmbedded && (!user?.uid || wpApiBaseUrl) && (fetchError && (fetchError.includes("credentials are not configured") || fetchError.includes("required.")))) {
+         displayError = `This product customizer (ID: ${productId}) could not load data. The embedding site might need to configure its connection or API proxy with Customizer Studio. (Details: ${displayError})`;
+      } else if (isEmbedded && wpApiBaseUrl && fetchError) {
+         displayError = `Failed to load product (ID: ${productId}) via WordPress proxy. Please ensure the Customizer Studio plugin is configured correctly on your WordPress site. (Details: ${fetchError})`;
       }
       setError(displayError + " Displaying default customizer view.");
       
@@ -318,7 +326,7 @@ function CustomizerLayoutAndLogic() {
       setConfigurableAttributes([]);
       setSelectedVariationOptions({});
       setIsLoading(false);
-      if (!isEmbedded && user?.uid) { 
+      if (!isEmbedded && user?.uid && !wpApiBaseUrl) { 
         toast({ title: "Product Load Error", description: fetchError || `Product ${productId} not found.`, variant: "destructive"});
       }
       return;
@@ -328,8 +336,8 @@ function CustomizerLayoutAndLogic() {
     let tempLoadedOptionsByColor: Record<string, ColorGroupOptionsForCustomizer> | null = null;
     let tempLoadedGroupingAttributeName: string | null = null;
 
-    if (user?.uid) { 
-      const { options: firestoreOptions, error: firestoreLoadError } = await loadProductOptionsFromFirestore(user.uid, productId);
+    if (user?.uid && !wpApiBaseUrl) { 
+      const { options: firestoreOptions, error: firestoreLoadError } = await loadProductOptionsFromFirestore(user.uid, productId!);
 
       if (firestoreLoadError) {
         console.warn("Customizer: Error loading options from Firestore:", firestoreLoadError);
@@ -377,9 +385,9 @@ function CustomizerLayoutAndLogic() {
     setActiveViewId(finalDefaultViews[0]?.id || null);
 
     if (wcProduct.type === 'variable') {
-      const { variations: fetchedVariations, error: variationsError } = await fetchWooCommerceProductVariations(productId, userWCCredentialsToUse);
+      const { variations: fetchedVariations, error: variationsError } = await fetchWooCommerceProductVariations(productId!, userWCCredentialsToUse, wpApiBaseUrl || undefined);
       if (variationsError) {
-        if (!isEmbedded || user?.uid) toast({ title: "Variations Load Error", description: variationsError, variant: "destructive" });
+        if (!isEmbedded || (user?.uid && !wpApiBaseUrl)) toast({ title: "Variations Load Error", description: variationsError, variant: "destructive" });
         setProductVariations(null);
         setConfigurableAttributes([]);
         setSelectedVariationOptions({});
@@ -424,29 +432,35 @@ function CustomizerLayoutAndLogic() {
     }
 
     setIsLoading(false);
-  }, [productId, user?.uid, authLoading, toast, isEmbedded, productDetails, viewMode]);
+  }, [productId, user?.uid, authLoading, toast, isEmbedded, productDetails, wpApiBaseUrl]); // Added wpApiBaseUrl
 
   useEffect(() => {
-    if (authLoading) {
+    if (authLoading && !wpApiBaseUrl) { // Don't block for auth if wpApiBaseUrl is present
       return; 
     }
 
     const currentProductId = searchParams.get('productId');
     
+    // Prioritize loading if a productId is present
     if (typeof currentProductId === 'string' && currentProductId.trim() !== '') {
-      if ((!productDetails || productDetails.id !== currentProductId) && (!error || (error && !error.includes(`ID: ${currentProductId}`)))) { // Add check to ensure error is not for current ProductId already
+      // Load if productDetails isn't set, or is for a different product, 
+      // or if there was an error (which might be for this product, but we want to retry if `loadCustomizerData` is called again)
+      if ((!productDetails || productDetails.id !== currentProductId) && (!error || (error && !error.includes(`ID: ${currentProductId}`)))) {
         loadCustomizerData();
-      } else if ((productDetails && productDetails.id === currentProductId) || error) {
+      } else if (productDetails?.id === currentProductId || error) {
+        // Already loaded or errored for this product
         setIsLoading(false);
       }
-    } else {
-      if (!productDetails && !error) {
+    } else if (!wpApiBaseUrl) { // If no productId AND no wpApiBaseUrl, load default fallback
+      if (!productDetails && !error) { // Only load default if nothing is loaded and no error exists
         loadCustomizerData(); 
-      } else if (productDetails || error) {
+      } else if (productDetails || error) { // If already has details or an error, no need to re-init default
         setIsLoading(false);
       }
+    } else { // Has wpApiBaseUrl but no productId (this case should be handled by loadCustomizerData setting an error)
+        setIsLoading(false);
     }
-  }, [authLoading, searchParams, loadCustomizerData, productDetails, error]); // searchParams in dep array
+  }, [authLoading, searchParams, loadCustomizerData, productDetails, error, wpApiBaseUrl]);
 
 
  useEffect(() => {
@@ -599,7 +613,6 @@ function CustomizerLayoutAndLogic() {
       return;
     }
 
-
     if (!isEmbedded && !user && (canvasImages.length > 0 || canvasTexts.length > 0 || canvasShapes.length > 0)) {
        toast({
         title: "Please Sign In",
@@ -620,7 +633,6 @@ function CustomizerLayoutAndLogic() {
     if (activeViewId && (viewsUsedForSurcharge.has(activeViewId) || viewsUsedForSurcharge.size === 0)) {
         viewsUsedForSurcharge.add(activeViewId);
     }
-
 
     let totalViewSurcharge = 0;
     viewsUsedForSurcharge.forEach(vid => {
@@ -660,7 +672,6 @@ function CustomizerLayoutAndLogic() {
         console.warn("document.referrer is empty, but app is in an iframe. Defaulting to targetOrigin '*' for postMessage. Parent site MUST validate event.origin.");
     }
 
-
     if (window.parent !== window) {
       window.parent.postMessage({ customizerStudioDesignData: designData }, targetOrigin);
       toast({
@@ -677,8 +688,7 @@ function CustomizerLayoutAndLogic() {
     }
   };
 
-
-  if (isLoading || (authLoading && user === undefined)) { 
+  if (isLoading || (authLoading && user === undefined && !wpApiBaseUrl)) { 
     return (
       <div className="flex min-h-svh h-screen w-full items-center justify-center bg-background">
         <Loader2 className="h-10 w-10 animate-spin text-primary" />
@@ -695,13 +705,20 @@ function CustomizerLayoutAndLogic() {
   const currentBoundaryBoxes = activeViewData?.boundaryBoxes || defaultFallbackProduct.views[0].boundaryBoxes;
   const currentProductName = productDetails?.name || defaultFallbackProduct.name;
 
-
   if (error && !productDetails) { 
+    let finalErrorMessage = error;
+    if (isEmbedded && wpApiBaseUrl && error.includes("credentials are not configured")) {
+        finalErrorMessage = `Failed to load product data. Please ensure the Customizer Studio plugin on your WordPress site is correctly configured and can access WooCommerce products. Original Error: ${error}`;
+    } else if (isEmbedded && wpApiBaseUrl && error.includes("Failed to fetch product")) {
+         finalErrorMessage = `Could not retrieve product information using the WordPress site's proxy. Please check the Customizer Studio plugin settings and your WooCommerce product status. Original Error: ${error}`;
+    }
+
+
     return (
-      <div className="flex flex-col min-h-svh h-w-full items-center justify-center bg-background p-4">
+      <div className="flex flex-col min-h-svh h-screen w-full items-center justify-center bg-background p-4">
         <AlertTriangle className="h-12 w-12 text-destructive mb-4" />
         <h2 className="text-xl font-semibold text-destructive mb-2">Customizer Error</h2>
-        <p className="text-muted-foreground text-center mb-6">{error}</p>
+        <p className="text-muted-foreground text-center mb-6 max-w-lg">{finalErrorMessage}</p>
         {!isEmbedded && ( 
           <Button variant="outline" asChild>
             <Link href="/dashboard">Back to Dashboard</Link>
@@ -768,7 +785,6 @@ function CustomizerLayoutAndLogic() {
                     <AlertTriangle className="inline h-4 w-4 mr-1" /> {error}
                 </div>
             )}
-
 
              <div className="w-full flex flex-col flex-1 min-h-0 pb-4">
               <DesignCanvas
@@ -860,7 +876,6 @@ function CustomizerLayoutAndLogic() {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>}
-
       </div>
   );
 }
@@ -879,4 +894,3 @@ export default function CustomizerPage() {
     </UploadProvider>
   );
 }
-
