@@ -129,11 +129,13 @@ export default function LayersPanel({ activeViewId }: LayersPanelProps) {
                 key={`${item.itemType}-${item.id}`}
                 onClick={handleSelect}
                 className={cn(
-                  "w-full p-2 border rounded-md flex items-center gap-3 transition-all bg-card border-border",
+                  "w-full p-2 border rounded-md flex items-center gap-3 transition-all bg-card",
                   item.isLocked
-                    ? "opacity-70 cursor-not-allowed"
+                    ? "opacity-70 cursor-not-allowed border-border"
                     : "cursor-pointer hover:bg-accent/10",
-                  isSelected && "shadow-[0_0_0_2px_hsl(var(--primary))]" // Replaced ring with box-shadow
+                  isSelected 
+                    ? "border-2 border-primary" // Selected: thicker primary border
+                    : "border border-border"     // Default: standard border
                 )}
                 title={title}
               >
