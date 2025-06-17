@@ -129,7 +129,7 @@ export default function LayersPanel({ activeViewId }: LayersPanelProps) {
                 key={`${item.itemType}-${item.id}`}
                 onClick={handleSelect}
                 className={cn(
-                  "p-2 border rounded-md flex items-center gap-3 transition-all bg-card border-border",
+                  "w-full p-2 border rounded-md flex items-center gap-3 transition-all bg-card border-border",
                   item.isLocked
                     ? "opacity-70 cursor-not-allowed"
                     : "cursor-pointer hover:bg-accent/10",
