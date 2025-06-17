@@ -133,7 +133,7 @@ export default function LayersPanel({ activeViewId }: LayersPanelProps) {
                   item.isLocked
                     ? "opacity-70 cursor-not-allowed"
                     : "cursor-pointer hover:bg-accent/10",
-                  isSelected && "ring-2 ring-primary"
+                  isSelected && "shadow-[0_0_0_2px_hsl(var(--primary))]" // Replaced ring with box-shadow
                 )}
                 title={title}
               >
