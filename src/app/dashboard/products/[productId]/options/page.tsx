@@ -117,18 +117,17 @@ export default function ProductOptionsPage() {
 
 
   const fetchAndSetProductData = useCallback(async (isRefresh = false) => {
-    if (!user?.uid || !productId) { // Corrected: user.uid instead of user.id
+    if (!user?.uid || !productId) { 
         setError("User or Product ID became invalid during fetch setup.");
         setIsLoading(false); setIsRefreshing(false);
         return;
     }
+    setError(null); 
     
     if (isRefresh) {
         setIsRefreshing(true);
-        setError(null); 
     } else {
         setIsLoading(true); 
-        setError(null); 
     }
     
     setVariationsError(null); setVariations([]);
@@ -136,9 +135,9 @@ export default function ProductOptionsPage() {
 
     let userCredentials: WooCommerceCredentials | undefined;
     try {
-      const userStoreUrl = localStorage.getItem(`wc_store_url_${user.uid}`); // Corrected: user.uid
-      const userConsumerKey = localStorage.getItem(`wc_consumer_key_${user.uid}`); // Corrected: user.uid
-      const userConsumerSecret = localStorage.getItem(`wc_consumer_secret_${user.uid}`); // Corrected: user.uid
+      const userStoreUrl = localStorage.getItem(`wc_store_url_${user.uid}`); 
+      const userConsumerKey = localStorage.getItem(`wc_consumer_key_${user.uid}`); 
+      const userConsumerSecret = localStorage.getItem(`wc_consumer_secret_${user.uid}`); 
       if (userStoreUrl && userConsumerKey && userConsumerSecret) {
         userCredentials = { storeUrl: userStoreUrl, consumerKey: userConsumerKey, consumerSecret: userConsumerSecret };
         setCredentialsExist(true);
@@ -215,7 +214,7 @@ export default function ProductOptionsPage() {
     let loadedOptionsByColor: Record<string, ColorGroupOptions> = {};
     let loadedGroupingAttributeName: string | null = null;
     let localDataFoundAndParsed = false;
-    const localStorageKey = `customizer_studio_product_options_${user.uid}_${productId}`; // Corrected: user.uid
+    const localStorageKey = `customizer_studio_product_options_${user.uid}_${productId}`; 
 
     try {
       const savedOptionsString = localStorage.getItem(localStorageKey);
@@ -279,36 +278,34 @@ export default function ProductOptionsPage() {
     setIsLoading(false); setIsRefreshing(false);
     if (isRefresh) toast({ title: "Product Data Refreshed", description: "Details updated from your store."});
 
-  }, [productId, user?.uid, toast]); // Corrected: user.uid
+  }, [productId, user?.uid, toast]); 
 
   useEffect(() => {
     if (authIsLoading) {
-      setError(null); 
+      setIsLoading(true); 
+      setError(null);
       return;
     }
-  
     if (!user) {
       setError("User not authenticated. Please sign in.");
-      setIsLoading(false); 
+      setIsLoading(false);
       setProductOptions(null);
       return;
     }
-  
     if (!productId) {
       setError("Product ID is missing.");
-      setIsLoading(false); 
+      setIsLoading(false);
       setProductOptions(null);
       return;
     }
   
-    setError(null); 
-  
-    if (!productOptions) { 
-        fetchAndSetProductData(false); 
-    } else {
+    setError(null);
+    if (!productOptions && !isLoading) { 
+      fetchAndSetProductData(false);
+    } else if (productOptions) {
       setIsLoading(false); 
     }
-  }, [productId, authIsLoading, user, productOptions, fetchAndSetProductData]);
+  }, [productId, authIsLoading, user, productOptions, fetchAndSetProductData, isLoading]);
 
 
   const handleRefreshData = () => {
@@ -405,7 +402,7 @@ export default function ProductOptionsPage() {
         toast({ title: "Error", description: "Product data or user session is missing.", variant: "destructive"});
         return;
     }
-    const localStorageKey = `customizer_studio_product_options_${user.uid}_${productOptions.id}`; // Corrected: user.uid
+    const localStorageKey = `customizer_studio_product_options_${user.uid}_${productOptions.id}`; 
     const dataToSave: LocalStorageData_New = {
       defaultViews: productOptions.defaultViews,
       optionsByColor: productOptions.optionsByColor,
@@ -433,7 +430,7 @@ export default function ProductOptionsPage() {
     setActiveViewIdForSetup(viewId); setSelectedBoundaryBoxId(null);
   };
 
-  const handleAddNewDefaultView = () => { 
+  const handleAddNewView = () => { 
     if (!productOptions) return;
     if (productOptions.defaultViews.length >= MAX_PRODUCT_VIEWS) {
       toast({ title: "Limit Reached", description: `Max ${MAX_PRODUCT_VIEWS} views per product.`, variant: "default" });
@@ -856,7 +853,7 @@ export default function ProductOptionsPage() {
             setSelectedBoundaryBoxId={setSelectedBoundaryBoxId}
             handleSelectView={handleSelectViewForSetup}
             handleViewDetailChange={handleDefaultViewDetailChange}
-            handleDeleteView={handleDeleteView}
+            handleDeleteView={handleDeleteDefaultView}
             handleAddNewView={handleAddNewView}
             handleAddBoundaryBox={handleAddBoundaryBox}
             handleRemoveBoundaryBox={handleRemoveBoundaryBox}
@@ -869,7 +866,7 @@ export default function ProductOptionsPage() {
             setIsDeleteViewDialogOpen={setIsDeleteViewDialogOpen}
             viewIdToDelete={viewIdToDelete}
             setViewIdToDelete={setViewIdToDelete} 
-            confirmDeleteView={confirmDeleteView}
+            confirmDeleteView={confirmDeleteDefaultView}
           />
 
           <Card className="shadow-md sticky top-8">
@@ -911,3 +908,4 @@ export default function ProductOptionsPage() {
     </div>
   );
 }
+
