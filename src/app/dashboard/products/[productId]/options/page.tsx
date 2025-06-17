@@ -89,7 +89,7 @@ export default function ProductOptionsPage() {
   const router = useRouter();
   const productId = params.productId as string;
   const { toast } = useToast();
-  const { user } = useAuth();
+  const { user, isLoading: authIsLoading } = useAuth();
 
   const [productOptions, setProductOptions] = useState<ProductOptionsData | null>(null);
   const [activeViewIdForSetup, setActiveViewIdForSetup] = useState<string | null>(null);
@@ -122,9 +122,11 @@ export default function ProductOptionsPage() {
       setError(user?.id ? "Product ID is missing." : "User not authenticated. Please sign in.");
       return;
     }
+    
+    setError(null); // Clear previous errors if we proceed
 
     if (isRefresh) setIsRefreshing(true); else setIsLoading(true);
-    setError(null); setVariationsError(null); setVariations([]);
+    setVariationsError(null); setVariations([]);
     setGroupedVariations(null); 
 
     let userCredentials: WooCommerceCredentials | undefined;
@@ -275,8 +277,14 @@ export default function ProductOptionsPage() {
   }, [productId, user?.id, toast]);
 
   useEffect(() => {
-    fetchAndSetProductData(false); // Initial fetch
-  }, [fetchAndSetProductData]); // Removed productId and user.id as fetchAndSetProductData already uses them
+    // Only fetch if auth is not loading and productId is present.
+    // The user?.id check is now primarily handled inside fetchAndSetProductData
+    // to set appropriate error messages if the user is missing after auth check.
+    if (!authIsLoading && productId) {
+      fetchAndSetProductData(false);
+    }
+  }, [productId, authIsLoading, fetchAndSetProductData]);
+
 
   const handleRefreshData = () => {
     fetchAndSetProductData(true); // Refresh fetch
@@ -599,7 +607,7 @@ export default function ProductOptionsPage() {
   };
 
 
-  if (isLoading && !isRefreshing) return <div className="flex items-center justify-center min-h-screen bg-background"><Loader2 className="h-10 w-10 animate-spin text-primary" /><p className="ml-3">Loading product options...</p></div>;
+  if ((isLoading || authIsLoading) && !isRefreshing) return <div className="flex items-center justify-center min-h-screen bg-background"><Loader2 className="h-10 w-10 animate-spin text-primary" /><p className="ml-3">Loading product options...</p></div>;
   if (error && !productOptions) return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-background p-4">
       <AlertTriangle className="h-12 w-12 text-destructive mb-4" />
@@ -738,7 +746,7 @@ export default function ProductOptionsPage() {
                                 onClick={() => setEditingImagesForColor(editingImagesForColor === groupKey ? null : groupKey)}
                                 className="w-full sm:w-auto hover:bg-accent/20"
                             >
-                                <Edit2 className="mr-2 h-4 w-4" />
+                                <Edit3 className="mr-2 h-4 w-4" />
                                 {editingImagesForColor === groupKey ? "Done Editing" : "Manage View Images for"} {groupKey}
                             </Button>
                             {editingImagesForColor === groupKey && (
@@ -805,7 +813,7 @@ export default function ProductOptionsPage() {
             handleSelectView={handleSelectViewForSetup}
             handleViewDetailChange={handleDefaultViewDetailChange}
             handleDeleteView={handleDeleteDefaultView}
-            handleAddNewView={handleAddNewDefaultView}
+            handleAddNewView={handleAddNewView}
             handleAddBoundaryBox={handleAddBoundaryBox}
             handleRemoveBoundaryBox={handleRemoveBoundaryBox}
             handleBoundaryBoxNameChange={handleBoundaryBoxNameChange}
