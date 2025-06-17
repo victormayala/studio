@@ -283,38 +283,37 @@ export default function ProductOptionsPage() {
 
   useEffect(() => {
     if (authIsLoading) {
-      setError(null); // Clear errors while auth is loading
-      // setIsLoading(true) is the initial state, loader UI condition handles it
+      // Still waiting for auth state to resolve
+      setIsLoading(true);
+      setError(null);
       return;
     }
   
-    // Auth state is determined
+    // Auth state is resolved
     if (!user) {
       setError("User not authenticated. Please sign in.");
-      setIsLoading(false); // Stop page loading, error will be displayed
+      setIsLoading(false);
       setProductOptions(null);
       return;
     }
   
     if (!productId) {
       setError("Product ID is missing.");
-      setIsLoading(false); // Stop page loading, error will be displayed
+      setIsLoading(false);
       setProductOptions(null);
       return;
     }
   
     // User is authenticated and productId is present
-    setError(null); // Clear any previous errors like "User not authenticated"
+    setError(null); // Clear any "User not authenticated" error
   
-    if (!productOptions) { // Only fetch if productOptions are not already loaded
-      fetchAndSetProductData(false); // This function will set its own isLoading
+    if (!productOptions) { // Fetch only if productOptions are not already loaded
+      fetchAndSetProductData(false); // This will set isLoading to true itself
     } else {
-      // productOptions are already loaded (e.g., from navigation or prior fetch),
-      // ensure the page's isLoading state is false.
+      // productOptions are already loaded, ensure page isLoading is false
       setIsLoading(false);
     }
-  }, [productId, authIsLoading, user, fetchAndSetProductData]); // Removed productOptions to avoid loop
-  // isLoading is managed by fetchAndSetProductData for its own execution
+  }, [authIsLoading, user, productId, fetchAndSetProductData]); // Removed productOptions from deps to avoid re-fetch loop
 
 
   const handleRefreshData = () => {
@@ -879,7 +878,7 @@ export default function ProductOptionsPage() {
             setIsDeleteViewDialogOpen={setIsDeleteViewDialogOpen}
             viewIdToDelete={viewIdToDelete}
             setViewIdToDelete={setViewIdToDelete} 
-            confirmDeleteView={confirmDeleteView}
+            confirmDeleteView={confirmDeleteDefaultView}
           />
 
           <Card className="shadow-md sticky top-8">
@@ -921,4 +920,3 @@ export default function ProductOptionsPage() {
     </div>
   );
 }
-
