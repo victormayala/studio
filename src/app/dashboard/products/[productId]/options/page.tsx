@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from 'react';
@@ -11,7 +10,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, Shirt, RefreshCcw, ExternalLink, Loader2, AlertTriangle, LayersIcon, Tag, Image as ImageIconLucide, Edit2, DollarSign, PlugZap } from 'lucide-react';
+import { ArrowLeft, Shirt, RefreshCcw, ExternalLink, Loader2, AlertTriangle, LayersIcon, Tag, Image as ImageIconLucide, Edit2, DollarSign, PlugZap, Edit3 } from 'lucide-react';
 import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
@@ -117,10 +116,17 @@ export default function ProductOptionsPage() {
 
 
   const fetchAndSetProductData = useCallback(async (isRefresh = false) => {
-    if (!productId || !user?.id) {
-      setIsLoading(false); setIsRefreshing(false);
-      setError(user?.id ? "Product ID is missing." : "User not authenticated. Please sign in.");
-      return;
+    if (!productId) {
+        setIsLoading(false); setIsRefreshing(false);
+        setError("Product ID is missing.");
+        return;
+    }
+    // User presence is now primarily checked by the useEffect before calling this.
+    // However, keeping a check here as a safeguard.
+    if (!user?.id) {
+        setIsLoading(false); setIsRefreshing(false);
+        setError("User not authenticated. Please sign in.");
+        return;
     }
     
     setError(null); // Clear previous errors if we proceed
@@ -277,17 +283,31 @@ export default function ProductOptionsPage() {
   }, [productId, user?.id, toast]);
 
   useEffect(() => {
-    // Only fetch if auth is not loading and productId is present.
-    // The user?.id check is now primarily handled inside fetchAndSetProductData
-    // to set appropriate error messages if the user is missing after auth check.
-    if (!authIsLoading && productId) {
-      fetchAndSetProductData(false);
+    if (authIsLoading) {
+        setIsLoading(true); // Show main loader if auth is still loading
+        return;
     }
-  }, [productId, authIsLoading, fetchAndSetProductData]);
+    if (!productId) {
+        setError("Product ID is missing.");
+        setIsLoading(false);
+        return;
+    }
+    if (!user) {
+        setError("User not authenticated. Please sign in.");
+        setIsLoading(false);
+        return;
+    }
+    // If auth is done, productId and user are present, proceed to fetch data
+    fetchAndSetProductData(false);
+  }, [productId, authIsLoading, user, fetchAndSetProductData]);
 
 
   const handleRefreshData = () => {
-    fetchAndSetProductData(true); // Refresh fetch
+    if (!authIsLoading && user && productId) {
+        fetchAndSetProductData(true);
+    } else {
+        toast({ title: "Cannot Refresh", description: "User or product ID missing.", variant: "destructive"});
+    }
   };
 
   const getPointerCoords = (e: MouseEvent | TouchEvent | React.MouseEvent | React.TouchEvent) => {
@@ -607,7 +627,10 @@ export default function ProductOptionsPage() {
   };
 
 
-  if ((isLoading || authIsLoading) && !isRefreshing) return <div className="flex items-center justify-center min-h-screen bg-background"><Loader2 className="h-10 w-10 animate-spin text-primary" /><p className="ml-3">Loading product options...</p></div>;
+  if (isLoading || authIsLoading && !isRefreshing) { // Keep main loader if general isLoading is true OR auth is loading and it's not a refresh
+    return <div className="flex items-center justify-center min-h-screen bg-background"><Loader2 className="h-10 w-10 animate-spin text-primary" /><p className="ml-3">Loading product options...</p></div>;
+  }
+  
   if (error && !productOptions) return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-background p-4">
       <AlertTriangle className="h-12 w-12 text-destructive mb-4" />
@@ -625,7 +648,7 @@ export default function ProductOptionsPage() {
   );
   if (!productOptions) return <div className="flex flex-col items-center justify-center min-h-screen bg-background p-4"><AlertTriangle className="h-12 w-12 text-muted-foreground mb-4" /><h2 className="text-xl font-semibold text-muted-foreground mb-2">Product Not Found</h2><p className="text-muted-foreground text-center mb-6">Could not load options for this product.</p><Button variant="outline" asChild><Link href="/dashboard"><ArrowLeft className="mr-2 h-4 w-4" />Back</Link></Button></div>;
 
-  const currentSetupView = productOptions.defaultViews.find(v => v.id === activeViewIdForSetup);
+  const currentSetupView = productOptions.views.find(v => v.id === activeViewIdForSetup);
   
   const allVariationsSelectedOverall = productOptions.type === 'variable' && variations.length > 0 && 
     Object.keys(groupedVariations || {}).length > 0 && 
@@ -867,4 +890,3 @@ export default function ProductOptionsPage() {
     </div>
   );
 }
-
