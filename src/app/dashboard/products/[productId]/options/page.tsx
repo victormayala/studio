@@ -11,12 +11,12 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, Shirt, RefreshCcw, ExternalLink, Loader2, AlertTriangle, LayersIcon, Tag, Image as ImageIconLucide, Edit2, DollarSign } from 'lucide-react';
+import { ArrowLeft, Shirt, RefreshCcw, ExternalLink, Loader2, AlertTriangle, LayersIcon, Tag, Image as ImageIconLucide, Edit2, DollarSign, PlugZap } from 'lucide-react';
 import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
-import { fetchWooCommerceProductById, fetchWooCommerceProductVariations } from '@/app/actions/woocommerceActions';
+import { fetchWooCommerceProductById, fetchWooCommerceProductVariations, type WooCommerceCredentials } from '@/app/actions/woocommerceActions';
 import type { WCCustomProduct, WCVariation, WCVariationAttribute } from '@/types/woocommerce';
 import { Alert as ShadCnAlert, AlertDescription as ShadCnAlertDescription, AlertTitle as ShadCnAlertTitle } from "@/components/ui/alert";
 import ProductViewSetup from '@/components/product-options/ProductViewSetup'; 
@@ -37,32 +37,32 @@ interface ProductView {
   imageUrl: string;
   aiHint?: string;
   boundaryBoxes: BoundaryBox[];
-  price?: number; // Added price per view
+  price?: number; 
 }
 
 interface ColorGroupOptions {
   selectedVariationIds: string[];
-  variantViewImages: Record<string, { imageUrl: string; aiHint?: string }>; // Key: defaultView.id
+  variantViewImages: Record<string, { imageUrl: string; aiHint?: string }>; 
 }
 
 interface ProductOptionsData {
   id: string;
   name: string;
   description: string;
-  price: number; // Base product price from WC
+  price: number; 
   type: 'simple' | 'variable' | 'grouped' | 'external';
   defaultViews: ProductView[]; 
   optionsByColor: Record<string, ColorGroupOptions>; 
   groupingAttributeName: string | null;
 }
 
-interface LocalStorageData_Old { // For migration
+interface LocalStorageData_Old { 
   views: ProductView[]; 
-  cstmzrSelectedVariationIds?: string[]; // Note: cstmzr prefix
-  customizerStudioSelectedVariationIds?: string[]; // Note: customizerStudio prefix
+  cstmzrSelectedVariationIds?: string[]; 
+  customizerStudioSelectedVariationIds?: string[]; 
 }
 
-interface LocalStorageData_New { // New structure for saving
+interface LocalStorageData_New { 
   defaultViews: ProductView[];
   optionsByColor: Record<string, ColorGroupOptions>;
   groupingAttributeName: string | null;
@@ -96,6 +96,7 @@ export default function ProductOptionsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [credentialsExist, setCredentialsExist] = useState(false);
 
   const [variations, setVariations] = useState<WCVariation[]>([]);
   const [isLoadingVariations, setIsLoadingVariations] = useState(false);
@@ -115,29 +116,41 @@ export default function ProductOptionsPage() {
   const [editingImagesForColor, setEditingImagesForColor] = useState<string | null>(null);
 
 
-  const fetchAndSetProductData = useCallback(async () => {
+  const fetchAndSetProductData = useCallback(async (isRefresh = false) => {
     if (!productId || !user?.id) {
       setIsLoading(false); setIsRefreshing(false);
       setError(user?.id ? "Product ID is missing." : "User not authenticated. Please sign in.");
       return;
     }
 
-    setIsLoading(true); setError(null); setVariationsError(null); setVariations([]);
+    if (isRefresh) setIsRefreshing(true); else setIsLoading(true);
+    setError(null); setVariationsError(null); setVariations([]);
     setGroupedVariations(null); 
 
-    let userCredentials;
+    let userCredentials: WooCommerceCredentials | undefined;
     try {
       const userStoreUrl = localStorage.getItem(`wc_store_url_${user.id}`);
       const userConsumerKey = localStorage.getItem(`wc_consumer_key_${user.id}`);
       const userConsumerSecret = localStorage.getItem(`wc_consumer_secret_${user.id}`);
       if (userStoreUrl && userConsumerKey && userConsumerSecret) {
         userCredentials = { storeUrl: userStoreUrl, consumerKey: userConsumerKey, consumerSecret: userConsumerSecret };
+        setCredentialsExist(true);
+      } else {
+        setCredentialsExist(false);
+        setError("WooCommerce store not connected. Please go to Dashboard > 'Store Integration' to connect your store first.");
+        setProductOptions(null); setIsLoading(false); setIsRefreshing(false);
+        return;
       }
-    } catch (e) { console.warn("Error accessing localStorage for WC credentials:", e); }
+    } catch (e) { 
+        console.warn("Error accessing localStorage for WC credentials:", e); 
+        setError("Could not load store credentials. Please try saving them again via the Dashboard.");
+        setProductOptions(null); setIsLoading(false); setIsRefreshing(false);
+        return;
+    }
 
     const { product: wcProduct, error: fetchError } = await fetchWooCommerceProductById(productId, userCredentials);
     if (fetchError || !wcProduct) {
-      setError(fetchError || `Product with ID ${productId} not found.`);
+      setError(fetchError || `Product with ID ${productId} not found in your connected store.`);
       setProductOptions(null); setIsLoading(false); setIsRefreshing(false);
       toast({ title: "Error Fetching Product", description: fetchError || `Product ${productId} not found.`, variant: "destructive"});
       return;
@@ -188,7 +201,6 @@ export default function ProductOptionsPage() {
     let plainTextDescription = 'No description available.';
     const descriptionSource = wcProduct.description || wcProduct.short_description || '';
     if (descriptionSource) {
-        // Use regex stripping consistently. This is safe for SSR and client.
         plainTextDescription = descriptionSource.replace(/<[^>]+>/g, '');
     }
 
@@ -256,18 +268,18 @@ export default function ProductOptionsPage() {
 
     setActiveViewIdForSetup(finalDefaultViews[0]?.id || null);
     setSelectedBoundaryBoxId(null);
-    setHasUnsavedChanges(isRefreshing); 
+    setHasUnsavedChanges(isRefresh); 
     setIsLoading(false); setIsRefreshing(false);
-    if (isRefreshing) toast({ title: "Product Data Refreshed", description: "Details updated from store."});
+    if (isRefresh) toast({ title: "Product Data Refreshed", description: "Details updated from your store."});
 
-  }, [productId, user?.id, toast, isRefreshing]);
+  }, [productId, user?.id, toast]);
 
   useEffect(() => {
-    fetchAndSetProductData();
-  }, [fetchAndSetProductData]);
+    fetchAndSetProductData(false); // Initial fetch
+  }, [fetchAndSetProductData]); // Removed productId and user.id as fetchAndSetProductData already uses them
 
   const handleRefreshData = () => {
-    setIsRefreshing(true); 
+    fetchAndSetProductData(true); // Refresh fetch
   };
 
   const getPointerCoords = (e: MouseEvent | TouchEvent | React.MouseEvent | React.TouchEvent) => {
@@ -587,9 +599,23 @@ export default function ProductOptionsPage() {
   };
 
 
-  if (isLoading && !isRefreshing) return <div className="flex items-center justify-center min-h-screen bg-background"><Loader2 className="h-10 w-10 animate-spin text-primary" /><p className="ml-3">Loading...</p></div>;
-  if (error && !productOptions) return <div className="flex flex-col items-center justify-center min-h-screen bg-background p-4"><AlertTriangle className="h-12 w-12 text-destructive mb-4" /><h2 className="text-xl font-semibold text-destructive mb-2">Error</h2><p className="text-muted-foreground text-center mb-6">{error}</p><Button variant="outline" asChild><Link href="/dashboard"><ArrowLeft className="mr-2 h-4 w-4" />Back</Link></Button></div>;
-  if (!productOptions) return <div className="flex flex-col items-center justify-center min-h-screen bg-background p-4"><AlertTriangle className="h-12 w-12 text-muted-foreground mb-4" /><h2 className="text-xl font-semibold text-muted-foreground mb-2">Not Found</h2><p className="text-muted-foreground text-center mb-6">Product could not be loaded.</p><Button variant="outline" asChild><Link href="/dashboard"><ArrowLeft className="mr-2 h-4 w-4" />Back</Link></Button></div>;
+  if (isLoading && !isRefreshing) return <div className="flex items-center justify-center min-h-screen bg-background"><Loader2 className="h-10 w-10 animate-spin text-primary" /><p className="ml-3">Loading product options...</p></div>;
+  if (error && !productOptions) return (
+    <div className="flex flex-col items-center justify-center min-h-screen bg-background p-4">
+      <AlertTriangle className="h-12 w-12 text-destructive mb-4" />
+      <h2 className="text-xl font-semibold text-destructive mb-2">Error Loading Product Options</h2>
+      <p className="text-muted-foreground text-center mb-6">{error}</p>
+      {error.includes("store not connected") && (
+         <Button variant="link" asChild>
+            <Link href="/dashboard"><PlugZap className="mr-2 h-4 w-4" />Go to Dashboard to Connect</Link>
+        </Button>
+      )}
+      <Button variant="outline" asChild className="mt-2">
+        <Link href="/dashboard"><ArrowLeft className="mr-2 h-4 w-4" />Back to Dashboard</Link>
+      </Button>
+    </div>
+  );
+  if (!productOptions) return <div className="flex flex-col items-center justify-center min-h-screen bg-background p-4"><AlertTriangle className="h-12 w-12 text-muted-foreground mb-4" /><h2 className="text-xl font-semibold text-muted-foreground mb-2">Product Not Found</h2><p className="text-muted-foreground text-center mb-6">Could not load options for this product.</p><Button variant="outline" asChild><Link href="/dashboard"><ArrowLeft className="mr-2 h-4 w-4" />Back</Link></Button></div>;
 
   const currentSetupView = productOptions.defaultViews.find(v => v.id === activeViewIdForSetup);
   
@@ -610,19 +636,29 @@ export default function ProductOptionsPage() {
         <Button variant="outline" asChild className="hover:bg-accent hover:text-accent-foreground">
           <Link href="/dashboard"><ArrowLeft className="mr-2 h-4 w-4" />Back to Dashboard</Link>
         </Button>
-        <Button variant="outline" onClick={handleRefreshData} disabled={isRefreshing || isLoading} className="hover:bg-accent hover:text-accent-foreground">
+        <Button variant="outline" onClick={handleRefreshData} disabled={isRefreshing || isLoading || !credentialsExist} className="hover:bg-accent hover:text-accent-foreground">
           {isRefreshing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCcw className="mr-2 h-4 w-4" />}Refresh Product Data
         </Button>
       </div>
 
       <h1 className="text-3xl font-bold tracking-tight mb-2 font-headline text-foreground">Product Options</h1>
       <p className="text-muted-foreground mb-8">Editing for: <span className="font-semibold text-foreground">{productOptions.name}</span> (ID: {productOptions.id})</p>
-      {error && <ShadCnAlert variant="destructive" className="mb-6"><AlertTriangle className="h-4 w-4" /><ShadCnAlertTitle>Product Data Error</ShadCnAlertTitle><ShadCnAlertDescription>{error}</ShadCnAlertDescription></ShadCnAlert>}
+      {!credentialsExist && (
+         <ShadCnAlert variant="destructive" className="mb-6">
+            <PlugZap className="h-4 w-4" />
+            <ShadCnAlertTitle>Store Not Connected</ShadCnAlertTitle>
+            <ShadCnAlertDescription>
+            Your WooCommerce store credentials are not configured. Product data cannot be fetched. 
+            Please go to <Link href="/dashboard" className="underline hover:text-destructive/80">your dashboard</Link> and set them up in the 'Store Integration' tab.
+            </ShadCnAlertDescription>
+        </ShadCnAlert>
+      )}
+      {error && credentialsExist && <ShadCnAlert variant="destructive" className="mb-6"><AlertTriangle className="h-4 w-4" /><ShadCnAlertTitle>Product Data Error</ShadCnAlertTitle><ShadCnAlertDescription>{error}</ShadCnAlertDescription></ShadCnAlert>}
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
         <div className="md:col-span-2 space-y-6">
           <Card className="shadow-md">
-            <CardHeader><CardTitle className="font-headline text-lg">Base Product Information</CardTitle><CardDescription>From WooCommerce (Read-only).</CardDescription></CardHeader>
+            <CardHeader><CardTitle className="font-headline text-lg">Base Product Information</CardTitle><CardDescription>From your WooCommerce store (Read-only).</CardDescription></CardHeader>
             <CardContent className="space-y-4">
               <div><Label htmlFor="productName">Product Name</Label><Input id="productName" value={productOptions.name} className="mt-1 bg-muted/50" readOnly /></div>
               <div><Label htmlFor="productDescription">Description</Label><Textarea id="productDescription" value={productOptions.description} className="mt-1 bg-muted/50" rows={4} readOnly /></div>
@@ -751,12 +787,12 @@ export default function ProductOptionsPage() {
                     })}
                   </div>
                   </>
-                ) : <div className="text-center py-6"><LayersIcon className="mx-auto h-10 w-10 text-muted-foreground" /><p className="mt-3 text-muted-foreground">No variations found or grouping failed.</p></div>}
+                ) : <div className="text-center py-6"><LayersIcon className="mx-auto h-10 w-10 text-muted-foreground" /><p className="mt-3 text-muted-foreground">No variations found or grouping failed for this product.</p></div>}
               </CardContent>
             </Card>
           )}
           {productOptions.type !== 'variable' && (
-            <Card className="shadow-md"><CardHeader><CardTitle className="font-headline text-lg">Product Variations</CardTitle></CardHeader><CardContent className="text-center py-8 text-muted-foreground"><Shirt className="mx-auto h-10 w-10 mb-2" />This is a simple product and does not have variations.</CardContent></Card>
+            <Card className="shadow-md"><CardHeader><CardTitle className="font-headline text-lg">Product Variations</CardTitle></CardHeader><CardContent className="text-center py-8 text-muted-foreground"><Shirt className="mx-auto h-10 w-10 mb-2" />This is a simple product and does not have variations to configure here.</CardContent></Card>
           )}
         </div>
 

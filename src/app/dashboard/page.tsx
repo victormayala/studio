@@ -13,7 +13,7 @@ import { RefreshCcw, MoreHorizontal, Settings, Code, Trash2, AlertTriangle, Load
 import Link from "next/link";
 import { useRouter } from 'next/navigation';
 import NextImage from 'next/image';
-import { fetchWooCommerceProducts } from "@/app/actions/woocommerceActions";
+import { fetchWooCommerceProducts, type WooCommerceCredentials } from "@/app/actions/woocommerceActions";
 import type { WCCustomProduct } from '@/types/woocommerce';
 import {format} from 'date-fns';
 import { useAuth } from "@/contexts/AuthContext";
@@ -58,19 +58,17 @@ export default function DashboardPage() {
 
   const [activeTab, setActiveTab] = useState<ActiveDashboardTab>('products');
 
-  // State for products
   const [products, setProducts] = useState<DisplayProduct[]>([]);
   const [isLoadingProducts, setIsLoadingProducts] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // State for credentials
   const [storeUrl, setStoreUrl] = useState('');
   const [consumerKey, setConsumerKey] = useState('');
   const [consumerSecret, setConsumerSecret] = useState('');
   const [isSavingCredentials, setIsSavingCredentials] = useState(false);
   const [isLoadingCredentials, setIsLoadingCredentials] = useState(true);
+  const [credentialsExist, setCredentialsExist] = useState(false);
 
-  // State for delete confirmation
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [productToDelete, setProductToDelete] = useState<ProductToDelete | null>(null);
 
@@ -99,18 +97,54 @@ export default function DashboardPage() {
     }
   }, [user, toast]);
 
-
-  const loadProductsWithCredentials = useCallback(async (
-    creds?: { storeUrl: string; consumerKey: string; consumerSecret: string },
+  const loadProductsWithUserCredentials = useCallback(async (
     isManualRefresh?: boolean,
-    ignoreHiddenList: boolean = false // New parameter
+    ignoreHiddenList: boolean = false
   ) => {
+    if (!user) {
+      setError("Please sign in to view products.");
+      setIsLoadingProducts(false);
+      return;
+    }
+
     setIsLoadingProducts(true);
     setError(null);
     const startTime = Date.now();
 
+    let userCredentials: WooCommerceCredentials | undefined;
     try {
-      const { products: fetchedProducts, error: fetchError } = await fetchWooCommerceProducts(creds);
+      const userStoreUrl = localStorage.getItem(`wc_store_url_${user.id}`);
+      const userConsumerKey = localStorage.getItem(`wc_consumer_key_${user.id}`);
+      const userConsumerSecret = localStorage.getItem(`wc_consumer_secret_${user.id}`);
+
+      if (userStoreUrl && userConsumerKey && userConsumerSecret) {
+        userCredentials = { storeUrl: userStoreUrl, consumerKey: userConsumerKey, consumerSecret: userConsumerSecret };
+        setCredentialsExist(true);
+      } else {
+        setCredentialsExist(false);
+        setError("WooCommerce store not connected. Please go to 'Store Integration' to connect your store.");
+        setProducts([]);
+        setIsLoadingProducts(false);
+        if (isManualRefresh) {
+          toast({
+            title: "Store Not Connected",
+            description: "Please connect your WooCommerce store first.",
+            variant: "default",
+          });
+        }
+        return;
+      }
+    } catch (storageError) {
+        console.error("Error accessing localStorage for WC credentials:", storageError);
+        setError("Could not load your store credentials. Please try saving them again in 'Store Integration'.");
+        setProducts([]);
+        setIsLoadingProducts(false);
+        return;
+    }
+    
+
+    try {
+      const { products: fetchedProducts, error: fetchError } = await fetchWooCommerceProducts(userCredentials);
       const duration = Date.now() - startTime;
 
       if (fetchError) {
@@ -137,7 +171,7 @@ export default function DashboardPage() {
         if (isManualRefresh) {
             toast({
             title: "Products Refreshed",
-            description: `Fetched ${displayProducts.length} products in ${duration}ms. ${creds ? 'Used user credentials.' : 'Used global credentials.'} ${ignoreHiddenList ? 'Hidden items temporarily shown.' : ''}`,
+            description: `Fetched ${displayProducts.length} products using your saved credentials in ${duration}ms. ${ignoreHiddenList ? 'Hidden items temporarily shown.' : ''}`,
             });
         }
       } else {
@@ -145,7 +179,7 @@ export default function DashboardPage() {
          if (isManualRefresh) {
             toast({
             title: "No Products Found",
-            description: "No products were returned from the store.",
+            description: "No products were returned from your store.",
             });
          }
       }
@@ -161,26 +195,35 @@ export default function DashboardPage() {
     } finally {
       setIsLoadingProducts(false);
     }
-  }, [toast, getLocallyHiddenProductIds]);
+  }, [user, toast, getLocallyHiddenProductIds]);
 
   useEffect(() => {
     if (user) {
       setIsLoadingCredentials(true);
-      const savedStoreUrl = localStorage.getItem(`wc_store_url_${user.id}`);
-      const savedConsumerKey = localStorage.getItem(`wc_consumer_key_${user.id}`);
-      const savedConsumerSecret = localStorage.getItem(`wc_consumer_secret_${user.id}`);
+      try {
+        const savedStoreUrl = localStorage.getItem(`wc_store_url_${user.id}`);
+        const savedConsumerKey = localStorage.getItem(`wc_consumer_key_${user.id}`);
+        const savedConsumerSecret = localStorage.getItem(`wc_consumer_secret_${user.id}`);
 
-      setStoreUrl(savedStoreUrl || '');
-      setConsumerKey(savedConsumerKey || '');
-      setConsumerSecret(savedConsumerSecret || '');
-      setIsLoadingCredentials(false);
+        setStoreUrl(savedStoreUrl || '');
+        setConsumerKey(savedConsumerKey || '');
+        setConsumerSecret(savedConsumerSecret || '');
+        setCredentialsExist(!!(savedStoreUrl && savedConsumerKey && savedConsumerSecret));
+      } catch (e) {
+        console.error("Error reading credentials from localStorage on mount:", e);
+        toast({ title: "Credential Load Error", description: "Could not read saved credentials.", variant: "destructive"});
+        setCredentialsExist(false);
+      } finally {
+        setIsLoadingCredentials(false);
+      }
     } else {
       setStoreUrl('');
       setConsumerKey('');
       setConsumerSecret('');
+      setCredentialsExist(false);
       setIsLoadingCredentials(false); 
     }
-  }, [user]);
+  }, [user, toast]);
 
 
   const handleSaveCredentials = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -192,18 +235,20 @@ export default function DashboardPage() {
       localStorage.setItem(`wc_store_url_${user.id}`, storeUrl);
       localStorage.setItem(`wc_consumer_key_${user.id}`, consumerKey);
       localStorage.setItem(`wc_consumer_secret_${user.id}`, consumerSecret);
+      setCredentialsExist(true);
       toast({
         title: "Credentials Saved (Locally)",
         description: "Your WooCommerce credentials have been saved in this browser.",
       });
       
       if (activeTab === 'products') {
-         loadProductsWithCredentials({ storeUrl, consumerKey, consumerSecret }, true, false); // false for ignoreHiddenList
+         loadProductsWithUserCredentials(true, false); 
       }
     } catch (error) {
+      setCredentialsExist(false);
       toast({
         title: "Error Saving Credentials",
-        description: "Could not save credentials to local storage.",
+        description: "Could not save credentials to local storage. Ensure localStorage is enabled and not full.",
         variant: "destructive",
       });
       console.error("Error saving to localStorage:", error);
@@ -222,12 +267,14 @@ export default function DashboardPage() {
       setStoreUrl('');
       setConsumerKey('');
       setConsumerSecret('');
+      setCredentialsExist(false);
       toast({
         title: "Credentials Cleared",
         description: "Your WooCommerce credentials have been removed from this browser.",
       });
        if (activeTab === 'products') {
-        loadProductsWithCredentials(undefined, true, false); // false for ignoreHiddenList
+        setProducts([]); // Clear products as credentials are gone
+        setError("WooCommerce store not connected. Please go to 'Store Integration' to connect your store.");
       }
     } catch (error) {
       toast({
@@ -243,32 +290,29 @@ export default function DashboardPage() {
 
   const handleRefreshDashboardData = useCallback(() => {
     if (user && !isLoadingCredentials) {
-      const userStoreUrl = localStorage.getItem(`wc_store_url_${user.id}`);
-      const userConsumerKey = localStorage.getItem(`wc_consumer_key_${user.id}`);
-      const userConsumerSecret = localStorage.getItem(`wc_consumer_secret_${user.id}`);
-
-      if (userStoreUrl && userConsumerKey && userConsumerSecret) {
-        loadProductsWithCredentials({ storeUrl: userStoreUrl, consumerKey: userConsumerKey, consumerSecret: userConsumerSecret }, true, true); // true for ignoreHiddenList
+      if (credentialsExist) {
+         loadProductsWithUserCredentials(true, true);
       } else {
-        loadProductsWithCredentials(undefined, true, true); // true for ignoreHiddenList
+         setError("WooCommerce store not connected. Please go to 'Store Integration' to connect your store.");
+         setProducts([]);
+         toast({
+            title: "Cannot Refresh",
+            description: "Please connect your WooCommerce store first.",
+            variant: "default",
+          });
       }
-    } else if (!user && !isLoadingCredentials) {
-      loadProductsWithCredentials(undefined, true, true); // true for ignoreHiddenList
     }
-  }, [user, isLoadingCredentials, loadProductsWithCredentials]);
+  }, [user, isLoadingCredentials, loadProductsWithUserCredentials, credentialsExist, toast]);
 
   useEffect(() => {
     if (activeTab === 'products' && user && !isLoadingCredentials && products.length === 0 && !isLoadingProducts && !error) {
-      const userStoreUrl = localStorage.getItem(`wc_store_url_${user.id}`);
-      const userConsumerKey = localStorage.getItem(`wc_consumer_key_${user.id}`);
-      const userConsumerSecret = localStorage.getItem(`wc_consumer_secret_${user.id}`);
-      if (userStoreUrl && userConsumerKey && userConsumerSecret) {
-        loadProductsWithCredentials({ storeUrl: userStoreUrl, consumerKey: userConsumerKey, consumerSecret: userConsumerSecret }, false, false); // Initial load respects hidden list
-      } else {
-        loadProductsWithCredentials(undefined, false, false); // Initial load respects hidden list
-      }
+       if (credentialsExist) {
+        loadProductsWithUserCredentials(false, false); 
+       } else if (!isLoadingProducts) { // Avoid setting error if products are already loading due to creds just being set
+         setError("WooCommerce store not connected. Please go to 'Store Integration' to connect your store.");
+       }
     }
-  }, [activeTab, user, isLoadingCredentials, products.length, isLoadingProducts, error, loadProductsWithCredentials]);
+  }, [activeTab, user, isLoadingCredentials, products.length, isLoadingProducts, error, loadProductsWithUserCredentials, credentialsExist]);
 
   const handleDeleteProduct = (product: DisplayProduct) => {
     setProductToDelete({ id: product.id, name: product.name });
@@ -285,7 +329,7 @@ export default function DashboardPage() {
 
     toast({
       title: "Product Hidden",
-      description: `${productToDelete.name} has been hidden from your dashboard. It is not deleted from your store. Click "Refresh Product Data" to see it again.`,
+      description: `${productToDelete.name} has been hidden from your dashboard. It is not deleted from your store. Click "Refresh Product Data" with "ignore hidden" to see it again (if needed).`,
     });
     setProducts(prev => prev.filter(p => p.id !== productToDelete.id)); 
     setIsDeleteDialogOpen(false);
@@ -355,7 +399,7 @@ export default function DashboardPage() {
                     </div>
                     {activeTab === 'products' && (
                        <div className="flex items-center gap-2">
-                        <Button onClick={handleRefreshDashboardData} className="bg-primary text-primary-foreground hover:bg-primary/90" disabled={isLoadingProducts || isLoadingCredentials}>
+                        <Button onClick={handleRefreshDashboardData} className="bg-primary text-primary-foreground hover:bg-primary/90" disabled={isLoadingProducts || isLoadingCredentials || !credentialsExist}>
                           {isLoadingProducts ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <RefreshCcw className="mr-2 h-5 w-5" />}
                           Refresh Product Data
                         </Button>
@@ -368,17 +412,17 @@ export default function DashboardPage() {
                       <CardHeader>
                         <CardTitle className="font-headline text-xl text-card-foreground">Your Products</CardTitle>
                         <CardDescription className="text-muted-foreground">
-                          View, edit, and manage your customizable products.
-                          {!isLoadingCredentials && !storeUrl && !consumerKey && !consumerSecret && (
-                            <span className="block text-orange-500 text-xs mt-1">
-                              <AlertTriangle className="inline h-3 w-3 mr-1" />
-                              No user-specific credentials saved. Using global fallback if available.
+                          View, edit, and manage your customizable products from your connected store.
+                          {!isLoadingCredentials && !credentialsExist && (
+                            <span className="block text-orange-500 text-sm mt-2">
+                              <AlertTriangle className="inline h-4 w-4 mr-1" />
+                              Your WooCommerce store is not connected. Please go to the <Button variant="link" className="p-0 h-auto text-sm text-orange-500 hover:text-orange-600" onClick={() => setActiveTab('storeIntegration')}>Store Integration</Button> tab to connect it.
                             </span>
                           )}
                         </CardDescription>
                       </CardHeader>
                       <CardContent>
-                        {isLoadingProducts || (isLoadingCredentials && products.length === 0) ? ( 
+                        {isLoadingProducts || (isLoadingCredentials && !credentialsExist) ? ( 
                           <div className="flex justify-center items-center py-10">
                             <Loader2 className="h-8 w-8 animate-spin text-primary" />
                             <p className="ml-3 text-muted-foreground">Loading products...</p>
@@ -387,14 +431,14 @@ export default function DashboardPage() {
                           <div className="text-center py-10">
                             <AlertTriangle className="mx-auto h-12 w-12 text-destructive" />
                             <p className="mt-4 text-destructive font-semibold">Error loading products</p>
-                            <p className="text-sm text-muted-foreground mt-1">{error}</p>
-                            {error.includes("WOOCOMMERCE_STORE_URL") && (
-                              <p className="text-xs text-muted-foreground mt-2">
-                                Please ensure global WooCommerce credentials are set in your <code>.env</code> file or configure user-specific credentials in the 'Store Integration' tab.
-                              </p>
+                            <p className="text-sm text-muted-foreground mt-1 px-4">{error}</p>
+                            {error.includes("store not connected") && (
+                              <Button variant="link" onClick={() => setActiveTab('storeIntegration')} className="mt-3">
+                                Go to Store Integration
+                              </Button>
                             )}
                           </div>
-                        ) : products.length > 0 ? (
+                        ) : products.length > 0 && credentialsExist ? (
                           <Table>
                             <TableHeader>
                               <TableRow>
@@ -445,13 +489,24 @@ export default function DashboardPage() {
                               ))}
                             </TableBody>
                           </Table>
-                        ) : (
+                        ) : credentialsExist ? ( // Credentials exist, but no products found
                           <div className="text-center py-10">
                             <PackageIcon className="mx-auto h-12 w-12 text-muted-foreground" />
-                            <p className="mt-4 text-muted-foreground">No products found.</p>
+                            <p className="mt-4 text-muted-foreground">No products found in your connected store.</p>
                             <p className="text-sm text-muted-foreground mt-1">
-                              Click "Refresh Product Data" to fetch from your WooCommerce store.
+                              Click "Refresh Product Data" to try fetching again.
                             </p>
+                          </div>
+                        ) : ( // This case is for when error is null but credentials don't exist (should be caught by above error handling)
+                           <div className="text-center py-10">
+                            <PlugZap className="mx-auto h-12 w-12 text-muted-foreground" />
+                            <p className="mt-4 text-muted-foreground">Please connect your store.</p>
+                            <p className="text-sm text-muted-foreground mt-1">
+                              Go to the 'Store Integration' tab to set up your WooCommerce connection.
+                            </p>
+                             <Button variant="link" onClick={() => setActiveTab('storeIntegration')} className="mt-3">
+                                Connect Store
+                              </Button>
                           </div>
                         )}
                       </CardContent>
@@ -467,7 +522,7 @@ export default function DashboardPage() {
                         </CardDescription>
                       </CardHeader>
                       <CardContent>
-                        {isLoadingCredentials && !storeUrl && !consumerKey && !consumerSecret ? ( 
+                        {isLoadingCredentials ? ( 
                           <div className="flex items-center justify-center py-10">
                             <Loader2 className="h-6 w-6 animate-spin text-primary" />
                             <p className="ml-2 text-muted-foreground">Loading credentials...</p>
@@ -577,7 +632,7 @@ export default function DashboardPage() {
             <AlertDialogTitle>Are you sure?</AlertDialogTitle>
             <AlertDialogDescription>
               This action will hide the product "{productToDelete?.name}" from your dashboard in this browser. 
-              It will not be deleted from your WooCommerce store. Clicking "Refresh Product Data" will show it again.
+              It will not be deleted from your WooCommerce store. Clicking "Refresh Product Data" with "ignore hidden" to see it again.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
