@@ -17,7 +17,6 @@ import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { fetchWooCommerceProductById, fetchWooCommerceProductVariations, type WooCommerceCredentials } from '@/app/actions/woocommerceActions';
-// Removed: import { saveProductOptionsToFirestore, loadProductOptionsFromFirestore, type ProductOptionsFirestoreData } from '@/app/actions/productOptionsActions';
 import { db } from '@/lib/firebase'; 
 import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore'; 
 import type { UserWooCommerceCredentials } from '@/app/actions/userCredentialsActions';
@@ -49,10 +48,8 @@ interface ColorGroupOptions {
   variantViewImages: Record<string, { imageUrl: string; aiHint?: string }>; 
 }
 
-// This interface defines the structure for data stored in Firestore for product options.
-// It includes fields that will have server timestamps.
 export interface ProductOptionsFirestoreData {
-  id: string; // Product ID
+  id: string; 
   name: string;
   description: string;
   price: number;
@@ -60,13 +57,10 @@ export interface ProductOptionsFirestoreData {
   defaultViews: ProductView[];
   optionsByColor: Record<string, ColorGroupOptions>;
   groupingAttributeName: string | null;
-  lastSaved?: any; // Firestore server timestamp
-  createdAt?: any; // Firestore server timestamp
+  lastSaved?: any; 
+  createdAt?: any; 
 }
 
-
-// This interface is used for the component's state, primarily.
-// It doesn't include serverTimestamps as those are handled by Firestore.
 interface ProductOptionsData {
   id: string; 
   name: string; 
@@ -104,7 +98,7 @@ export default function ProductOptionsPage() {
 
   const [productOptions, setProductOptions] = useState<ProductOptionsData | null>(null);
   const [activeViewIdForSetup, setActiveViewIdForSetup] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(true); 
+  const [isLoading, setIsLoading] = useState(true); // Default to true for initial page load
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null); 
@@ -131,182 +125,194 @@ export default function ProductOptionsPage() {
   const fetchAndSetProductData = useCallback(async (isRefresh = false) => {
     if (!user?.uid || !productId || !db) { 
         setError("User or Product ID invalid, or DB not ready.");
-        setIsLoading(false); setIsRefreshing(false);
+        setIsLoading(false); 
+        setIsRefreshing(false);
         return;
     }
-    setError(null); 
     
     if (isRefresh) {
         setIsRefreshing(true);
     } else {
         setIsLoading(true); 
     }
+    setError(null); 
+    setVariationsError(null);
     
-    setVariationsError(null); setVariations([]);
-    setGroupedVariations(null); 
-
-    let userWCCredentialsToUse: WooCommerceCredentials | undefined;
     try {
-      const credDocRef = doc(db, 'userWooCommerceCredentials', user.uid);
-      const credDocSnap = await getDoc(credDocRef);
-      if (credDocSnap.exists()) {
-        const credData = credDocSnap.data() as UserWooCommerceCredentials;
-        userWCCredentialsToUse = { 
-          storeUrl: credData.storeUrl, 
-          consumerKey: credData.consumerKey, 
-          consumerSecret: credData.consumerSecret 
-        };
-        setCredentialsExist(true);
-      } else {
-        setCredentialsExist(false);
-        throw new Error("WooCommerce store not connected. Please go to Dashboard > 'Store Integration' to connect your store first.");
-      }
-    } catch (credError: any) {
-      setError(credError.message);
-      setProductOptions(null); setIsLoading(false); setIsRefreshing(false);
-      toast({ title: "Credential Error", description: credError.message, variant: "destructive"});
-      return;
-    }
-
-    const { product: wcProduct, error: fetchError } = await fetchWooCommerceProductById(productId, userWCCredentialsToUse);
-    if (fetchError || !wcProduct) {
-      setError(fetchError || `Product with ID ${productId} not found in your connected store.`);
-      setProductOptions(null); setIsLoading(false); setIsRefreshing(false);
-      toast({ title: "Error Fetching Product", description: fetchError || `Product ${productId} not found.`, variant: "destructive"});
-      return;
-    }
-    
-    let tempGroupedVariationsData: Record<string, WCVariation[]> | null = null;
-    let identifiedGroupingAttr: string | null = null;
-
-    if (wcProduct.type === 'variable') {
-      setIsLoadingVariations(true);
-      const { variations: fetchedVars, error: varsError } = await fetchWooCommerceProductVariations(productId, userWCCredentialsToUse);
-      if (varsError) {
-        setVariationsError(varsError);
-      } else if (fetchedVars && fetchedVars.length > 0) {
-        setVariations(fetchedVars); 
-        const firstVarAttributes = fetchedVars[0].attributes;
-        const colorAttr = firstVarAttributes.find(attr => attr.name.toLowerCase() === 'color' || attr.name.toLowerCase() === 'colour');
-        if (colorAttr) {
-          identifiedGroupingAttr = colorAttr.name;
+      let userWCCredentialsToUse: WooCommerceCredentials | undefined;
+      try {
+        const credDocRef = doc(db, 'userWooCommerceCredentials', user.uid);
+        const credDocSnap = await getDoc(credDocRef);
+        if (credDocSnap.exists()) {
+          const credData = credDocSnap.data() as UserWooCommerceCredentials;
+          userWCCredentialsToUse = { 
+            storeUrl: credData.storeUrl, 
+            consumerKey: credData.consumerKey, 
+            consumerSecret: credData.consumerSecret 
+          };
+          setCredentialsExist(true);
         } else {
-          const nonSizeAttr = firstVarAttributes.find(attr => !['size', 'talla'].includes(attr.name.toLowerCase()));
-          if (nonSizeAttr) identifiedGroupingAttr = nonSizeAttr.name;
-          else if (firstVarAttributes.length > 0) identifiedGroupingAttr = firstVarAttributes[0].name;
+          setCredentialsExist(false);
+          throw new Error("WooCommerce store not connected. Please go to Dashboard > 'Store Integration' to connect your store first.");
         }
+      } catch (credError: any) {
+        toast({ title: "Credential Error", description: credError.message, variant: "destructive"});
+        throw credError; // Propagate to outer catch
+      }
 
-        if (identifiedGroupingAttr) {
-          const groups: Record<string, WCVariation[]> = {};
-          fetchedVars.forEach(v => {
-            const groupAttr = v.attributes.find(a => a.name === identifiedGroupingAttr);
-            const groupKey = groupAttr ? groupAttr.option : 'Other';
-            if (!groups[groupKey]) groups[groupKey] = [];
-            groups[groupKey].push(v);
-          });
-          tempGroupedVariationsData = groups;
-          setGroupedVariations(groups);
-        } else {
-          tempGroupedVariationsData = { 'All Variations': fetchedVars };
-          setGroupedVariations({ 'All Variations': fetchedVars });
+      const { product: wcProduct, error: fetchError } = await fetchWooCommerceProductById(productId, userWCCredentialsToUse);
+      if (fetchError || !wcProduct) {
+        toast({ title: "Error Fetching Product", description: fetchError || `Product ${productId} not found.`, variant: "destructive"});
+        throw new Error(fetchError || `Product with ID ${productId} not found in your connected store.`);
+      }
+      
+      let tempGroupedVariationsData: Record<string, WCVariation[]> | null = null;
+      let identifiedGroupingAttr: string | null = null;
+
+      if (wcProduct.type === 'variable') {
+        setIsLoadingVariations(true);
+        try {
+            const { variations: fetchedVars, error: varsError } = await fetchWooCommerceProductVariations(productId, userWCCredentialsToUse);
+            if (varsError) {
+                setVariationsError(varsError);
+            } else if (fetchedVars && fetchedVars.length > 0) {
+                setVariations(fetchedVars); 
+                const firstVarAttributes = fetchedVars[0].attributes;
+                const colorAttr = firstVarAttributes.find(attr => attr.name.toLowerCase() === 'color' || attr.name.toLowerCase() === 'colour');
+                if (colorAttr) {
+                identifiedGroupingAttr = colorAttr.name;
+                } else {
+                const nonSizeAttr = firstVarAttributes.find(attr => !['size', 'talla'].includes(attr.name.toLowerCase()));
+                if (nonSizeAttr) identifiedGroupingAttr = nonSizeAttr.name;
+                else if (firstVarAttributes.length > 0) identifiedGroupingAttr = firstVarAttributes[0].name;
+                }
+
+                if (identifiedGroupingAttr) {
+                const groups: Record<string, WCVariation[]> = {};
+                fetchedVars.forEach(v => {
+                    const groupAttr = v.attributes.find(a => a.name === identifiedGroupingAttr);
+                    const groupKey = groupAttr ? groupAttr.option : 'Other';
+                    if (!groups[groupKey]) groups[groupKey] = [];
+                    groups[groupKey].push(v);
+                });
+                tempGroupedVariationsData = groups;
+                setGroupedVariations(groups);
+                } else {
+                tempGroupedVariationsData = { 'All Variations': fetchedVars };
+                setGroupedVariations({ 'All Variations': fetchedVars });
+                }
+            }
+        } finally {
+            setIsLoadingVariations(false);
         }
       }
-      setIsLoadingVariations(false);
-    }
 
-    const defaultImageUrl = wcProduct.images && wcProduct.images.length > 0 ? wcProduct.images[0].src : 'https://placehold.co/600x600.png';
-    const defaultAiHint = wcProduct.images && wcProduct.images.length > 0 && wcProduct.images[0].alt ? wcProduct.images[0].alt.split(" ").slice(0,2).join(" ") : 'product image';
-    const initialDefaultViews: ProductView[] = [{ id: crypto.randomUUID(), name: "Front", imageUrl: defaultImageUrl, aiHint: defaultAiHint, boundaryBoxes: [], price: 0 }];
-    
-    let plainTextDescription = 'No description available.';
-    const descriptionSource = wcProduct.description || wcProduct.short_description || '';
-    if (descriptionSource) {
-        plainTextDescription = descriptionSource.replace(/<[^>]+>/g, '');
-    }
+      const defaultImageUrl = wcProduct.images && wcProduct.images.length > 0 ? wcProduct.images[0].src : 'https://placehold.co/600x600.png';
+      const defaultAiHint = wcProduct.images && wcProduct.images.length > 0 && wcProduct.images[0].alt ? wcProduct.images[0].alt.split(" ").slice(0,2).join(" ") : 'product image';
+      const initialDefaultViews: ProductView[] = [{ id: crypto.randomUUID(), name: "Front", imageUrl: defaultImageUrl, aiHint: defaultAiHint, boundaryBoxes: [], price: 0 }];
+      
+      let plainTextDescription = 'No description available.';
+      const descriptionSource = wcProduct.description || wcProduct.short_description || '';
+      if (descriptionSource) { plainTextDescription = descriptionSource.replace(/<[^>]+>/g, ''); }
 
-    let loadedDefaultViews: ProductView[] = [];
-    let loadedOptionsByColor: Record<string, ColorGroupOptions> = {};
-    let loadedGroupingAttributeName: string | null = null;
-    
-    // Client-side loading of product options from Firestore
-    let firestoreOptions: ProductOptionsFirestoreData | undefined;
-    let firestoreLoadError: string | undefined;
-    try {
-      const optionsDocRef = doc(db, 'userProductOptions', user.uid, 'products', productId);
-      const optionsDocSnap = await getDoc(optionsDocRef);
-      if (optionsDocSnap.exists()) {
-        firestoreOptions = optionsDocSnap.data() as ProductOptionsFirestoreData;
+      let loadedDefaultViews: ProductView[] = [];
+      let loadedOptionsByColor: Record<string, ColorGroupOptions> = {};
+      let loadedGroupingAttributeName: string | null = null;
+      
+      let firestoreOptions: ProductOptionsFirestoreData | undefined;
+      try {
+        const optionsDocRef = doc(db, 'userProductOptions', user.uid, 'products', productId);
+        const optionsDocSnap = await getDoc(optionsDocRef);
+        if (optionsDocSnap.exists()) {
+          firestoreOptions = optionsDocSnap.data() as ProductOptionsFirestoreData;
+        }
+      } catch (e: any) {
+        console.error("Error loading product options from Firestore (client-side):", e);
+        toast({ title: "Loading Issue", description: `Could not load saved settings: ${e.message || "Unknown Firestore error"}. Using defaults.`, variant: "default" });
+        // Not throwing here, will proceed with defaults if settings are missing or fail to load
       }
+
+      if (firestoreOptions) {
+          loadedDefaultViews = firestoreOptions.defaultViews.map((view: any) => ({ ...view, price: view.price ?? 0 })) || [];
+          loadedOptionsByColor = firestoreOptions.optionsByColor || {};
+          loadedGroupingAttributeName = firestoreOptions.groupingAttributeName || null;
+      }
+
+      const finalDefaultViews = loadedDefaultViews.length > 0 ? loadedDefaultViews : initialDefaultViews;
+      let finalOptionsByColor = loadedOptionsByColor;
+      if (!firestoreOptions && tempGroupedVariationsData) { 
+          finalOptionsByColor = {};
+          Object.keys(tempGroupedVariationsData).forEach(colorKey => { finalOptionsByColor[colorKey] = { selectedVariationIds: [], variantViewImages: {} }; });
+      } else if (!firestoreOptions && wcProduct.type !== 'variable') { 
+          finalOptionsByColor = { 'default': { selectedVariationIds: [], variantViewImages: {} }};
+      }
+
+      setProductOptions({
+        id: wcProduct.id.toString(), name: wcProduct.name || `Product ${productId}`, description: plainTextDescription,
+        price: parseFloat(wcProduct.price) || 0, type: wcProduct.type,
+        defaultViews: finalDefaultViews.map(view => ({...view, price: view.price ?? 0})), 
+        optionsByColor: finalOptionsByColor,
+        groupingAttributeName: loadedGroupingAttributeName || identifiedGroupingAttr,
+      });
+
+      setActiveViewIdForSetup(finalDefaultViews[0]?.id || null);
+      setSelectedBoundaryBoxId(null);
+      setHasUnsavedChanges(isRefresh ? hasUnsavedChanges : false); 
+      if (isRefresh) toast({ title: "Product Data Refreshed", description: "Details updated from your store."});
+
     } catch (e: any) {
-      console.error("Error loading product options from Firestore (client-side):", e);
-      firestoreLoadError = `Failed to load customizer settings: ${e.message || "Unknown Firestore error"}`;
+        console.error("Error in fetchAndSetProductData:", e.message);
+        setError(e.message);
+        setProductOptions(null);
+    } finally {
+        if (isRefresh) setIsRefreshing(false);
+        setIsLoading(false); // Ensure main loading is always set to false
     }
-
-    if (firestoreLoadError) {
-        console.warn("Error loading from Firestore, will use defaults or WC data:", firestoreLoadError);
-        toast({ title: "Loading Issue", description: `Could not load saved settings: ${firestoreLoadError}. Using defaults.`, variant: "default" });
-    }
-
-    if (firestoreOptions) {
-        loadedDefaultViews = firestoreOptions.defaultViews.map((view: any) => ({ ...view, price: view.price ?? 0 })) || [];
-        loadedOptionsByColor = firestoreOptions.optionsByColor || {};
-        loadedGroupingAttributeName = firestoreOptions.groupingAttributeName || null;
-    }
-
-
-    const finalDefaultViews = loadedDefaultViews.length > 0 ? loadedDefaultViews : initialDefaultViews;
-    
-    let finalOptionsByColor = loadedOptionsByColor;
-    if (!firestoreOptions && tempGroupedVariationsData) { 
-        finalOptionsByColor = {};
-        Object.keys(tempGroupedVariationsData).forEach(colorKey => {
-            finalOptionsByColor[colorKey] = { selectedVariationIds: [], variantViewImages: {} };
-        });
-    } else if (!firestoreOptions && wcProduct.type !== 'variable') { 
-        finalOptionsByColor = { 'default': { selectedVariationIds: [], variantViewImages: {} }};
-    }
-
-
-    setProductOptions({
-      id: wcProduct.id.toString(), name: wcProduct.name || `Product ${productId}`, description: plainTextDescription,
-      price: parseFloat(wcProduct.price) || 0, type: wcProduct.type,
-      defaultViews: finalDefaultViews.map(view => ({...view, price: view.price ?? 0})), 
-      optionsByColor: finalOptionsByColor,
-      groupingAttributeName: loadedGroupingAttributeName || identifiedGroupingAttr,
-    });
-
-    setActiveViewIdForSetup(finalDefaultViews[0]?.id || null);
-    setSelectedBoundaryBoxId(null);
-    setHasUnsavedChanges(isRefresh ? hasUnsavedChanges : false); 
-    setIsLoading(false); setIsRefreshing(false);
-    if (isRefresh) toast({ title: "Product Data Refreshed", description: "Details updated from your store."});
-
   }, [productId, user?.uid, toast, hasUnsavedChanges]); 
 
 
   useEffect(() => {
-    if (authIsLoading) {
-      setError(null); 
-      return;
-    }
-    if (!user) {
-      setError("User not authenticated. Please sign in."); 
-      setIsLoading(false); 
-      setProductOptions(null); 
-      return;
-    }
-    if (!productId) {
-      setError("Product ID is missing."); 
-      setIsLoading(false); 
-      setProductOptions(null); 
-      return;
-    }
+    let didCancel = false;
+
+    const loadInitialData = async () => {
+        if (authIsLoading) {
+            if (!didCancel) setIsLoading(true); // Keep page loading while auth resolves
+            return;
+        }
+        if (!user) {
+            if (!didCancel) {
+                setError("User not authenticated. Please sign in.");
+                setIsLoading(false);
+                setProductOptions(null);
+            }
+            return;
+        }
+        if (!productId) {
+            if (!didCancel) {
+                setError("Product ID is missing.");
+                setIsLoading(false);
+                setProductOptions(null);
+            }
+            return;
+        }
+
+        // Fetch data only if productOptions are not yet loaded (initial load scenario)
+        // isLoading check prevents re-fetch if one is already in progress from another trigger (though less likely with this structure)
+        if (!productOptions && !isLoading && !error) { 
+            await fetchAndSetProductData(false); // isRefresh = false
+        } else if (productOptions || error) {
+            // If data already loaded or an error previously occurred, ensure loading is off
+            if (!didCancel) setIsLoading(false);
+        }
+        // If isLoading is true, a fetch is in progress (likely initial from useState(true) or from fetchAndSetProductData itself), so do nothing more here.
+    };
     
-    if (!productOptions && !error && !isLoading) {
-      fetchAndSetProductData(false);
-    }
-  
-  }, [authIsLoading, user, productId, productOptions, error, isLoading, fetchAndSetProductData]);
+    loadInitialData();
+
+    return () => {
+        didCancel = true;
+    };
+  }, [authIsLoading, user, productId, fetchAndSetProductData, productOptions, isLoading, error]);
 
 
   const handleRefreshData = () => {
@@ -654,7 +660,7 @@ export default function ProductOptionsPage() {
   };
 
 
-  if (authIsLoading || (isLoading && !error && !productOptions)) {
+  if (isLoading) {
     return <div className="flex items-center justify-center min-h-screen bg-background"><Loader2 className="h-10 w-10 animate-spin text-primary" /><p className="ml-3">Loading product options...</p></div>;
   }
   
@@ -933,4 +939,6 @@ export default function ProductOptionsPage() {
     </div>
   );
 }
+    
+
     
