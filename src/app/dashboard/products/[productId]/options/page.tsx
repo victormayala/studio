@@ -226,8 +226,12 @@ export default function ProductOptionsPage() {
           firestoreOptions = optionsDocSnap.data() as ProductOptionsFirestoreData;
         }
       } catch (e: any) {
-        console.error("Error loading product options from Firestore (client-side):", e);
-        toast({ title: "Loading Issue", description: `Could not load saved settings: ${e.message || "Unknown Firestore error"}. Using defaults.`, variant: "default" });
+        let detailedError = `Could not load saved settings: ${e.message || "Unknown Firestore error"}. Using defaults.`;
+        if (e.code === 'permission-denied' || e.message?.includes('Missing or insufficient permissions')) {
+          detailedError += " This could be a Firestore security rule issue.";
+        }
+        console.error("Error loading product options from Firestore (client-side):", detailedError, e);
+        toast({ title: "Loading Issue", description: detailedError, variant: "default" });
       }
 
       if (firestoreOptions) {
