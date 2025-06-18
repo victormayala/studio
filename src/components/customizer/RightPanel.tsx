@@ -1,6 +1,7 @@
 
 "use client";
 
+import React from 'react'; // Import React for React.memo
 import GridControls from './GridControls'; 
 import HistoryControls from './HistoryControls'; 
 import ViewSwitcher from './ViewSwitcher';
@@ -25,7 +26,7 @@ interface RightPanelProps {
   productVariations?: WCVariation[] | null; 
 }
 
-export default function RightPanel({ 
+const RightPanelComponent = ({ 
   showGrid, 
   toggleGrid,
   showBoundaryBoxes, 
@@ -38,7 +39,7 @@ export default function RightPanel({
   selectedVariationOptions,
   onVariantOptionSelect,
   productVariations, 
-}: RightPanelProps) {
+}: RightPanelProps) => {
   return (
   <div 
     id="right-panel-content"
@@ -111,3 +112,7 @@ export default function RightPanel({
   </div>
   );
 }
+
+const RightPanel = React.memo(RightPanelComponent);
+RightPanel.displayName = 'RightPanel';
+export default RightPanel;

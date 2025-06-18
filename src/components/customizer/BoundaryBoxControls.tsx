@@ -1,6 +1,7 @@
 
 "use client";
 
+import React from 'react'; // Import React for React.memo
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { BoxSelect } from "lucide-react";
@@ -10,7 +11,7 @@ interface BoundaryBoxControlsProps {
   toggleBoundaryBoxes: () => void;
 }
 
-export default function BoundaryBoxControls({ showBoundaryBoxes, toggleBoundaryBoxes }: BoundaryBoxControlsProps) {
+const BoundaryBoxControlsComponent = ({ showBoundaryBoxes, toggleBoundaryBoxes }: BoundaryBoxControlsProps) => {
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between rounded-lg border p-3 shadow-sm bg-muted/20">
@@ -34,3 +35,6 @@ export default function BoundaryBoxControls({ showBoundaryBoxes, toggleBoundaryB
   );
 }
 
+const BoundaryBoxControls = React.memo(BoundaryBoxControlsComponent);
+BoundaryBoxControls.displayName = 'BoundaryBoxControls';
+export default BoundaryBoxControls;

@@ -235,27 +235,27 @@ function CustomizerLayoutAndLogic() {
   const toggleRightSidebar = useCallback(() => setIsRightSidebarOpen(prev => !prev), []);
 
 
-  const handleVariantOptionSelect = (attributeName: string, optionValue: string) => {
+  const handleVariantOptionSelect = useCallback((attributeName: string, optionValue: string) => {
     setSelectedVariationOptions(prev => ({
       ...prev,
       [attributeName]: optionValue,
     }));
-  };
+  }, []);
 
   const loadCustomizerData = useCallback(async (productIdToLoad: string | null, wpApiBaseUrlToUse: string | null) => {
     setIsLoading(true);
     setError(null);
     
     let shouldResetFullState = false;
-    if (!productDetails) { // Initial load
+    if (!productDetails) { 
         shouldResetFullState = true;
-    } else if (productIdToLoad && productDetails.id !== productIdToLoad) { // Product ID changed
+    } else if (productIdToLoad && productDetails.id !== productIdToLoad) { 
         shouldResetFullState = true;
-    } else if (productIdToLoad && productDetails.id === productIdToLoad) { // Same product, check if proxy mode changed
+    } else if (productIdToLoad && productDetails.id === productIdToLoad) { 
         if ((productDetails.meta?.proxyUsed ?? false) !== (!!wpApiBaseUrlToUse)) {
             shouldResetFullState = true;
         }
-    } else if (!productIdToLoad && productDetails.id !== defaultFallbackProduct.id) { // Product ID removed, was not fallback
+    } else if (!productIdToLoad && productDetails.id !== defaultFallbackProduct.id) { 
         shouldResetFullState = true;
     }
 
@@ -269,7 +269,6 @@ function CustomizerLayoutAndLogic() {
         setLoadedGroupingAttributeName(null);
         setTotalCustomizationPrice(0);
     } else if (productDetails && !productIdToLoad && productDetails.id === defaultFallbackProduct.id && !error) {
-      // Already showing fallback and no new product ID, so no change needed
       setIsLoading(false);
       return;
     }
@@ -287,7 +286,6 @@ function CustomizerLayoutAndLogic() {
     }
     
     if (!productIdToLoad && wpApiBaseUrlToUse) {
-        // This case might indicate an attempt to use proxy without a product ID, which is an error.
         setError("Product ID is missing from URL. Cannot load product via proxy. Displaying default customizer.");
         const defaultViewsError = defaultFallbackProduct.views;
         const baseImagesMapError: Record<string, {url: string, aiHint?: string, price?: number}> = {};
@@ -299,17 +297,15 @@ function CustomizerLayoutAndLogic() {
         return;
     }
 
-    // At this point, productIdToLoad must be valid.
-    if (!productIdToLoad) { // Should be caught by above, but as a safeguard
+    if (!productIdToLoad) { 
         setError("Invalid state: Product ID became null unexpectedly. Displaying default.");
         setProductDetails({...defaultFallbackProduct, meta: { proxyUsed: !!wpApiBaseUrlToUse }});
         setIsLoading(false);
         return;
     }
 
-    // If not using proxy, but we are in authLoading state and don't have a user.uid yet, return to wait.
     if (authLoading && !user?.uid && !wpApiBaseUrlToUse) { 
-      setIsLoading(false); // Not truly loading product data yet, waiting for auth.
+      setIsLoading(false); 
       return; 
     }
 
@@ -317,7 +313,7 @@ function CustomizerLayoutAndLogic() {
     let fetchError: string | undefined;
     let userWCCredentialsToUse: WooCommerceCredentials | undefined;
 
-    if (user?.uid && !wpApiBaseUrlToUse) { // Only try to load user credentials if NOT using proxy
+    if (user?.uid && !wpApiBaseUrlToUse) { 
       try {
         const credDocRef = doc(db, 'userWooCommerceCredentials', user.uid);
         const credDocSnap = await getDoc(credDocRef);
@@ -328,17 +324,36 @@ function CustomizerLayoutAndLogic() {
             consumerKey: credData.consumerKey, 
             consumerSecret: credData.consumerSecret 
           };
-        } else if (!isEmbedded) { // Don't toast in embedded mode for missing user credentials
-          toast({ title: "WooCommerce Credentials Note", description: "No saved WooCommerce credentials for this user. Product data might be limited or use defaults.", variant: "default" });
+        } else if (!isEmbedded) {
+          let message = "WooCommerce API credentials are not configured. Please connect your store in the 'Store Integration' section.";
+          if(isEmbedded && wpApiBaseUrlToUse) {
+             message = `Product (ID: ${productIdToLoad}) could not load. The embedding site may need to configure its WordPress plugin settings for Customizer Studio, or ensure its WooCommerce store allows API access.`;
+          } else if (isEmbedded && !wpApiBaseUrlToUse) {
+            message = `Product (ID: ${productIdToLoad}) requires the embedding site to provide a WordPress API proxy, or to enable direct user credential access.`;
+          }
+          setError(message + " Using default product view.");
+          // Immediately set fallback and return if critical credentials are missing for direct access
+          const defaultViewsError = defaultFallbackProduct.views;
+          const baseImagesMapError: Record<string, {url: string, aiHint?: string, price?: number}> = {};
+          defaultViewsError.forEach(view => { baseImagesMapError[view.id] = { url: view.imageUrl, aiHint: view.aiHint, price: view.price ?? 0 }; });
+          setViewBaseImages(baseImagesMapError);
+          setProductDetails({...defaultFallbackProduct, meta: { proxyUsed: !!wpApiBaseUrlToUse }});
+          setActiveViewId(defaultViewsError[0]?.id || null);
+          setConfigurableAttributes([]);
+          setSelectedVariationOptions({});
+          setIsLoading(false);
+          if (!isEmbedded) {
+            toast({ title: "WooCommerce Connection Note", description: "No saved WooCommerce credentials for this user.", variant: "default" });
+          }
+          return;
         }
       } catch (credError: any) {
-          if (!isEmbedded && user?.uid) { // Only toast if not embedded and user exists
+          if (!isEmbedded && user?.uid) { 
             toast({ title: "WooCommerce Connection Error", description: credError.message || "Could not load your WooCommerce store credentials.", variant: "destructive" });
           }
       }
     }
     
-    // Pass wpApiBaseUrlToUse to fetchWooCommerceProductById
     ({ product: wcProduct, error: fetchError } = await fetchWooCommerceProductById(productIdToLoad, userWCCredentialsToUse, wpApiBaseUrlToUse || undefined));
 
     if (fetchError || !wcProduct) {
@@ -348,7 +363,6 @@ function CustomizerLayoutAndLogic() {
       } else if (isEmbedded && wpApiBaseUrlToUse && fetchError) {
          displayError = `Failed to load product (ID: ${productIdToLoad}) via WordPress proxy. Please ensure the Customizer Studio plugin is configured correctly on your WordPress site. Original error: ${fetchError}`;
       } else if (isEmbedded && !wpApiBaseUrlToUse && (fetchError && (fetchError.includes("credentials are not configured") || fetchError.includes("required.")))) {
-         // This scenario is less likely now since unauthenticated users wouldn't attempt to load direct creds.
          displayError = `This product customizer (ID: ${productIdToLoad}) requires an API proxy from the embedding site, or the site needs user credentials. Original error: ${fetchError}`;
       } else if (user?.uid && !wpApiBaseUrlToUse && (fetchError && (fetchError.includes("credentials are not configured") || fetchError.includes("User-specific WooCommerce credentials are required")))) {
          displayError = `WooCommerce API credentials are not configured for your account. Please connect your store in the Dashboard > 'Store Integration' section.`;
@@ -362,10 +376,10 @@ function CustomizerLayoutAndLogic() {
       setViewBaseImages(baseImagesMapError);
       setProductDetails({...defaultFallbackProduct, meta: { proxyUsed: !!wpApiBaseUrlToUse }});
       setActiveViewId(defaultViewsError[0]?.id || null);
-      setConfigurableAttributes([]); // Ensure reset on error
-      setSelectedVariationOptions({}); // Ensure reset on error
+      setConfigurableAttributes([]); 
+      setSelectedVariationOptions({}); 
       setIsLoading(false);
-      if (!isEmbedded && user?.uid && !wpApiBaseUrlToUse) { // Don't toast in embedded or if no user
+      if (!isEmbedded && user?.uid && !wpApiBaseUrlToUse) { 
         toast({ title: "Product Load Error", description: fetchError || `Product ${productIdToLoad} not found.`, variant: "destructive"});
       }
       return;
@@ -375,13 +389,12 @@ function CustomizerLayoutAndLogic() {
     let tempLoadedOptionsByColor: Record<string, ColorGroupOptionsForCustomizer> | null = null;
     let tempLoadedGroupingAttributeName: string | null = null;
 
-    // Only try to load user-specific options if user exists and not using proxy
     if (user?.uid && !wpApiBaseUrlToUse) { 
       const { options: firestoreOptions, error: firestoreLoadError } = await loadProductOptionsFromFirestore(user.uid, productIdToLoad);
 
       if (firestoreLoadError) {
         console.warn("Customizer: Error loading options from Firestore:", firestoreLoadError);
-        if (!isEmbedded) { // Don't toast this in embedded mode
+        if (!isEmbedded) { 
             toast({ title: "Settings Load Error", description: "Could not load saved Customizer Studio settings from cloud. Using product defaults.", variant: "default"});
         }
       }
@@ -392,7 +405,7 @@ function CustomizerLayoutAndLogic() {
       }
     }
 
-    if (finalDefaultViews.length === 0) { // If no Firestore options or couldn't load them
+    if (finalDefaultViews.length === 0) { 
         finalDefaultViews = [
             {
                 id: `default_view_wc_${wcProduct.id}`,
@@ -426,7 +439,6 @@ function CustomizerLayoutAndLogic() {
     setActiveViewId(finalDefaultViews[0]?.id || null);
 
     if (wcProduct.type === 'variable') {
-      // Pass wpApiBaseUrlToUse to fetchWooCommerceProductVariations
       const { variations: fetchedVariations, error: variationsError } = await fetchWooCommerceProductVariations(productIdToLoad, userWCCredentialsToUse, wpApiBaseUrlToUse || undefined);
       if (variationsError) {
         if (!isEmbedded || (user?.uid && !wpApiBaseUrlToUse)) toast({ title: "Variations Load Error", description: variationsError, variant: "destructive" });
@@ -467,38 +479,39 @@ function CustomizerLayoutAndLogic() {
          setConfigurableAttributes([]);
          setSelectedVariationOptions({});
       }
-    } else { // Not a variable product
+    } else { 
         setProductVariations(null);
         setConfigurableAttributes([]);
         setSelectedVariationOptions({});
     }
 
     setIsLoading(false);
-  }, [user?.uid, authLoading, toast, isEmbedded, productDetails, error]); // Added productDetails & error
+  }, [user?.uid, authLoading, toast, isEmbedded, productDetails, error]); 
 
 
   useEffect(() => {
-    // Wait for auth state to resolve if not using proxy.
-    // If using proxy, or if auth state is resolved (user or no user defined), proceed.
     if (authLoading && !user && !wpApiBaseUrlFromUrl) {
       return; 
     }
-    loadCustomizerData(productIdFromUrl, wpApiBaseUrlFromUrl);
-  }, [authLoading, user, productIdFromUrl, wpApiBaseUrlFromUrl, loadCustomizerData]);
+    // Only call if productIdFromUrl is not null/empty OR if wpApiBaseUrl is also null/empty (to load fallback)
+    if ((productIdFromUrl && productIdFromUrl.trim() !== '') || (!productIdFromUrl && !wpApiBaseUrlFromUrl) ) {
+        loadCustomizerData(productIdFromUrl, wpApiBaseUrlFromUrl);
+    } else if (!productIdFromUrl && wpApiBaseUrlFromUrl && !productDetails && !isLoading && !error) {
+        // Case where proxy URL is given but no product ID, force load fallback if not already loading/errored/loaded
+        loadCustomizerData(null, wpApiBaseUrlFromUrl);
+    }
+  }, [authLoading, user, productIdFromUrl, wpApiBaseUrlFromUrl, loadCustomizerData, productDetails, isLoading, error]);
 
 
  useEffect(() => {
     if (!productDetails || !viewBaseImages) {
       return;
     }
-    // For variable products, ensure variations (if applicable) are loaded or there are no selected options yet.
     if (productDetails.type === 'variable' && !productVariations && Object.keys(selectedVariationOptions).length > 0) {
         return;
     }
 
-    // Find the matching variation based on selected options
     const matchingVariation = productDetails.type === 'variable' && productVariations ? productVariations.find(variation => {
-      // If no options are selected but there are configurable attributes, it means we haven't selected a full variation yet.
       if (Object.keys(selectedVariationOptions).length === 0 && configurableAttributes && configurableAttributes.length > 0) return false;
       return variation.attributes.every(
         attr => selectedVariationOptions[attr.name] === attr.option
@@ -513,7 +526,6 @@ function CustomizerLayoutAndLogic() {
       primaryVariationImageAiHint = matchingVariation.image.alt?.split(" ").slice(0, 2).join(" ") || undefined;
     }
 
-    // Determine if there are specific images for the current selected color group
     let currentColorKey: string | null = null;
     if (loadedGroupingAttributeName && selectedVariationOptions[loadedGroupingAttributeName]) {
       currentColorKey = selectedVariationOptions[loadedGroupingAttributeName];
@@ -521,7 +533,6 @@ function CustomizerLayoutAndLogic() {
 
     const currentVariantViewImages = currentColorKey && loadedOptionsByColor ? loadedOptionsByColor[currentColorKey]?.variantViewImages : null;
 
-    // Update productDetails.views with the correct image URLs
     setProductDetails(prevProductDetails => {
       if (!prevProductDetails) return null;
 
@@ -529,25 +540,18 @@ function CustomizerLayoutAndLogic() {
         let finalImageUrl: string | undefined = undefined;
         let finalAiHint: string | undefined = undefined;
 
-        // Start with the base image for the view (from Firestore or WC default)
         const baseImageInfo = viewBaseImages[view.id];
         const baseImageUrl = baseImageInfo?.url || defaultFallbackProduct.views[0].imageUrl;
         const baseAiHint = baseImageInfo?.aiHint || defaultFallbackProduct.views[0].aiHint;
 
-        // 1. Check for variant-specific image (from optionsByColor) for this view
         if (currentVariantViewImages && currentVariantViewImages[view.id]?.imageUrl) {
           finalImageUrl = currentVariantViewImages[view.id].imageUrl;
           finalAiHint = currentVariantViewImages[view.id].aiHint || baseAiHint;
         }
-        // 2. Else, if a matching variation has a primary image AND this is the active view, use variation primary image
-        //    (This logic might need refinement if each view should independently check for variation images)
         else if (primaryVariationImageSrc && view.id === activeViewId) { 
-          // Potentially, this should only apply if the view is meant to show the primary variation image.
-          // For now, it applies to the active view if a variation image is available.
           finalImageUrl = primaryVariationImageSrc;
           finalAiHint = primaryVariationImageAiHint || baseAiHint;
         }
-        // 3. Else, use the base image for the view
         else {
           finalImageUrl = baseImageUrl;
           finalAiHint = baseAiHint;
@@ -562,13 +566,13 @@ function CustomizerLayoutAndLogic() {
   }, [
     selectedVariationOptions,
     productVariations,
-    productDetails?.id, // Important: re-run if product itself changes
+    productDetails?.id, 
     activeViewId,
     viewBaseImages,
     loadedOptionsByColor,
     loadedGroupingAttributeName,
-    configurableAttributes, // Re-run if attributes structure changes
-    productDetails?.type // Re-run if product type changes (simple/variable)
+    configurableAttributes, 
+    productDetails?.type 
   ]);
 
   useEffect(() => {
@@ -577,7 +581,6 @@ function CustomizerLayoutAndLogic() {
     canvasTexts.forEach(item => { if (item.viewId) usedViewIdsWithElements.add(item.viewId); });
     canvasShapes.forEach(item => { if (item.viewId) usedViewIdsWithElements.add(item.viewId); });
 
-    // Ensure the active view's price is included even if it has no elements yet
     const viewsToPrice = new Set<string>(usedViewIdsWithElements);
     if (activeViewId) {
       viewsToPrice.add(activeViewId);
@@ -659,7 +662,7 @@ function CustomizerLayoutAndLogic() {
       return; 
     }
 
-    const currentProductIdFromParams = productIdFromUrl; // Use memoized param
+    const currentProductIdFromParams = productIdFromUrl; 
     const baseProductPrice = productDetails?.basePrice ?? 0;
 
     const viewsUsedForSurcharge = new Set<string>();
@@ -933,3 +936,4 @@ export default function CustomizerPage() {
     </UploadProvider>
   );
 }
+
