@@ -500,7 +500,6 @@ export default function DesignCanvas({
             className="relative centered-square-container" 
             style={{
               width: 'min(100%, calc(100svh - 10rem))', 
-              height: 'min(100%, calc(100svh - 10rem))',
               aspectRatio: '1 / 1', 
             }}
           >
@@ -611,3 +610,4 @@ export default function DesignCanvas({
     
 
     
+
