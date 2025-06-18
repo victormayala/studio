@@ -1,6 +1,7 @@
 
 "use client";
 
+import React from 'react'; // Import React for React.memo
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Grid3X3 } from "lucide-react";
@@ -10,7 +11,7 @@ interface GridControlsProps {
   toggleGrid: () => void;
 }
 
-export default function GridControls({ showGrid, toggleGrid }: GridControlsProps) {
+const GridControlsComponent = ({ showGrid, toggleGrid }: GridControlsProps) => {
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between rounded-lg border p-3 shadow-sm bg-muted/20">
@@ -34,3 +35,7 @@ export default function GridControls({ showGrid, toggleGrid }: GridControlsProps
     </div>
   );
 }
+
+const GridControls = React.memo(GridControlsComponent);
+GridControls.displayName = 'GridControls';
+export default GridControls;
