@@ -318,7 +318,7 @@ function CustomizerLayoutAndLogic() {
           displayError = `This product customizer (ID: ${productIdToLoad}) could not load data using the provided proxy. The embedding site might need to configure its connection or API proxy with Customizer Studio. Original error: ${fetchError}`;
       } else if (isEmbedded && wpApiBaseUrlToUse && fetchError) {
           if (fetchError.includes("Status: 403")) {
-            displayError = `Failed to load product (ID: ${productIdToLoad}) via WordPress proxy. Access was forbidden (403). This often indicates a CORS, security rule, or plugin configuration issue on your WordPress site. Please check the Customizer Studio plugin settings and your server logs. Original error: ${fetchError}`;
+            displayError = `Failed to load product (ID: ${productIdToLoad}) via WordPress proxy. Access was forbidden (403). This often indicates a CORS, security rule, or plugin configuration issue on your WordPress site. Please check the Customizer Studio plugin settings, allowed origins for your REST API, and your server logs. Original error: ${fetchError}`;
           } else {
             displayError = `Failed to load product (ID: ${productIdToLoad}) via WordPress proxy. Please ensure the Customizer Studio plugin is configured correctly on your WordPress site. Original error: ${fetchError}`;
           }
@@ -346,31 +346,37 @@ function CustomizerLayoutAndLogic() {
     let finalDefaultViews: ProductView[] = [];
     let tempLoadedOptionsByColor: Record<string, ColorGroupOptionsForCustomizer> | null = null;
     let tempLoadedGroupingAttributeName: string | null = null;
+    let firestoreOptions: ProductOptionsFirestoreData | undefined;
 
-    if (user?.uid && !wpApiBaseUrlToUse) {
-      const { options: firestoreOptions, error: firestoreLoadError } = await loadProductOptionsFromFirestore(user.uid, productIdToLoad);
+    if (user?.uid && !wpApiBaseUrlToUse) { // Only load Firestore options if user is logged in and not using proxy
+      const { options, error: firestoreLoadError } = await loadProductOptionsFromFirestore(user.uid, productIdToLoad);
       if (firestoreLoadError) {
         console.warn("Customizer: Error loading options from Firestore:", firestoreLoadError);
         if (!isEmbedded) toast({ title: "Settings Load Error", description: "Could not load saved Customizer Studio settings. Using product defaults.", variant: "default"});
       }
-      if (firestoreOptions) {
-        finalDefaultViews = firestoreOptions.defaultViews.map(v => ({...v, price: v.price ?? 0})) || [];
-        tempLoadedOptionsByColor = firestoreOptions.optionsByColor || {};
-        tempLoadedGroupingAttributeName = firestoreOptions.groupingAttributeName || null;
-      }
+      firestoreOptions = options; // Store loaded options (or undefined)
     }
 
-    if (finalDefaultViews.length === 0) {
+    if (firestoreOptions && Array.isArray(firestoreOptions.defaultViews) && firestoreOptions.defaultViews.length > 0) {
+      finalDefaultViews = firestoreOptions.defaultViews.map(v => ({...v, price: v.price ?? 0}));
+      tempLoadedOptionsByColor = firestoreOptions.optionsByColor || {};
+      tempLoadedGroupingAttributeName = firestoreOptions.groupingAttributeName || null;
+    } else {
+      // Fallback if no Firestore views, or if they are empty/invalid
       finalDefaultViews = [{
         id: `default_view_wc_${wcProduct.id}`, name: "Front View",
         imageUrl: wcProduct.images && wcProduct.images.length > 0 ? wcProduct.images[0].src : defaultFallbackProduct.views[0].imageUrl,
         aiHint: wcProduct.images && wcProduct.images.length > 0 && wcProduct.images[0].alt ? wcProduct.images[0].alt.split(" ").slice(0,2).join(" ") : defaultFallbackProduct.views[0].aiHint,
         boundaryBoxes: defaultFallbackProduct.views[0].boundaryBoxes, price: defaultFallbackProduct.views[0].price ?? 0,
       }];
+      // If falling back default views, also ensure optionsByColor and groupingAttributeName are reset or based on WC product if applicable
+      tempLoadedOptionsByColor = {}; // Reset to empty if we're creating a fresh default view
+      tempLoadedGroupingAttributeName = null; // Reset
     }
-
+    
     setLoadedOptionsByColor(tempLoadedOptionsByColor);
     setLoadedGroupingAttributeName(tempLoadedGroupingAttributeName);
+
     const baseImagesMapFinal: Record<string, {url: string, aiHint?: string, price?:number}> = {};
     finalDefaultViews.forEach(view => { baseImagesMapFinal[view.id] = { url: view.imageUrl, aiHint: view.aiHint, price: view.price ?? 0 }; });
     setViewBaseImages(baseImagesMapFinal);
@@ -404,7 +410,7 @@ function CustomizerLayoutAndLogic() {
       } else { setProductVariations(null); setConfigurableAttributes([]); setSelectedVariationOptions({}); }
     } else { setProductVariations(null); setConfigurableAttributes([]); setSelectedVariationOptions({}); }
     setIsLoading(false);
-  }, [user?.uid, authLoading, toast, isEmbedded]);
+  }, [user?.uid, authLoading, toast, isEmbedded, productDetails]);
 
 
   useEffect(() => {
@@ -412,7 +418,7 @@ function CustomizerLayoutAndLogic() {
     const targetProxyUrl = wpApiBaseUrlFromUrl || null;
 
     if (authLoading && !user && !targetProxyUrl) {
-        if (lastLoadedProductIdRef.current === undefined) { // Only load default if it's truly the first attempt
+        if (lastLoadedProductIdRef.current === undefined) { 
             loadCustomizerData(null, null);
             lastLoadedProductIdRef.current = null;
             lastLoadedProxyUrlRef.current = null;
@@ -420,11 +426,10 @@ function CustomizerLayoutAndLogic() {
         return;
     }
     
-    // Check if parameters have actually changed OR if no product is loaded yet
     if (
         (lastLoadedProductIdRef.current !== targetProductId ||
         lastLoadedProxyUrlRef.current !== targetProxyUrl) ||
-        !productDetails // Added this condition to ensure initial load happens
+        !productDetails 
     ) {
         loadCustomizerData(targetProductId, targetProxyUrl);
         lastLoadedProductIdRef.current = targetProductId;
@@ -436,7 +441,7 @@ function CustomizerLayoutAndLogic() {
       productIdFromUrl,
       wpApiBaseUrlFromUrl,
       loadCustomizerData,
-      productDetails // Added productDetails as dependency
+      productDetails 
   ]);
 
 
@@ -474,7 +479,7 @@ function CustomizerLayoutAndLogic() {
         if (currentVariantViewImages && currentVariantViewImages[view.id]?.imageUrl) {
           finalImageUrl = currentVariantViewImages[view.id].imageUrl;
           finalAiHint = currentVariantViewImages[view.id].aiHint || baseAiHint;
-        } else if (primaryVariationImageSrc && view.id === activeViewId) {
+        } else if (primaryVariationImageSrc && view.id === activeViewId) { // Prioritize variation image for *active* view if no specific variant view image is set
           finalImageUrl = primaryVariationImageSrc;
           finalAiHint = primaryVariationImageAiHint || baseAiHint;
         } else {
@@ -482,7 +487,7 @@ function CustomizerLayoutAndLogic() {
           finalAiHint = baseAiHint;
         }
 
-        if (view.imageUrl !== finalImageUrl || view.aiHint !== finalAiHint || (view.price ?? 0) !== (baseImageInfo?.price ?? 0)) {
+        if (view.imageUrl !== finalImageUrl || view.aiHint !== finalAiHint || (view.price ?? 0) !== (baseImageInfo?.price ?? view.price ?? 0)) {
           viewsContentActuallyChanged = true;
         }
         return { ...view, imageUrl: finalImageUrl!, aiHint: finalAiHint, price: baseImageInfo?.price ?? view.price ?? 0 };
