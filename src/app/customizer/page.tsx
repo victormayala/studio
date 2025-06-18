@@ -332,7 +332,7 @@ function CustomizerLayoutAndLogic() {
             message = `Product (ID: ${productIdToLoad}) requires the embedding site to provide a WordPress API proxy, or to enable direct user credential access.`;
           }
           setError(message + " Using default product view.");
-          // Immediately set fallback and return if critical credentials are missing for direct access
+          
           const defaultViewsError = defaultFallbackProduct.views;
           const baseImagesMapError: Record<string, {url: string, aiHint?: string, price?: number}> = {};
           defaultViewsError.forEach(view => { baseImagesMapError[view.id] = { url: view.imageUrl, aiHint: view.aiHint, price: view.price ?? 0 }; });
@@ -362,7 +362,7 @@ function CustomizerLayoutAndLogic() {
          displayError = `This product customizer (ID: ${productIdToLoad}) could not load data using the provided proxy. The embedding site might need to configure its connection or API proxy with Customizer Studio. Original error: ${fetchError}`;
       } else if (isEmbedded && wpApiBaseUrlToUse && fetchError) {
          displayError = `Failed to load product (ID: ${productIdToLoad}) via WordPress proxy. Please ensure the Customizer Studio plugin is configured correctly on your WordPress site. Original error: ${fetchError}`;
-      } else if (isEmbedded && !wpApiBaseUrlToUse && (fetchError && (fetchError.includes("credentials are not configured") || fetchError.includes("required.")))) {
+      } else if (isEmbedded && !wpApiBaseUrlToUse && (fetchError && (fetchError.includes("credentials are not configured") || fetchError.includes("User-specific WooCommerce credentials are required.")))) {
          displayError = `This product customizer (ID: ${productIdToLoad}) requires an API proxy from the embedding site, or the site needs user credentials. Original error: ${fetchError}`;
       } else if (user?.uid && !wpApiBaseUrlToUse && (fetchError && (fetchError.includes("credentials are not configured") || fetchError.includes("User-specific WooCommerce credentials are required")))) {
          displayError = `WooCommerce API credentials are not configured for your account. Please connect your store in the Dashboard > 'Store Integration' section.`;
@@ -493,14 +493,14 @@ function CustomizerLayoutAndLogic() {
     if (authLoading && !user && !wpApiBaseUrlFromUrl) {
       return; 
     }
-    // Only call if productIdFromUrl is not null/empty OR if wpApiBaseUrl is also null/empty (to load fallback)
+    
     if ((productIdFromUrl && productIdFromUrl.trim() !== '') || (!productIdFromUrl && !wpApiBaseUrlFromUrl) ) {
         loadCustomizerData(productIdFromUrl, wpApiBaseUrlFromUrl);
     } else if (!productIdFromUrl && wpApiBaseUrlFromUrl && !productDetails && !isLoading && !error) {
-        // Case where proxy URL is given but no product ID, force load fallback if not already loading/errored/loaded
+        
         loadCustomizerData(null, wpApiBaseUrlFromUrl);
     }
-  }, [authLoading, user, productIdFromUrl, wpApiBaseUrlFromUrl, loadCustomizerData, productDetails, isLoading, error]);
+  }, [authLoading, user?.uid, productIdFromUrl, wpApiBaseUrlFromUrl, loadCustomizerData, productDetails, isLoading, error]);
 
 
  useEffect(() => {
@@ -559,6 +559,25 @@ function CustomizerLayoutAndLogic() {
 
         return { ...view, imageUrl: finalImageUrl!, aiHint: finalAiHint, price: view.price ?? 0 };
       });
+      
+      // Check if any view's imageUrl or aiHint actually changed
+      let viewsContentChanged = false;
+      if (updatedViews.length !== prevProductDetails.views.length) {
+        viewsContentChanged = true;
+      } else {
+        for (let i = 0; i < updatedViews.length; i++) {
+          if (updatedViews[i].imageUrl !== prevProductDetails.views[i].imageUrl ||
+              updatedViews[i].aiHint !== prevProductDetails.views[i].aiHint ||
+              updatedViews[i].price !== (prevProductDetails.views[i].price ?? 0) ) { 
+            viewsContentChanged = true;
+            break;
+          }
+        }
+      }
+
+      if (!viewsContentChanged && prevProductDetails.views.length === updatedViews.length) { // Ensure lengths match for the no-change case
+        return prevProductDetails; // Return previous state if no meaningful change
+      }
 
       return { ...prevProductDetails, views: updatedViews };
     });
@@ -566,13 +585,11 @@ function CustomizerLayoutAndLogic() {
   }, [
     selectedVariationOptions,
     productVariations,
-    productDetails?.id, 
     activeViewId,
     viewBaseImages,
     loadedOptionsByColor,
     loadedGroupingAttributeName,
-    configurableAttributes, 
-    productDetails?.type 
+    configurableAttributes,
   ]);
 
   useEffect(() => {
