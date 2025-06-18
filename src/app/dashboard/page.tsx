@@ -9,7 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { RefreshCcw, MoreHorizontal, Settings, Code, Trash2, AlertTriangle, Loader2, LogOut, Link as LinkIcon, KeyRound, Save, Package as PackageIcon, PlugZap, UserCircle, XCircle } from "lucide-react";
+import { RefreshCcw, MoreHorizontal, Settings, Code, Trash2, AlertTriangle, Loader2, LogOut, Link as LinkIcon, KeyRound, Save, Package as PackageIcon, PlugZap, UserCircle, XCircle, Clipboard, Check, Info } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from 'next/navigation';
 import NextImage from 'next/image';
@@ -35,6 +35,8 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { cn } from '@/lib/utils';
+import { Alert as ShadCnAlert, AlertDescription as ShadCnAlertDescription, AlertTitle as ShadCnAlertTitle } from "@/components/ui/alert";
+
 
 interface DisplayProduct {
   id: string;
@@ -74,22 +76,21 @@ export default function DashboardPage() {
 
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [productToDelete, setProductToDelete] = useState<ProductToDelete | null>(null);
+  const [copiedUserId, setCopiedUserId] = useState(false);
 
   const getLocallyHiddenProductIds = useCallback((): string[] => {
-    if (typeof window === 'undefined' || !user || !user.uid) { // Ensure client-side and user.uid exists
+    if (typeof window === 'undefined' || !user || !user.uid) { 
         return [];
     }
     const key = `${LOCALLY_HIDDEN_PRODUCTS_KEY_PREFIX}${user.uid}`;
     try {
       const storedIds = localStorage.getItem(key);
-      if (storedIds === null || storedIds === undefined) { // Explicitly check for null/undefined
+      if (storedIds === null || storedIds === undefined) { 
         return [];
       }
-      // At this point, storedIds is a string.
       return JSON.parse(storedIds);
     } catch (e) {
       console.error("Error parsing locally hidden product IDs from localStorage:", e);
-      // If parsing fails, it's safer to assume no IDs are hidden or clear the malformed data.
       try {
         localStorage.removeItem(key);
       } catch (removeError) {
@@ -100,7 +101,7 @@ export default function DashboardPage() {
   }, [user]);
 
   const setLocallyHiddenProductIds = useCallback((ids: string[]): void => {
-    if (typeof window === 'undefined' || !user || !user.uid) return; // Ensure client-side and user.uid exists
+    if (typeof window === 'undefined' || !user || !user.uid) return; 
     try {
       localStorage.setItem(`${LOCALLY_HIDDEN_PRODUCTS_KEY_PREFIX}${user.uid}`, JSON.stringify(ids));
     } catch (e) {
@@ -148,8 +149,6 @@ export default function DashboardPage() {
     };
     
     try {
-      // The dashboard fetches all products; it does not use wpApiBaseUrl.
-      // wpApiBaseUrl is for single product/variation fetching in the customizer via a WP plugin proxy.
       const { products: fetchedProducts, error: fetchError } = await fetchWooCommerceProducts(userCredentialsToUse);
       const duration = Date.now() - startTime;
 
@@ -345,6 +344,20 @@ export default function DashboardPage() {
     setProductToDelete(null);
   };
 
+  const handleCopyUserId = async () => {
+    if (!user?.uid) return;
+    try {
+      await navigator.clipboard.writeText(user.uid);
+      setCopiedUserId(true);
+      toast({ title: "User ID Copied!", description: "Your User ID has been copied to the clipboard." });
+      setTimeout(() => setCopiedUserId(false), 2000);
+    } catch (err) {
+      toast({ title: "Copy Failed", description: "Could not copy User ID. Please try again or copy manually.", variant: "destructive" });
+      console.error('Failed to copy User ID: ', err);
+    }
+  };
+
+
   if (authIsLoading || !user) {
     return (
       <div className="flex min-h-svh w-full items-center justify-center bg-background">
@@ -405,7 +418,7 @@ export default function DashboardPage() {
                         Your Dashboard
                       </h1>
                       <p className="text-muted-foreground">
-                        Welcome, {user?.email}!
+                        Welcome, {user?.displayName || user?.email}!
                       </p>
                     </div>
                     {activeTab === 'products' && (
@@ -625,8 +638,33 @@ export default function DashboardPage() {
                         <CardTitle className="font-headline text-xl text-card-foreground">User Profile</CardTitle>
                         <CardDescription className="text-muted-foreground">Manage your account details.</CardDescription>
                       </CardHeader>
-                      <CardContent>
-                        <p className="text-muted-foreground">Email: {user?.email}</p>
+                      <CardContent className="space-y-4">
+                        <div>
+                          <Label>Email Address</Label>
+                          <p className="text-sm text-foreground mt-1">{user?.email || "N/A"}</p>
+                        </div>
+                        <div>
+                          <Label>Customizer Studio User ID</Label>
+                          <div className="flex items-center gap-2 mt-1">
+                            <Input 
+                              id="userIdDisplay" 
+                              value={user?.uid || "N/A"} 
+                              readOnly 
+                              className="bg-muted/50 text-sm"
+                            />
+                            <Button onClick={handleCopyUserId} variant="outline" size="sm" disabled={!user?.uid}>
+                              {copiedUserId ? <Check className="h-4 w-4 text-green-500" /> : <Clipboard className="h-4 w-4" />}
+                              <span className="ml-2 hidden sm:inline">{copiedUserId ? "Copied!" : "Copy ID"}</span>
+                            </Button>
+                          </div>
+                           <ShadCnAlert variant="default" className="mt-3 bg-primary/5 border-primary/20">
+                            <Info className="h-4 w-4 text-primary" />
+                            <ShadCnAlertTitle className="text-primary/90 font-medium">User ID for WordPress Plugin</ShadCnAlertTitle>
+                            <ShadCnAlertDescription className="text-primary/80">
+                              Copy this User ID and paste it into the "Customizer Studio User ID" field in your Customizer Studio WordPress plugin settings. This allows the plugin to load your specific product configurations (views, areas, etc.) when embedding the customizer.
+                            </ShadCnAlertDescription>
+                          </ShadCnAlert>
+                        </div>
                         <p className="mt-4 text-muted-foreground">More profile options will be available here. (Coming Soon)</p>
                       </CardContent>
                     </Card>
@@ -660,6 +698,8 @@ export default function DashboardPage() {
     </UploadProvider>
   );
 }
+    
+
     
 
     
