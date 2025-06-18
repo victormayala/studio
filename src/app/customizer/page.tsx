@@ -227,17 +227,19 @@ function CustomizerLayoutAndLogic() {
 
 
   const loadCustomizerData = useCallback(async (productIdToLoad: string | null, wpApiBaseUrlToUse: string | null) => {
-    // Reset states ONLY if product context changes, or if forced (e.g., initial load)
-    if (productDetails?.id !== productIdToLoad || (productDetails?.meta?.proxyUsed ?? false) !== !!wpApiBaseUrlToUse) {
-      setProductDetails(null);
-      setProductVariations(null);
-      setConfigurableAttributes(null);
-      setSelectedVariationOptions({});
-      setViewBaseImages({});
-      setLoadedOptionsByColor(null);
-      setLoadedGroupingAttributeName(null);
-      setTotalCustomizationPrice(0);
-      setActiveViewId(null); // Reset active view as well
+    const currentProductId = productDetails?.id;
+    const currentProxyStatus = productDetails?.meta?.proxyUsed ?? false;
+
+    if (currentProductId !== productIdToLoad || currentProxyStatus !== !!wpApiBaseUrlToUse) {
+        setProductDetails(null);
+        setProductVariations(null);
+        setConfigurableAttributes(null);
+        setSelectedVariationOptions({});
+        setViewBaseImages({});
+        setLoadedOptionsByColor(null);
+        setLoadedGroupingAttributeName(null);
+        setTotalCustomizationPrice(0);
+        setActiveViewId(null);
     }
     setIsLoading(true);
     setError(null);
@@ -275,13 +277,7 @@ function CustomizerLayoutAndLogic() {
     }
 
     if (authLoading && !user?.uid && !wpApiBaseUrlToUse) {
-      // This case means we need user credentials but auth hasn't resolved yet.
-      // We should show loading and wait for auth.
-      // Error or default product will be handled by the useEffect that calls loadCustomizerData.
-      // Or, if we want to show a specific message for this state:
-      // setError("Authenticating... Please wait to load product details.");
-      setIsLoading(false); // Set to false to allow UI to render (e.g. "Authenticating..." message)
-                           // or rely on the main loading spinner based on `authLoading` prop.
+      setIsLoading(false); 
       return;
     }
 
@@ -321,7 +317,11 @@ function CustomizerLayoutAndLogic() {
       if (isEmbedded && wpApiBaseUrlToUse && (fetchError?.includes("credentials are not configured") || fetchError?.includes("required."))) {
           displayError = `This product customizer (ID: ${productIdToLoad}) could not load data using the provided proxy. The embedding site might need to configure its connection or API proxy with Customizer Studio. Original error: ${fetchError}`;
       } else if (isEmbedded && wpApiBaseUrlToUse && fetchError) {
-          displayError = `Failed to load product (ID: ${productIdToLoad}) via WordPress proxy. Please ensure the Customizer Studio plugin is configured correctly on your WordPress site. Original error: ${fetchError}`;
+          if (fetchError.includes("Status: 403")) {
+            displayError = `Failed to load product (ID: ${productIdToLoad}) via WordPress proxy. Access was forbidden (403). This often indicates a CORS, security rule, or plugin configuration issue on your WordPress site. Please check the Customizer Studio plugin settings and your server logs. Original error: ${fetchError}`;
+          } else {
+            displayError = `Failed to load product (ID: ${productIdToLoad}) via WordPress proxy. Please ensure the Customizer Studio plugin is configured correctly on your WordPress site. Original error: ${fetchError}`;
+          }
       } else if (isEmbedded && !wpApiBaseUrlToUse && (fetchError?.includes("credentials are not configured") || fetchError?.includes("User-specific WooCommerce credentials are required."))) {
           displayError = `This product customizer (ID: ${productIdToLoad}) requires an API proxy from the embedding site, or the site needs user credentials. Original error: ${fetchError}`;
       } else if (user?.uid && !wpApiBaseUrlToUse && (fetchError?.includes("credentials are not configured") || fetchError?.includes("User-specific WooCommerce credentials are required"))) {
@@ -404,7 +404,7 @@ function CustomizerLayoutAndLogic() {
       } else { setProductVariations(null); setConfigurableAttributes([]); setSelectedVariationOptions({}); }
     } else { setProductVariations(null); setConfigurableAttributes([]); setSelectedVariationOptions({}); }
     setIsLoading(false);
-  }, [user?.uid, authLoading, toast, isEmbedded, productDetails]); // productDetails added to check current state for reset
+  }, [user?.uid, authLoading, toast, isEmbedded]);
 
 
   useEffect(() => {
@@ -412,17 +412,19 @@ function CustomizerLayoutAndLogic() {
     const targetProxyUrl = wpApiBaseUrlFromUrl || null;
 
     if (authLoading && !user && !targetProxyUrl) {
-        if (lastLoadedProductIdRef.current === undefined) {
+        if (lastLoadedProductIdRef.current === undefined) { // Only load default if it's truly the first attempt
             loadCustomizerData(null, null);
             lastLoadedProductIdRef.current = null;
             lastLoadedProxyUrlRef.current = null;
         }
         return;
     }
-
+    
+    // Check if parameters have actually changed OR if no product is loaded yet
     if (
-        lastLoadedProductIdRef.current !== targetProductId ||
-        lastLoadedProxyUrlRef.current !== targetProxyUrl
+        (lastLoadedProductIdRef.current !== targetProductId ||
+        lastLoadedProxyUrlRef.current !== targetProxyUrl) ||
+        !productDetails // Added this condition to ensure initial load happens
     ) {
         loadCustomizerData(targetProductId, targetProxyUrl);
         lastLoadedProductIdRef.current = targetProductId;
@@ -434,7 +436,7 @@ function CustomizerLayoutAndLogic() {
       productIdFromUrl,
       wpApiBaseUrlFromUrl,
       loadCustomizerData,
-      // isLoading removed to prevent loop with the !isLoading guard that was removed
+      productDetails // Added productDetails as dependency
   ]);
 
 
@@ -486,13 +488,10 @@ function CustomizerLayoutAndLogic() {
         return { ...view, imageUrl: finalImageUrl!, aiHint: finalAiHint, price: baseImageInfo?.price ?? view.price ?? 0 };
       });
 
-      if (!viewsContentActuallyChanged) {
-        // No visual content change, but maybe price or other meta changed
-        const basePriceChanged = prevProductDetails.basePrice !== (matchingVariation ? parseFloat(matchingVariation.price || '0') : prevProductDetails.basePrice);
-        if (basePriceChanged) {
-          return { ...prevProductDetails, views: updatedViews, basePrice: matchingVariation ? parseFloat(matchingVariation.price || '0') : prevProductDetails.basePrice };
-        }
-        return prevProductDetails; // No change needed
+      const basePriceChanged = prevProductDetails.basePrice !== (matchingVariation ? parseFloat(matchingVariation.price || '0') : prevProductDetails.basePrice);
+
+      if (!viewsContentActuallyChanged && !basePriceChanged) {
+        return prevProductDetails;
       }
       return { ...prevProductDetails, views: updatedViews, basePrice: matchingVariation ? parseFloat(matchingVariation.price || '0') : prevProductDetails.basePrice };
     });
@@ -707,6 +706,8 @@ export default function CustomizerPage() {
   );
 }
     
+    
+
     
 
     
