@@ -40,7 +40,8 @@ export interface ButtonProps
   asChild?: boolean
 }
 
-const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
+// Define the original component logic
+const ButtonComponent = React.forwardRef<HTMLButtonElement, ButtonProps>(
   ({ className, variant, size, asChild = false, ...props }, ref) => {
     const Comp = asChild ? Slot : "button"
     return (
@@ -52,7 +53,12 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
     )
   }
 )
-Button.displayName = "Button"
+ButtonComponent.displayName = "ButtonComponentInternal" // For debugging if needed
+
+// Create the memoized version for export
+const Button = React.memo(ButtonComponent);
+Button.displayName = "Button" // Standard display name for the exported component
+
 
 export { Button, buttonVariants }
 
