@@ -11,7 +11,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, Shirt, RefreshCcw, ExternalLink, Loader2, AlertTriangle, LayersIcon, Tag, Image as ImageIconLucide, Edit2, DollarSign, PlugZap, Edit3, Save } from 'lucide-react';
+import { ArrowLeft, Shirt, RefreshCcw, ExternalLink, Loader2, AlertTriangle, LayersIcon, Tag, Image as ImageIconLucide, Edit2, DollarSign, PlugZap, Edit3, Save, Settings } from 'lucide-react';
 import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
@@ -57,6 +57,7 @@ export interface ProductOptionsFirestoreData {
   defaultViews: ProductView[];
   optionsByColor: Record<string, ColorGroupOptions>;
   groupingAttributeName: string | null;
+  allowCustomization?: boolean; // Added field
   lastSaved?: any; 
   createdAt?: any; 
 }
@@ -70,6 +71,7 @@ interface ProductOptionsData {
   defaultViews: ProductView[]; 
   optionsByColor: Record<string, ColorGroupOptions>; 
   groupingAttributeName: string | null;
+  allowCustomization: boolean; // Added field
 }
 
 
@@ -217,6 +219,7 @@ export default function ProductOptionsPage() {
       let loadedDefaultViews: ProductView[] = [];
       let loadedOptionsByColor: Record<string, ColorGroupOptions> = {};
       let loadedGroupingAttributeName: string | null = null;
+      let loadedAllowCustomization: boolean = true; // Default to true
       
       let firestoreOptions: ProductOptionsFirestoreData | undefined;
       try {
@@ -228,7 +231,7 @@ export default function ProductOptionsPage() {
       } catch (e: any) {
         let detailedError = `Could not load saved settings: ${e.message || "Unknown Firestore error"}. Using defaults.`;
         if (e.code === 'permission-denied' || e.message?.includes('Missing or insufficient permissions')) {
-          detailedError += " This could be a Firestore security rule issue.";
+          detailedError += " This could be a Firestore security rule issue. Ensure your rules allow read access for your user ID.";
         }
         console.error("Error loading product options from Firestore (client-side):", detailedError, e);
         toast({ title: "Loading Issue", description: detailedError, variant: "default" });
@@ -238,6 +241,7 @@ export default function ProductOptionsPage() {
           loadedDefaultViews = firestoreOptions.defaultViews.map((view: any) => ({ ...view, price: view.price ?? 0 })) || [];
           loadedOptionsByColor = firestoreOptions.optionsByColor || {};
           loadedGroupingAttributeName = firestoreOptions.groupingAttributeName || null;
+          loadedAllowCustomization = firestoreOptions.allowCustomization !== undefined ? firestoreOptions.allowCustomization : true;
       }
 
       const finalDefaultViews = loadedDefaultViews.length > 0 ? loadedDefaultViews : initialDefaultViews;
@@ -255,6 +259,7 @@ export default function ProductOptionsPage() {
         defaultViews: finalDefaultViews.map(view => ({...view, price: view.price ?? 0})), 
         optionsByColor: finalOptionsByColor,
         groupingAttributeName: loadedGroupingAttributeName || identifiedGroupingAttr,
+        allowCustomization: loadedAllowCustomization,
       });
 
       setActiveViewIdForSetup(finalDefaultViews[0]?.id || null);
@@ -421,6 +426,7 @@ export default function ProductOptionsPage() {
       defaultViews: productOptions.defaultViews,
       optionsByColor: productOptions.optionsByColor,
       groupingAttributeName: productOptions.groupingAttributeName,
+      allowCustomization: productOptions.allowCustomization,
       lastSaved: serverTimestamp(),
     };
 
@@ -445,6 +451,10 @@ export default function ProductOptionsPage() {
   const handleOpenInCustomizer = () => {
     if (!productOptions || hasUnsavedChanges) {
       toast({ title: "Save Changes", description: "Please save your changes before opening in customizer.", variant: "default"});
+      return;
+    }
+    if (!productOptions.allowCustomization) {
+      toast({ title: "Customization Disabled", description: "This product is currently marked as 'Do Not Customize'. Enable customization to open in the customizer.", variant: "default"});
       return;
     }
     router.push(`/customizer?productId=${productOptions.id}`);
@@ -751,6 +761,31 @@ export default function ProductOptionsPage() {
             </CardContent>
           </Card>
 
+          <Card className="shadow-md">
+            <CardHeader><CardTitle className="font-headline text-lg">Customization Settings</CardTitle><CardDescription>Control how this product can be customized.</CardDescription></CardHeader>
+            <CardContent className="space-y-4">
+                <div className="flex items-center space-x-3 rounded-md border p-4 bg-muted/20">
+                    <Checkbox
+                        id="allowCustomization"
+                        checked={productOptions.allowCustomization}
+                        onCheckedChange={(checked) => {
+                            const isChecked = checked as boolean;
+                            setProductOptions(prev => prev ? { ...prev, allowCustomization: isChecked } : null);
+                            setHasUnsavedChanges(true);
+                        }}
+                    />
+                    <div className="grid gap-1.5 leading-none">
+                        <Label htmlFor="allowCustomization" className="text-sm font-medium text-foreground cursor-pointer">
+                        Enable Product Customization
+                        </Label>
+                        <p className="text-xs text-muted-foreground">
+                        If unchecked, the "Customize" button will not appear for this product on your store (requires WordPress plugin update to check this flag).
+                        </p>
+                    </div>
+                </div>
+            </CardContent>
+          </Card>
+
           {productOptions.type === 'variable' && (
             <Card className="shadow-md">
               <CardHeader><CardTitle className="font-headline text-lg">Product Variations</CardTitle><CardDescription>Select which variation color groups should be available in the customizer. Configure view-specific images per color.</CardDescription></CardHeader>
@@ -912,6 +947,9 @@ export default function ProductOptionsPage() {
                 Editing for: <span className="font-semibold text-foreground">{productOptions.name}</span>
               </p>
               <p className="text-sm text-muted-foreground">
+                Customization: <Badge variant={productOptions.allowCustomization ? "default" : "secondary"} className={productOptions.allowCustomization ? "bg-green-500/10 text-green-700 border-green-500/30" : ""}>{productOptions.allowCustomization ? "Enabled" : "Disabled"}</Badge>
+              </p>
+              <p className="text-sm text-muted-foreground">
                 Total Default Views: <span className="font-semibold text-foreground">{productOptions.defaultViews.length}</span>
               </p>
               <p className="text-sm text-muted-foreground">
@@ -936,7 +974,8 @@ export default function ProductOptionsPage() {
                 {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" /> }
                 Save All Configurations
               </Button>
-              <Button variant="outline" size="lg" onClick={handleOpenInCustomizer} disabled={hasUnsavedChanges} className="hover:bg-accent hover:text-accent-foreground"><ExternalLink className="mr-2 h-4 w-4" />Open in Customizer</Button>
+              <Button variant="outline" size="lg" onClick={handleOpenInCustomizer} disabled={hasUnsavedChanges || !productOptions.allowCustomization} className="hover:bg-accent hover:text-accent-foreground"><ExternalLink className="mr-2 h-4 w-4" />Open in Customizer</Button>
+              {!productOptions.allowCustomization && <p className="text-xs text-center text-muted-foreground">Customization is currently disabled for this product.</p>}
             </CardFooter>
           </Card>
         </div>
@@ -948,3 +987,4 @@ export default function ProductOptionsPage() {
 
 
     
+

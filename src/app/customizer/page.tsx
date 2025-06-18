@@ -15,7 +15,7 @@ import { doc, getDoc } from 'firebase/firestore';
 import type { UserWooCommerceCredentials } from '@/app/actions/userCredentialsActions';
 import {
   Loader2, AlertTriangle, ShoppingCart, UploadCloud, Layers, Type, Shapes as ShapesIconLucide, Smile, Palette, Gem as GemIcon, Settings2 as SettingsIcon,
-  PanelLeftClose, PanelRightOpen, PanelRightClose, PanelLeftOpen, Sparkles
+  PanelLeftClose, PanelRightOpen, PanelRightClose, PanelLeftOpen, Sparkles, Ban
 } from 'lucide-react';
 import { Button, buttonVariants } from '@/components/ui/button';
 import {
@@ -71,6 +71,7 @@ interface LoadedCustomizerOptions {
   defaultViews: ProductView[];
   optionsByColor: Record<string, ColorGroupOptionsForCustomizer>;
   groupingAttributeName: string | null;
+  allowCustomization?: boolean; // Added field
 }
 
 export interface ProductForCustomizer {
@@ -79,6 +80,7 @@ export interface ProductForCustomizer {
   basePrice: number;
   views: ProductView[];
   type?: 'simple' | 'variable' | 'grouped' | 'external';
+  allowCustomization?: boolean; // Added field
   meta?: {
     proxyUsed?: boolean;
     configUserIdUsed?: string | null;
@@ -107,6 +109,7 @@ const defaultFallbackProduct: ProductForCustomizer = {
     }
   ],
   type: 'simple',
+  allowCustomization: true,
   meta: { proxyUsed: false, configUserIdUsed: null },
 };
 
@@ -136,8 +139,7 @@ async function loadProductOptionsFromFirestore(
     if (docSnap.exists()) {
       return { options: docSnap.data() as ProductOptionsFirestoreData };
     }
-    // console.log(`loadProductOptionsFromFirestore: No options found in Firestore for user/config ${userIdForOptions}, product ${productId}.`);
-    return { options: undefined }; // No options found is not an error, just undefined
+    return { options: undefined }; 
   } catch (error: any) {
     let detailedError = `Failed to load options from cloud: ${error.message}`;
     if (error.code === 'permission-denied' || error.message?.includes('Missing or insufficient permissions')) {
@@ -289,8 +291,6 @@ function CustomizerLayoutAndLogic() {
         return;
     }
 
-    // Don't return early if auth is loading but a proxy/configUserID is present.
-    // Only return early if auth is loading AND no proxy AND no configUserId.
     if (authLoading && !user?.uid && !wpApiBaseUrlToUse && !configUserIdToUse) {
       setIsLoading(false); 
       return;
@@ -300,14 +300,11 @@ function CustomizerLayoutAndLogic() {
     let fetchError: string | undefined;
     let userWCCredentialsToUse: WooCommerceCredentials | undefined;
 
-    // This logic determines if we need to load credentials for direct WC API access.
-    // It's only relevant if NO proxy is used AND (it's not embedded OR it's embedded but configUserId is missing).
-    // If configUserId is present for an embed, we DON'T need the current user's direct credentials for the WC fetch.
     const shouldLoadUserDirectCredentials = user?.uid && !wpApiBaseUrlToUse && (!configUserIdToUse || !isEmbedded);
 
     if (shouldLoadUserDirectCredentials) {
       try {
-        const credDocRef = doc(db, 'userWooCommerceCredentials', user.uid!); // user.uid is guaranteed here by shouldLoadUserDirectCredentials
+        const credDocRef = doc(db, 'userWooCommerceCredentials', user.uid!); 
         const credDocSnap = await getDoc(credDocRef);
         if (credDocSnap.exists()) {
           const credData = credDocSnap.data() as UserWooCommerceCredentials;
@@ -337,8 +334,8 @@ function CustomizerLayoutAndLogic() {
       if (isEmbedded && wpApiBaseUrlToUse && (fetchError?.includes("credentials are not configured") || fetchError?.includes("required."))) {
           displayError = `This product customizer (ID: ${productIdToLoad}) could not load data using the provided proxy. The embedding site might need to configure its connection or API proxy with Customizer Studio. Original error: ${fetchError}`;
       } else if (isEmbedded && wpApiBaseUrlToUse && fetchError) {
-          if (fetchError.includes("Status: 403")) {
-            displayError = `Failed to load product (ID: ${productIdToLoad}) via WordPress proxy. Access was forbidden (403). This often indicates a CORS, security rule, or plugin configuration issue on your WordPress site. Please check the Customizer Studio plugin settings (Allowed Origins, User ID), REST API security, and your server logs. Original error: ${fetchError}`;
+          if (fetchError.includes("Status: 403") || fetchError.includes("Invalid Origin")) { // Added check for "Invalid Origin"
+            displayError = `Failed to load product (ID: ${productIdToLoad}) via WordPress proxy. Access was forbidden (403). This often indicates a CORS or plugin configuration issue on your WordPress site. Please ensure the Customizer Studio plugin is configured correctly (Allowed Origins, User ID), and check REST API security and server logs. Original error: ${fetchError}`;
           } else {
             displayError = `Failed to load product (ID: ${productIdToLoad}) via WordPress proxy. Please ensure the Customizer Studio plugin is configured correctly on your WordPress site. Original error: ${fetchError}`;
           }
@@ -367,19 +364,17 @@ function CustomizerLayoutAndLogic() {
     let tempLoadedOptionsByColor: Record<string, ColorGroupOptionsForCustomizer> | null = null;
     let tempLoadedGroupingAttributeName: string | null = null;
     let firestoreOptions: ProductOptionsFirestoreData | undefined;
+    let finalAllowCustomization: boolean = true;
 
-    // Determine whose options to load: configUserId (from URL, for embeds) takes precedence.
-    // If not present, use the currently logged-in user's UID (for direct use of customizer).
     const userIdForFirestoreOptions = configUserIdToUse || user?.uid;
 
     if (userIdForFirestoreOptions) { 
       const { options, error: firestoreLoadError } = await loadProductOptionsFromFirestore(userIdForFirestoreOptions, productIdToLoad);
       if (firestoreLoadError) {
         console.warn(`Customizer: Error loading options from Firestore for user/config ${userIdForFirestoreOptions}:`, firestoreLoadError);
-        // Only toast if NOT an embedded scenario where configUserId was used, as the site owner (configUser) is not the one seeing the toast.
         if (!isEmbedded || (isEmbedded && !configUserIdToUse && user?.uid)) {
             let toastMessage = "Could not load saved Customizer Studio settings. Using product defaults.";
-            if (firestoreLoadError.includes("Missing or insufficient permissions")) {
+            if (firestoreLoadError.includes("Missing or insufficient permissions") || firestoreLoadError.includes("security rule issue")) {
                 toastMessage = "Cannot load saved settings due to permissions. Check Firestore rules. Using product defaults.";
             }
             toast({ title: "Settings Load Issue", description: toastMessage, variant: "default"});
@@ -388,12 +383,16 @@ function CustomizerLayoutAndLogic() {
       firestoreOptions = options;
     }
 
-    if (firestoreOptions && Array.isArray(firestoreOptions.defaultViews) && firestoreOptions.defaultViews.length > 0) {
-      finalDefaultViews = firestoreOptions.defaultViews.map(v => ({...v, price: v.price ?? 0}));
-      tempLoadedOptionsByColor = firestoreOptions.optionsByColor || {};
-      tempLoadedGroupingAttributeName = firestoreOptions.groupingAttributeName || null;
-    } else {
-      // Fallback to single view from WC product if Firestore options are missing or empty
+    if (firestoreOptions) {
+        if (Array.isArray(firestoreOptions.defaultViews) && firestoreOptions.defaultViews.length > 0) {
+            finalDefaultViews = firestoreOptions.defaultViews.map(v => ({...v, price: v.price ?? 0}));
+        }
+        tempLoadedOptionsByColor = firestoreOptions.optionsByColor || {};
+        tempLoadedGroupingAttributeName = firestoreOptions.groupingAttributeName || null;
+        finalAllowCustomization = firestoreOptions.allowCustomization !== undefined ? firestoreOptions.allowCustomization : true;
+    }
+
+    if (finalDefaultViews.length === 0) { // Fallback if Firestore options are missing or empty views
       finalDefaultViews = [{
         id: `default_view_wc_${wcProduct.id}`, name: "Front View",
         imageUrl: wcProduct.images && wcProduct.images.length > 0 ? wcProduct.images[0].src : defaultFallbackProduct.views[0].imageUrl,
@@ -402,16 +401,26 @@ function CustomizerLayoutAndLogic() {
       }];
       tempLoadedOptionsByColor = {}; 
       tempLoadedGroupingAttributeName = null; 
-       if (userIdForFirestoreOptions && !firestoreOptions) {
-        // This means we tried to load Firestore options but found none for this user/product combo.
-        // Only toast if not an embedded scenario where configUserId was specifically used.
+      if (userIdForFirestoreOptions && !firestoreOptions) {
         if ((!isEmbedded && user?.uid) || (isEmbedded && !configUserIdToUse && user?.uid)) {
           toast({ title: "No Saved Settings", description: "No Customizer Studio settings found for this product. Displaying default view.", variant: "default" });
         } else if (isEmbedded && configUserIdToUse) {
-          // Site owner used configUserId, but no settings found for them. Log, but don't toast public user.
            console.warn(`Customizer: No Firestore settings found for configUserId ${configUserIdToUse} and product ${productIdToLoad}. Using default view.`);
         }
       }
+    }
+    
+    if (!finalAllowCustomization) {
+        setError(`Customization for product "${wcProduct.name}" is currently disabled by the store owner.`);
+        // Keep wcProduct data for basic display, but mark as not customizable
+        setProductDetails({
+            id: wcProduct.id.toString(), name: wcProduct.name || `Product ${productIdToLoad}`, 
+            basePrice: parseFloat(wcProduct.price || wcProduct.regular_price || '0'),
+            views: finalDefaultViews, type: wcProduct.type, allowCustomization: false, meta: metaForProduct,
+        });
+        setActiveViewId(finalDefaultViews[0]?.id || null);
+        setIsLoading(false);
+        return; // Stop further processing for variations etc.
     }
     
     setLoadedOptionsByColor(tempLoadedOptionsByColor);
@@ -424,7 +433,7 @@ function CustomizerLayoutAndLogic() {
 
     setProductDetails({
       id: wcProduct.id.toString(), name: wcProduct.name || `Product ${productIdToLoad}`, basePrice: productBasePrice,
-      views: finalDefaultViews, type: wcProduct.type, meta: metaForProduct,
+      views: finalDefaultViews, type: wcProduct.type, allowCustomization: finalAllowCustomization, meta: metaForProduct,
     });
     setActiveViewId(finalDefaultViews[0]?.id || null);
 
@@ -459,28 +468,20 @@ function CustomizerLayoutAndLogic() {
     const targetConfigUserId = configUserIdFromUrl || null;
 
     if (authLoading && !user && !targetProxyUrl && !targetConfigUserId) {
-        // If auth is still loading and we have no user, no proxy, and no config user,
-        // we might be in a state where we should wait or show a default.
-        // Let's ensure we load a default if it's the very first time.
-        if (lastLoadedProductIdRef.current === undefined) { // Check if it's the absolute initial load
+        if (lastLoadedProductIdRef.current === undefined) { 
             loadCustomizerData(null, null, null);
-            lastLoadedProductIdRef.current = null; // Mark as loaded (with default)
+            lastLoadedProductIdRef.current = null; 
             lastLoadedProxyUrlRef.current = null;
             lastLoadedConfigUserIdRef.current = null;
         }
-        return; // Wait for auth state or for proxy/config user to be available
+        return; 
     }
     
-    // Conditions to reload:
-    // 1. Product ID has changed.
-    // 2. Proxy URL has changed.
-    // 3. Config User ID has changed.
-    // 4. Or if productDetails is null (meaning initial load or reset).
     if (
         (lastLoadedProductIdRef.current !== targetProductId ||
         lastLoadedProxyUrlRef.current !== targetProxyUrl ||
         lastLoadedConfigUserIdRef.current !== targetConfigUserId) ||
-        !productDetails // Ensure we load if productDetails is currently null
+        !productDetails 
     ) {
         loadCustomizerData(targetProductId, targetProxyUrl, targetConfigUserId);
         lastLoadedProductIdRef.current = targetProductId;
@@ -489,12 +490,12 @@ function CustomizerLayoutAndLogic() {
     }
   }, [
       authLoading,
-      user, // user object itself changing might imply we need to re-check user-specific things if no configUserId
+      user, 
       productIdFromUrl,
       wpApiBaseUrlFromUrl,
       configUserIdFromUrl,
       loadCustomizerData,
-      productDetails // Added productDetails here: if it becomes null, we should re-attempt load.
+      productDetails 
   ]);
 
 
@@ -533,9 +534,6 @@ function CustomizerLayoutAndLogic() {
           finalImageUrl = currentVariantViewImages[view.id].imageUrl;
           finalAiHint = currentVariantViewImages[view.id].aiHint || baseAiHint;
         } else if (primaryVariationImageSrc && view.id === activeViewId) { 
-          // This condition might need adjustment: should a variation image override only the *active* view,
-          // or all views if no color-specific images are set for those views?
-          // Current: only active view if no specific color-variant view image is set.
           finalImageUrl = primaryVariationImageSrc;
           finalAiHint = primaryVariationImageAiHint || baseAiHint;
         } else {
@@ -552,7 +550,7 @@ function CustomizerLayoutAndLogic() {
       const basePriceChanged = prevProductDetails.basePrice !== (matchingVariation ? parseFloat(matchingVariation.price || '0') : prevProductDetails.basePrice);
 
       if (!viewsContentActuallyChanged && !basePriceChanged) {
-        return prevProductDetails; // No actual change, return previous state to avoid loop
+        return prevProductDetails; 
       }
       return { ...prevProductDetails, views: updatedViews, basePrice: matchingVariation ? parseFloat(matchingVariation.price || '0') : prevProductDetails.basePrice };
     });
@@ -567,7 +565,7 @@ function CustomizerLayoutAndLogic() {
     canvasTexts.forEach(item => { if (item.viewId) usedViewIdsWithElements.add(item.viewId); });
     canvasShapes.forEach(item => { if (item.viewId) usedViewIdsWithElements.add(item.viewId); });
     const viewsToPrice = new Set<string>(usedViewIdsWithElements);
-    if (activeViewId) viewsToPrice.add(activeViewId); // Always include the active view for pricing if elements exist or not
+    if (activeViewId) viewsToPrice.add(activeViewId); 
 
     let viewSurcharges = 0;
     if (productDetails?.views) {
@@ -616,6 +614,10 @@ function CustomizerLayoutAndLogic() {
   };
 
   const handleAddToCart = () => {
+    if (productDetails && productDetails.allowCustomization === false) {
+      toast({ title: "Customization Disabled", description: "This product is not available for customization at this time.", variant: "destructive" });
+      return;
+    }
     if (!activeViewId && (canvasImages.length > 0 || canvasTexts.length > 0 || canvasShapes.length > 0)){
        toast({ title: "Select a View", description: "Please ensure an active product view is selected before adding to cart if you have customizations.", variant: "default"});
       return;
@@ -636,7 +638,6 @@ function CustomizerLayoutAndLogic() {
     canvasTexts.forEach(item => { if(item.viewId) viewsUsedForSurcharge.add(item.viewId); });
     canvasShapes.forEach(item => { if(item.viewId) viewsUsedForSurcharge.add(item.viewId); });
     if (activeViewId && (viewsUsedForSurcharge.has(activeViewId) || viewsUsedForSurcharge.size === 0)) {
-        // Only add active view surcharge if it's already used or no other views have elements
         viewsUsedForSurcharge.add(activeViewId);
     }
     let totalViewSurcharge = 0;
@@ -656,8 +657,8 @@ function CustomizerLayoutAndLogic() {
         selectedOptions: selectedVariationOptions, baseProductPrice: baseProductPrice, totalViewSurcharge: totalViewSurcharge,
         totalCustomizationPrice: totalCustomizationPrice, activeViewIdUsed: activeViewId,
       },
-      userId: user?.uid || null, // Current user's ID if available
-      configUserId: productDetails?.meta?.configUserIdUsed || null, // ID of the user who configured the product
+      userId: user?.uid || null, 
+      configUserId: productDetails?.meta?.configUserIdUsed || null, 
     };
 
     let targetOrigin = '*';
@@ -686,6 +687,33 @@ function CustomizerLayoutAndLogic() {
     );
   }
 
+  if (productDetails && productDetails.allowCustomization === false) {
+    return (
+      <div className="flex flex-col min-h-svh h-screen w-full items-center justify-center bg-background p-4">
+        {!isEmbedded && <AppHeader />}
+        <div className="text-center">
+          <Ban className="h-16 w-16 text-destructive mx-auto mb-6" />
+          <h2 className="text-2xl font-semibold text-destructive mb-3">Customization Disabled</h2>
+          <p className="text-muted-foreground mb-6 max-w-md">
+            Product customization for "{productDetails.name}" is currently disabled by the store owner.
+          </p>
+          {!isEmbedded && user && (
+            <Button variant="outline" asChild>
+              <Link href={`/dashboard/products/${productDetails.id}/options`}>
+                <SettingsIcon className="mr-2 h-4 w-4" /> Go to Product Options
+              </Link>
+            </Button>
+          )}
+          {!isEmbedded && !user && (
+             <Button variant="outline" asChild>
+              <Link href="/dashboard">Go to Dashboard</Link>
+            </Button>
+          )}
+        </div>
+      </div>
+    );
+  }
+
   const activeViewData = productDetails?.views.find(v => v.id === activeViewId);
   const currentProductImage = activeViewData?.imageUrl || defaultFallbackProduct.views[0].imageUrl;
   const currentProductAlt = activeViewData?.name || defaultFallbackProduct.views[0].name;
@@ -693,7 +721,7 @@ function CustomizerLayoutAndLogic() {
   const currentBoundaryBoxes = activeViewData?.boundaryBoxes || defaultFallbackProduct.views[0].boundaryBoxes;
   const currentProductName = productDetails?.name || defaultFallbackProduct.name;
 
-  if (error && !productDetails) { // Only show full page error if productDetails is truly null
+  if (error && !productDetails) { 
     let finalErrorMessage = error;
      if (isEmbedded && wpApiBaseUrlFromUrl && error.includes("credentials are not configured")) {
         finalErrorMessage = `Failed to load product data. Please ensure the Customizer Studio plugin on your WordPress site is correctly configured and can access WooCommerce products. Original Error: ${error}`;
@@ -704,6 +732,7 @@ function CustomizerLayoutAndLogic() {
     }
     return (
       <div className="flex flex-col min-h-svh h-screen w-full items-center justify-center bg-background p-4">
+        {!isEmbedded && <AppHeader />}
         <AlertTriangle className="h-12 w-12 text-destructive mb-4" />
         <h2 className="text-xl font-semibold text-destructive mb-2">Customizer Error</h2>
         <p className="text-muted-foreground text-center mb-6 max-w-lg">{finalErrorMessage}</p>
@@ -728,7 +757,6 @@ function CustomizerLayoutAndLogic() {
           </Button>
 
           <main className="flex-1 p-4 md:p-6 flex flex-col min-h-0">
-            {/* Display error as an inline alert if productDetails IS available (meaning it's a non-critical error or error after initial load) */}
             {error && productDetails?.id === defaultFallbackProduct.id && ( <div className="w-full max-w-4xl p-3 mb-4 border border-destructive bg-destructive/10 rounded-md text-destructive text-sm flex-shrink-0"> <AlertTriangle className="inline h-4 w-4 mr-1" /> {error} </div> )}
              {error && productDetails && productDetails.id !== defaultFallbackProduct.id && ( <div className="w-full max-w-4xl p-3 mb-4 border border-destructive bg-destructive/10 rounded-md text-destructive text-sm flex-shrink-0"> <AlertTriangle className="inline h-4 w-4 mr-1" /> {error} </div> )}
              <div className="w-full flex flex-col flex-1 min-h-0 pb-4">
@@ -746,7 +774,10 @@ function CustomizerLayoutAndLogic() {
             <div className="text-md font-medium text-muted-foreground truncate max-w-xs sm:max-w-sm md:max-w-md" title={currentProductName}> {currentProductName} </div>
             <div className="flex items-center gap-3">
                 <div className="text-lg font-semibold text-foreground">Total: ${totalCustomizationPrice.toFixed(2)}</div>
-                <Button size="default" className="bg-primary text-primary-foreground hover:bg-primary/90" onClick={handleAddToCart}> <ShoppingCart className="mr-2 h-5 w-5" /> Add to Cart </Button>
+                <Button size="default" className="bg-primary text-primary-foreground hover:bg-primary/90" onClick={handleAddToCart} disabled={productDetails?.allowCustomization === false}> 
+                    {productDetails?.allowCustomization === false ? <Ban className="mr-2 h-5 w-5" /> : <ShoppingCart className="mr-2 h-5 w-5" /> }
+                    {productDetails?.allowCustomization === false ? "Not Customizable" : "Add to Cart"}
+                </Button>
             </div>
         </footer>
 
@@ -779,3 +810,4 @@ export default function CustomizerPage() {
 
 
     
+
