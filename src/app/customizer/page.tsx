@@ -348,13 +348,15 @@ function CustomizerLayoutAndLogic() {
     let tempLoadedGroupingAttributeName: string | null = null;
     let firestoreOptions: ProductOptionsFirestoreData | undefined;
 
-    if (user?.uid && !wpApiBaseUrlToUse) { // Only load Firestore options if user is logged in and not using proxy
+    // Attempt to load Firestore options if a user is logged into Customizer Studio,
+    // or if a configUserId is provided (future enhancement for fully anonymous public embeds)
+    if (user?.uid) { 
       const { options, error: firestoreLoadError } = await loadProductOptionsFromFirestore(user.uid, productIdToLoad);
       if (firestoreLoadError) {
         console.warn("Customizer: Error loading options from Firestore:", firestoreLoadError);
         if (!isEmbedded) toast({ title: "Settings Load Error", description: "Could not load saved Customizer Studio settings. Using product defaults.", variant: "default"});
       }
-      firestoreOptions = options; // Store loaded options (or undefined)
+      firestoreOptions = options;
     }
 
     if (firestoreOptions && Array.isArray(firestoreOptions.defaultViews) && firestoreOptions.defaultViews.length > 0) {
@@ -369,9 +371,8 @@ function CustomizerLayoutAndLogic() {
         aiHint: wcProduct.images && wcProduct.images.length > 0 && wcProduct.images[0].alt ? wcProduct.images[0].alt.split(" ").slice(0,2).join(" ") : defaultFallbackProduct.views[0].aiHint,
         boundaryBoxes: defaultFallbackProduct.views[0].boundaryBoxes, price: defaultFallbackProduct.views[0].price ?? 0,
       }];
-      // If falling back default views, also ensure optionsByColor and groupingAttributeName are reset or based on WC product if applicable
-      tempLoadedOptionsByColor = {}; // Reset to empty if we're creating a fresh default view
-      tempLoadedGroupingAttributeName = null; // Reset
+      tempLoadedOptionsByColor = {}; 
+      tempLoadedGroupingAttributeName = null; 
     }
     
     setLoadedOptionsByColor(tempLoadedOptionsByColor);
@@ -479,7 +480,7 @@ function CustomizerLayoutAndLogic() {
         if (currentVariantViewImages && currentVariantViewImages[view.id]?.imageUrl) {
           finalImageUrl = currentVariantViewImages[view.id].imageUrl;
           finalAiHint = currentVariantViewImages[view.id].aiHint || baseAiHint;
-        } else if (primaryVariationImageSrc && view.id === activeViewId) { // Prioritize variation image for *active* view if no specific variant view image is set
+        } else if (primaryVariationImageSrc && view.id === activeViewId) { 
           finalImageUrl = primaryVariationImageSrc;
           finalAiHint = primaryVariationImageAiHint || baseAiHint;
         } else {
@@ -716,3 +717,4 @@ export default function CustomizerPage() {
     
 
     
+
