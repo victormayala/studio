@@ -128,13 +128,13 @@ export default function DashboardPage() {
     const startTime = Date.now();
 
     if (!credentialsExist || !storeUrl || !consumerKey || !consumerSecret) {
-      setError("WooCommerce store not connected. Please go to 'Store Integration' to connect your store.");
+      setError("To list products on the dashboard, connect your WooCommerce store via the 'Store Integration' tab using your API credentials. This is separate from any WordPress plugin integration used for the customizer on your site.");
       setProducts([]);
       setIsLoadingProducts(false);
       if (isManualRefresh) {
         toast({
-          title: "Store Not Connected",
-          description: "Please connect your WooCommerce store first.",
+          title: "Store Not Connected to Dashboard",
+          description: "Please connect your WooCommerce store in 'Store Integration' to see products here.",
           variant: "default",
         });
       }
@@ -148,6 +148,8 @@ export default function DashboardPage() {
     };
     
     try {
+      // The dashboard fetches all products; it does not use wpApiBaseUrl.
+      // wpApiBaseUrl is for single product/variation fetching in the customizer via a WP plugin proxy.
       const { products: fetchedProducts, error: fetchError } = await fetchWooCommerceProducts(userCredentialsToUse);
       const duration = Date.now() - startTime;
 
@@ -283,7 +285,7 @@ export default function DashboardPage() {
       });
        if (activeTab === 'products') {
         setProducts([]); 
-        setError("WooCommerce store not connected. Please go to 'Store Integration' to connect your store.");
+        setError("To list products on the dashboard, connect your WooCommerce store via the 'Store Integration' tab using your API credentials. This is separate from any WordPress plugin integration used for the customizer on your site.");
       }
     } else {
       toast({
@@ -300,11 +302,11 @@ export default function DashboardPage() {
       if (credentialsExist) {
          loadProductsWithUserCredentials(true, true);
       } else {
-         setError("WooCommerce store not connected. Please go to 'Store Integration' to connect your store.");
+         setError("To list products on the dashboard, connect your WooCommerce store via the 'Store Integration' tab using your API credentials. This is separate from any WordPress plugin integration used for the customizer on your site.");
          setProducts([]);
          toast({ 
             title: "Cannot Refresh",
-            description: "Please connect your WooCommerce store first.",
+            description: "Please connect your WooCommerce store first via 'Store Integration' for dashboard features.",
             variant: "default",
           });
       }
@@ -316,7 +318,7 @@ export default function DashboardPage() {
        if (credentialsExist) {
         loadProductsWithUserCredentials(false, false); 
        } else if (!isLoadingProducts) { 
-         setError("WooCommerce store not connected. Please go to 'Store Integration' to connect your store.");
+         setError("To list products on the dashboard, connect your WooCommerce store via the 'Store Integration' tab using your API credentials. This is separate from any WordPress plugin integration used for the customizer on your site.");
        }
     }
   }, [activeTab, user, isLoadingCredentials, products.length, isLoadingProducts, error, loadProductsWithUserCredentials, credentialsExist]);
@@ -351,7 +353,7 @@ export default function DashboardPage() {
     );
   }
 
-  const isStoreNotConnectedError = error && (error.includes("store not connected") || error.includes("credentials are not configured") || error.includes("User-specific WooCommerce credentials are required"));
+  const isStoreNotConnectedError = error && (error.includes("store not connected") || error.includes("credentials are not configured") || error.includes("User-specific WooCommerce credentials are required") || error.includes("Store Integration"));
 
   return (
     <UploadProvider>
@@ -421,7 +423,7 @@ export default function DashboardPage() {
                       <CardHeader>
                         <CardTitle className="font-headline text-xl text-card-foreground">Your Products</CardTitle>
                         <CardDescription className="text-muted-foreground">
-                          View, edit, and manage your customizable products from your connected store.
+                          View, edit, and manage your customizable products. Requires direct WooCommerce API connection in 'Store Integration' for this dashboard view.
                         </CardDescription>
                       </CardHeader>
                       <CardContent>
@@ -435,13 +437,11 @@ export default function DashboardPage() {
                             <AlertTriangle className="mx-auto h-12 w-12 text-orange-500" />
                             <p className="mt-4 text-orange-600 font-semibold">
                               {isStoreNotConnectedError
-                                ? "Store Not Connected"
-                                : "No Products Found"}
+                                ? "Store Not Connected to Dashboard"
+                                : "No Products Found or Error"}
                             </p>
                             <p className="text-sm text-muted-foreground mt-1 px-4">
-                              {isStoreNotConnectedError
-                                ? <>Your WooCommerce store is not connected.<br />Please go to 'Store Integration' to connect your store.</>
-                                : error}
+                              {error}
                             </p>
                             {isStoreNotConnectedError && (
                               <Button variant="link" onClick={() => setActiveTab('storeIntegration')} className="mt-3 text-orange-600 hover:text-orange-700">
@@ -511,9 +511,9 @@ export default function DashboardPage() {
                         ) : ( 
                            <div className="text-center py-10">
                             <PlugZap className="mx-auto h-12 w-12 text-orange-500" />
-                            <p className="mt-4 text-orange-600 font-semibold">Store Not Connected</p>
+                            <p className="mt-4 text-orange-600 font-semibold">Store Not Connected to Dashboard</p>
                             <p className="text-sm text-muted-foreground mt-1 px-4">
-                               Your WooCommerce store is not connected.<br />Please go to the 'Store Integration' tab to set up your WooCommerce connection.
+                               To list products on the dashboard, please connect your WooCommerce store via the 'Store Integration' tab using your API credentials.
                             </p>
                              <Button variant="link" onClick={() => setActiveTab('storeIntegration')} className="mt-3 text-orange-600 hover:text-orange-700">
                                 Connect Store
@@ -529,7 +529,7 @@ export default function DashboardPage() {
                       <CardHeader>
                         <CardTitle className="font-headline text-xl text-card-foreground">WooCommerce Store Connection</CardTitle>
                         <CardDescription className="text-muted-foreground">
-                          Connect your WooCommerce store to fetch and manage products. Your credentials are saved to your account.
+                          Connect your WooCommerce store to fetch and manage products directly within this dashboard. Your credentials are saved to your account.
                         </CardDescription>
                       </CardHeader>
                       <CardContent>
@@ -660,6 +660,8 @@ export default function DashboardPage() {
     </UploadProvider>
   );
 }
+    
+
     
 
     
