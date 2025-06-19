@@ -10,12 +10,13 @@ import { UploadProvider, useUploads } from "@/contexts/UploadContext";
 import { fetchWooCommerceProductById, fetchWooCommerceProductVariations, type WooCommerceCredentials } from '@/app/actions/woocommerceActions';
 import type { ProductOptionsFirestoreData } from '@/app/dashboard/products/[productId]/options/page';
 import { useAuth } from '@/contexts/AuthContext';
-import { db } from '@/lib/firebase';
+import { db, storage as firebaseStorage } from '@/lib/firebase'; // Import storage
+import { ref as storageRef, uploadString, getDownloadURL } from 'firebase/storage'; // Firebase storage functions
 import { doc, getDoc } from 'firebase/firestore';
 import type { UserWooCommerceCredentials } from '@/app/actions/userCredentialsActions';
 import {
   Loader2, AlertTriangle, ShoppingCart, UploadCloud, Layers, Type, Shapes as ShapesIconLucide, Smile, Palette, Gem as GemIcon, Settings2 as SettingsIcon,
-  PanelLeftClose, PanelRightOpen, PanelRightClose, PanelLeftOpen, Sparkles, Ban, Camera
+  PanelLeftClose, PanelRightOpen, PanelRightClose, PanelLeftOpen, Sparkles, Ban, Camera, Eye
 } from 'lucide-react';
 import { Button, buttonVariants } from '@/components/ui/button';
 import {
@@ -27,8 +28,10 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
+  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import Link from 'next/link';
+import NextImage from 'next/image'; // For modal previews
 import type { WCCustomProduct, WCVariation, WCVariationAttribute } from '@/types/woocommerce';
 import { useToast } from '@/hooks/use-toast';
 import CustomizerIconNav, { type CustomizerTool } from '@/components/customizer/CustomizerIconNav';
@@ -72,7 +75,7 @@ interface LoadedCustomizerOptions {
   defaultViews: ProductView[];
   optionsByColor: Record<string, ColorGroupOptionsForCustomizer>;
   groupingAttributeName: string | null;
-  allowCustomization?: boolean; // Added field
+  allowCustomization?: boolean; 
 }
 
 export interface ProductForCustomizer {
@@ -81,7 +84,7 @@ export interface ProductForCustomizer {
   basePrice: number;
   views: ProductView[];
   type?: 'simple' | 'variable' | 'grouped' | 'external';
-  allowCustomization?: boolean; // Added field
+  allowCustomization?: boolean; 
   meta?: {
     proxyUsed?: boolean;
     configUserIdUsed?: string | null;
@@ -91,6 +94,12 @@ export interface ProductForCustomizer {
 export interface ConfigurableAttribute {
   name: string;
   options: string[];
+}
+
+interface ViewScreenshot {
+  viewId: string;
+  viewName: string;
+  imageDataUrl: string;
 }
 
 const defaultFallbackProduct: ProductForCustomizer = {
@@ -164,7 +173,7 @@ function CustomizerLayoutAndLogic() {
 
   const { user, isLoading: authLoading } = useAuth();
   const { toast } = useToast();
-  const { canvasImages, canvasTexts, canvasShapes } = useUploads();
+  const { canvasImages, canvasTexts, canvasShapes, selectCanvasImage, selectCanvasText, selectCanvasShape } = useUploads();
 
   const [productDetails, setProductDetails] = useState<ProductForCustomizer | null>(null);
   const [activeViewId, setActiveViewId] = useState<string | null>(null);
@@ -193,6 +202,13 @@ function CustomizerLayoutAndLogic() {
   const lastLoadedProductIdRef = useRef<string | null | undefined>(undefined);
   const lastLoadedProxyUrlRef = useRef<string | null | undefined>(undefined);
   const lastLoadedConfigUserIdRef = useRef<string | null | undefined>(undefined);
+  const originalActiveViewIdBeforePreviewRef = useRef<string | null>(null);
+
+  // State for Add to Cart Confirmation Modal
+  const [isConfirmationModalOpen, setIsConfirmationModalOpen] = useState(false);
+  const [isGeneratingPreviews, setIsGeneratingPreviews] = useState(false);
+  const [viewScreenshots, setViewScreenshots] = useState<ViewScreenshot[]>([]);
+  const [primaryScreenshotForUpload, setPrimaryScreenshotForUpload] = useState<string | null>(null);
 
 
   useEffect(() => {
@@ -335,7 +351,7 @@ function CustomizerLayoutAndLogic() {
       if (isEmbedded && wpApiBaseUrlToUse && (fetchError?.includes("credentials are not configured") || fetchError?.includes("required."))) {
           displayError = `This product customizer (ID: ${productIdToLoad}) could not load data using the provided proxy. The embedding site might need to configure its connection or API proxy with Customizer Studio. Original error: ${fetchError}`;
       } else if (isEmbedded && wpApiBaseUrlToUse && fetchError) {
-          if (fetchError.includes("Status: 403") || fetchError.includes("Invalid Origin")) { // Added check for "Invalid Origin"
+          if (fetchError.includes("Status: 403") || fetchError.includes("Invalid Origin")) { 
             displayError = `Failed to load product (ID: ${productIdToLoad}) via WordPress proxy. Access was forbidden (403). This often indicates a CORS or plugin configuration issue on your WordPress site. Please ensure the Customizer Studio plugin is configured correctly (Allowed Origins, User ID), and check REST API security and server logs. Original error: ${fetchError}`;
           } else {
             displayError = `Failed to load product (ID: ${productIdToLoad}) via WordPress proxy. Please ensure the Customizer Studio plugin is configured correctly on your WordPress site. Original error: ${fetchError}`;
@@ -393,7 +409,7 @@ function CustomizerLayoutAndLogic() {
         finalAllowCustomization = firestoreOptions.allowCustomization !== undefined ? firestoreOptions.allowCustomization : true;
     }
 
-    if (finalDefaultViews.length === 0) { // Fallback if Firestore options are missing or empty views
+    if (finalDefaultViews.length === 0) { 
       finalDefaultViews = [{
         id: `default_view_wc_${wcProduct.id}`, name: "Front View",
         imageUrl: wcProduct.images && wcProduct.images.length > 0 ? wcProduct.images[0].src : defaultFallbackProduct.views[0].imageUrl,
@@ -413,7 +429,6 @@ function CustomizerLayoutAndLogic() {
     
     if (!finalAllowCustomization) {
         setError(`Customization for product "${wcProduct.name}" is currently disabled by the store owner.`);
-        // Keep wcProduct data for basic display, but mark as not customizable
         setProductDetails({
             id: wcProduct.id.toString(), name: wcProduct.name || `Product ${productIdToLoad}`, 
             basePrice: parseFloat(wcProduct.price || wcProduct.regular_price || '0'),
@@ -421,7 +436,7 @@ function CustomizerLayoutAndLogic() {
         });
         setActiveViewId(finalDefaultViews[0]?.id || null);
         setIsLoading(false);
-        return; // Stop further processing for variations etc.
+        return; 
     }
     
     setLoadedOptionsByColor(tempLoadedOptionsByColor);
@@ -614,7 +629,148 @@ function CustomizerLayoutAndLogic() {
     }
   };
 
-  const handleAddToCart = async () => {
+  const generatePreviewsAndOpenModal = async () => {
+    if (!productDetails || !activeViewId) return;
+    selectCanvasImage(null); selectCanvasText(null); selectCanvasShape(null); // Deselect items
+
+    setIsGeneratingPreviews(true);
+    setIsConfirmationModalOpen(true); // Open modal to show loading state
+
+    // 1. Capture screenshot of the initially active view for potential upload
+    const canvasElement = document.getElementById('design-canvas-render-area');
+    let initialActiveViewScreenshotDataUrl: string | null = null;
+    if (canvasElement) {
+      try {
+        const canvasOutput = await html2canvas(canvasElement, { allowTaint: true, useCORS: true, backgroundColor: null, logging: false });
+        initialActiveViewScreenshotDataUrl = canvasOutput.toDataURL('image/png');
+        setPrimaryScreenshotForUpload(initialActiveViewScreenshotDataUrl);
+      } catch (error) {
+        console.error("Error generating primary screenshot:", error);
+        toast({ title: "Screenshot Failed", description: "Could not generate initial preview.", variant: "destructive" });
+      }
+    }
+
+    // 2. Generate previews for all customized views
+    const customizedViewsScreenshots: ViewScreenshot[] = [];
+    originalActiveViewIdBeforePreviewRef.current = activeViewId; 
+
+    for (const view of productDetails.views) {
+      const hasCustomizations = 
+        canvasImages.some(item => item.viewId === view.id) ||
+        canvasTexts.some(item => item.viewId === view.id) ||
+        canvasShapes.some(item => item.viewId === view.id);
+
+      if (hasCustomizations) {
+        if (activeViewId !== view.id) {
+          setActiveViewId(view.id);
+          await new Promise(resolve => setTimeout(resolve, 250)); // DOM update delay
+        }
+        if (canvasElement) {
+          try {
+            const canvasOutput = await html2canvas(canvasElement, { allowTaint: true, useCORS: true, backgroundColor: null, logging: false });
+            customizedViewsScreenshots.push({
+              viewId: view.id,
+              viewName: view.name,
+              imageDataUrl: canvasOutput.toDataURL('image/png'),
+            });
+          } catch (error) {
+            console.error(`Error generating screenshot for view ${view.name}:`, error);
+            customizedViewsScreenshots.push({
+              viewId: view.id,
+              viewName: view.name,
+              imageDataUrl: 'error', // Placeholder for failed screenshots
+            });
+          }
+        }
+      }
+    }
+    setViewScreenshots(customizedViewsScreenshots);
+    setIsGeneratingPreviews(false);
+
+    // Restore original active view after generating all previews
+    if (originalActiveViewIdBeforePreviewRef.current && activeViewId !== originalActiveViewIdBeforePreviewRef.current) {
+        setActiveViewId(originalActiveViewIdBeforePreviewRef.current);
+        await new Promise(resolve => setTimeout(resolve, 50)); // Small delay
+    }
+    originalActiveViewIdBeforePreviewRef.current = null;
+  };
+
+  const handleConfirmAddToCart = async () => {
+    setIsConfirmationModalOpen(false);
+    let screenshotStorageUrl: string | null = null;
+
+    if (primaryScreenshotForUpload && user && user.uid && productDetails && productDetails.id && firebaseStorage) {
+      toast({ title: "Processing Design...", description: "Uploading your customization preview.", duration: 2000 });
+      try {
+        const filePath = `user_customizations/${user.uid}/${productDetails.id}/${Date.now()}.png`;
+        const fileStorageRef = storageRef(firebaseStorage, filePath);
+        await uploadString(fileStorageRef, primaryScreenshotForUpload, 'data_url');
+        screenshotStorageUrl = await getDownloadURL(fileStorageRef);
+        toast({ title: "Preview Saved", description: "Customization preview uploaded successfully." });
+      } catch (uploadError) {
+        console.error("Error uploading screenshot to Firebase Storage:", uploadError);
+        toast({ title: "Upload Failed", description: "Could not save customization preview.", variant: "destructive" });
+      }
+    } else if (primaryScreenshotForUpload) {
+        toast({ title: "Note", description: "Customization preview generated but not uploaded (user/product/storage issue).", variant: "default" });
+    }
+
+
+    const currentProductIdFromUrlResolved = productIdFromUrl;
+    const baseProductPrice = productDetails?.basePrice ?? 0;
+    const viewsUsedForSurcharge = new Set<string>();
+    canvasImages.forEach(item => { if(item.viewId) viewsUsedForSurcharge.add(item.viewId); });
+    canvasTexts.forEach(item => { if(item.viewId) viewsUsedForSurcharge.add(item.viewId); });
+    canvasShapes.forEach(item => { if(item.viewId) viewsUsedForSurcharge.add(item.viewId); });
+    
+    const activeViewIdForPricing = activeViewId || originalActiveViewIdBeforePreviewRef.current || productDetails?.views[0]?.id;
+    if (activeViewIdForPricing && (viewsUsedForSurcharge.has(activeViewIdForPricing) || viewsUsedForSurcharge.size === 0)) {
+        viewsUsedForSurcharge.add(activeViewIdForPricing);
+    }
+
+    let totalViewSurcharge = 0;
+    viewsUsedForSurcharge.forEach(vid => { totalViewSurcharge += productDetails?.views.find(v => v.id === vid)?.price ?? 0; });
+
+    const designData = {
+      productId: currentProductIdFromUrlResolved || productDetails?.id,
+      variationId: productVariations?.find(v => v.attributes.every(attr => selectedVariationOptions[attr.name] === attr.option))?.id.toString() || null,
+      quantity: 1,
+      customizationDetails: {
+        viewData: productDetails?.views.map(view => ({
+            viewId: view.id, viewName: view.name,
+            images: canvasImages.filter(item => item.viewId === view.id).map(img => ({ src: img.dataUrl, name: img.name, type: img.type, x: img.x, y: img.y, scale: img.scale, rotation: img.rotation })),
+            texts: canvasTexts.filter(item => item.viewId === view.id).map(txt => ({ content: txt.content, fontFamily: txt.fontFamily, fontSize: txt.fontSize, color: txt.color, x: txt.x, y: txt.y, scale: txt.scale, rotation: txt.rotation, outlineColor: txt.outlineColor, outlineWidth: txt.outlineWidth, shadowColor: txt.shadowColor, shadowOffsetX: txt.shadowOffsetX, shadowOffsetY: txt.shadowOffsetY, shadowBlur: txt.shadowBlur, archAmount: txt.archAmount })),
+            shapes: canvasShapes.filter(item => item.viewId === view.id).map(shp => ({ type: shp.shapeType, color: shp.color, strokeColor: shp.strokeColor, strokeWidth: shp.strokeWidth, x: shp.x, y: shp.y, scale: shp.scale, rotation: shp.rotation, width: shp.width, height: shp.height })),
+        })).filter(view => view.images.length > 0 || view.texts.length > 0 || view.shapes.length > 0),
+        selectedOptions: selectedVariationOptions, baseProductPrice: baseProductPrice, totalViewSurcharge: totalViewSurcharge,
+        totalCustomizationPrice: totalCustomizationPrice, 
+        activeViewIdUsed: activeViewIdForPricing, // Use the resolved active view ID
+        screenshotStorageUrl: screenshotStorageUrl, // Use storage URL
+      },
+      userId: user?.uid || null, 
+      configUserId: productDetails?.meta?.configUserIdUsed || null, 
+    };
+
+    let targetOrigin = '*';
+    if (window.parent !== window && document.referrer) {
+      try { targetOrigin = new URL(document.referrer).origin; }
+      catch (e) { console.warn("Could not parse document.referrer for targetOrigin. Defaulting to '*'. Parent site MUST validate event.origin.", e); }
+    } else if (window.parent !== window) {
+        console.warn("document.referrer is empty, but app is in an iframe. Defaulting to targetOrigin '*' for postMessage. Parent site MUST validate event.origin.");
+    }
+
+    if (window.parent !== window) {
+      window.parent.postMessage({ customizerStudioDesignData: designData }, targetOrigin);
+      toast({ title: "Design Sent!", description: `Your design details have been sent. The embedding site must verify the origin of this message for security.`});
+    } else {
+       toast({ title: "Add to Cart Clicked (Standalone)", description: "Design data logged to console. Screenshot (if any) " + (screenshotStorageUrl ? `uploaded to: ${screenshotStorageUrl}` : "not uploaded."), variant: "default", duration: 7000});
+      console.log("Add to Cart - Design Data:", designData);
+    }
+    setViewScreenshots([]);
+    setPrimaryScreenshotForUpload(null);
+  };
+
+  const handleAddToCartClick = () => {
     if (productDetails && productDetails.allowCustomization === false) {
       toast({ title: "Customization Disabled", description: "This product is not available for customization at this time.", variant: "destructive" });
       return;
@@ -631,84 +787,9 @@ function CustomizerLayoutAndLogic() {
        toast({ title: "Please Sign In", description: "Sign in to save your design and add to cart (if applicable).", variant: "default" });
       return;
     }
-
-    const canvasElement = document.getElementById('design-canvas-render-area');
-    let screenshotDataUrl: string | null = null;
-
-    if (canvasElement) {
-      try {
-        const canvasOutput = await html2canvas(canvasElement, {
-          allowTaint: true,
-          useCORS: true,
-          backgroundColor: null, // Attempt to capture with transparency
-          logging: false, // Reduce console noise
-        });
-        screenshotDataUrl = canvasOutput.toDataURL('image/png');
-         toast({ title: "Screenshot Captured", description: "A preview of your design has been generated.", variant: "default" });
-      } catch (error) {
-        console.error("Error generating screenshot with html2canvas:", error);
-        toast({
-          title: "Screenshot Failed",
-          description: "Could not generate a preview image of the customization. Proceeding without it.",
-          variant: "destructive",
-        });
-      }
-    } else {
-      console.warn("Could not find canvas element with ID 'design-canvas-render-area' for screenshot.");
-       toast({
-          title: "Screenshot Skipped",
-          description: "Canvas element not found for screenshot. Proceeding without it.",
-          variant: "default",
-        });
-    }
-
-    const currentProductIdFromUrlResolved = productIdFromUrl;
-    const baseProductPrice = productDetails?.basePrice ?? 0;
-    const viewsUsedForSurcharge = new Set<string>();
-    canvasImages.forEach(item => { if(item.viewId) viewsUsedForSurcharge.add(item.viewId); });
-    canvasTexts.forEach(item => { if(item.viewId) viewsUsedForSurcharge.add(item.viewId); });
-    canvasShapes.forEach(item => { if(item.viewId) viewsUsedForSurcharge.add(item.viewId); });
-    if (activeViewId && (viewsUsedForSurcharge.has(activeViewId) || viewsUsedForSurcharge.size === 0)) {
-        viewsUsedForSurcharge.add(activeViewId);
-    }
-    let totalViewSurcharge = 0;
-    viewsUsedForSurcharge.forEach(vid => { totalViewSurcharge += productDetails?.views.find(v => v.id === vid)?.price ?? 0; });
-
-    const designData = {
-      productId: currentProductIdFromUrlResolved || productDetails?.id,
-      variationId: productVariations?.find(v => v.attributes.every(attr => selectedVariationOptions[attr.name] === attr.option))?.id.toString() || null,
-      quantity: 1,
-      customizationDetails: {
-        viewData: productDetails?.views.map(view => ({
-            viewId: view.id, viewName: view.name,
-            images: canvasImages.filter(item => item.viewId === view.id).map(img => ({ src: img.dataUrl, name: img.name, type: img.type, x: img.x, y: img.y, scale: img.scale, rotation: img.rotation })),
-            texts: canvasTexts.filter(item => item.viewId === view.id).map(txt => ({ content: txt.content, fontFamily: txt.fontFamily, fontSize: txt.fontSize, color: txt.color, x: txt.x, y: txt.y, scale: txt.scale, rotation: txt.rotation, outlineColor: txt.outlineColor, outlineWidth: txt.outlineWidth, shadowColor: txt.shadowColor, shadowOffsetX: txt.shadowOffsetX, shadowOffsetY: txt.shadowOffsetY, shadowBlur: txt.shadowBlur, archAmount: txt.archAmount })),
-            shapes: canvasShapes.filter(item => item.viewId === view.id).map(shp => ({ type: shp.shapeType, color: shp.color, strokeColor: shp.strokeColor, strokeWidth: shp.strokeWidth, x: shp.x, y: shp.y, scale: shp.scale, rotation: shp.rotation, width: shp.width, height: shp.height })),
-        })).filter(view => view.images.length > 0 || view.texts.length > 0 || view.shapes.length > 0),
-        selectedOptions: selectedVariationOptions, baseProductPrice: baseProductPrice, totalViewSurcharge: totalViewSurcharge,
-        totalCustomizationPrice: totalCustomizationPrice, activeViewIdUsed: activeViewId,
-        screenshotDataUrl: screenshotDataUrl, // Added screenshot
-      },
-      userId: user?.uid || null, 
-      configUserId: productDetails?.meta?.configUserIdUsed || null, 
-    };
-
-    let targetOrigin = '*';
-    if (window.parent !== window && document.referrer) {
-      try { targetOrigin = new URL(document.referrer).origin; }
-      catch (e) { console.warn("Could not parse document.referrer for targetOrigin. Defaulting to '*'. Parent site MUST validate event.origin.", e); }
-    } else if (window.parent !== window) {
-        console.warn("document.referrer is empty, but app is in an iframe. Defaulting to targetOrigin '*' for postMessage. Parent site MUST validate event.origin.");
-    }
-
-    if (window.parent !== window) {
-      window.parent.postMessage({ customizerStudioDesignData: designData }, targetOrigin);
-      toast({ title: "Design Sent!", description: `Your design details have been sent. The embedding site must verify the origin of this message (${targetOrigin === '*' ? 'any origin, or a specific one if referrer was available' : targetOrigin}) for security.`});
-    } else {
-       toast({ title: "Add to Cart Clicked (Standalone)", description: "This action would normally send data to an embedded store. Design data logged to console.", variant: "default"});
-      console.log("Add to Cart - Design Data:", designData);
-    }
+    generatePreviewsAndOpenModal();
   };
+
 
   if (isLoading || (authLoading && !user && !wpApiBaseUrlFromUrl && !configUserIdFromUrl)) {
     return (
@@ -806,12 +887,76 @@ function CustomizerLayoutAndLogic() {
             <div className="text-md font-medium text-muted-foreground truncate max-w-xs sm:max-w-sm md:max-w-md" title={currentProductName}> {currentProductName} </div>
             <div className="flex items-center gap-3">
                 <div className="text-lg font-semibold text-foreground">Total: ${totalCustomizationPrice.toFixed(2)}</div>
-                <Button size="default" className="bg-primary text-primary-foreground hover:bg-primary/90" onClick={handleAddToCart} disabled={productDetails?.allowCustomization === false}> 
-                    {productDetails?.allowCustomization === false ? <Ban className="mr-2 h-5 w-5" /> : <ShoppingCart className="mr-2 h-5 w-5" /> }
-                    {productDetails?.allowCustomization === false ? "Not Customizable" : "Add to Cart"}
+                <Button size="default" className="bg-primary text-primary-foreground hover:bg-primary/90" onClick={handleAddToCartClick} disabled={productDetails?.allowCustomization === false || isGeneratingPreviews}> 
+                    {isGeneratingPreviews ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : (productDetails?.allowCustomization === false ? <Ban className="mr-2 h-5 w-5" /> : <ShoppingCart className="mr-2 h-5 w-5" />) }
+                    {isGeneratingPreviews ? "Processing..." : (productDetails?.allowCustomization === false ? "Not Customizable" : "Add to Cart")}
                 </Button>
             </div>
         </footer>
+
+        <AlertDialog open={isConfirmationModalOpen} onOpenChange={setIsConfirmationModalOpen}>
+            <AlertDialogContent className="max-w-3xl">
+                <AlertDialogHeader>
+                    <AlertDialogTitle className="font-headline text-xl">Confirm Your Customization</AlertDialogTitle>
+                    <AlertDialogDescription>
+                        Please review the previews of your customized product views below.
+                        {isGeneratingPreviews && " Generating previews..."}
+                    </AlertDialogDescription>
+                </AlertDialogHeader>
+                
+                {isGeneratingPreviews ? (
+                    <div className="flex flex-col items-center justify-center h-64">
+                        <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
+                        <p className="text-muted-foreground">Generating previews, please wait...</p>
+                    </div>
+                ) : viewScreenshots.length > 0 ? (
+                    <div className="my-4 max-h-[60vh] overflow-y-auto grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 p-1">
+                        {viewScreenshots.map(preview => (
+                            <div key={preview.viewId} className="border rounded-md p-2 bg-muted/20">
+                                <p className="text-sm font-medium text-center mb-1.5 text-foreground">{preview.viewName}</p>
+                                <div className="relative aspect-square w-full rounded overflow-hidden bg-background">
+                                    {preview.imageDataUrl === 'error' ? (
+                                        <div className="absolute inset-0 flex flex-col items-center justify-center text-destructive bg-destructive/10">
+                                            <AlertTriangle className="h-8 w-8 mb-1" />
+                                            <span className="text-xs">Preview Error</span>
+                                        </div>
+                                    ) : (
+                                        <NextImage src={preview.imageDataUrl} alt={`Preview of ${preview.viewName}`} fill className="object-contain" />
+                                    )}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                ) : (
+                     <div className="my-4 text-center text-muted-foreground">
+                        <Eye className="h-12 w-12 mx-auto mb-2 text-muted-foreground/50" />
+                        No customized views to preview. 
+                        {primaryScreenshotForUpload && " The current view will be used for the order."}
+                    </div>
+                )}
+
+                <AlertDialogFooter>
+                    <AlertDialogCancel 
+                        onClick={() => {
+                            setIsConfirmationModalOpen(false); 
+                            setViewScreenshots([]); 
+                            setPrimaryScreenshotForUpload(null);
+                            if (originalActiveViewIdBeforePreviewRef.current && activeViewId !== originalActiveViewIdBeforePreviewRef.current) {
+                                setActiveViewId(originalActiveViewIdBeforePreviewRef.current);
+                            }
+                            originalActiveViewIdBeforePreviewRef.current = null;
+                        }} 
+                        disabled={isGeneratingPreviews}
+                    >
+                        Cancel
+                    </AlertDialogCancel>
+                    <AlertDialogAction onClick={handleConfirmAddToCart} disabled={isGeneratingPreviews || (!primaryScreenshotForUpload && viewScreenshots.length === 0)}>
+                        {isGeneratingPreviews ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                        Confirm & Add to Cart
+                    </AlertDialogAction>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+        </AlertDialog>
 
         {!isEmbedded && <AlertDialog open={isLeaveConfirmOpen} onOpenChange={setIsLeaveConfirmOpen}>
           <AlertDialogContent>
@@ -839,8 +984,11 @@ export default function CustomizerPage() {
 
     
 
+    
+
 
 
     
+
 
 
