@@ -9,23 +9,22 @@ runConfig:
 
 # Environment variables and secrets.
 env:
-  # Configure environment variables.
-  # See https://firebase.google.com/docs/app-hosting/configure#user-defined-environment
-  - variable: GEMINI_API_KEY
-    # OPTION 1: Direct Value (Replace placeholder with your actual key)
-    # Ensure this file is handled securely if you use this method.
-    value: "YOUR_ACTUAL_GEMINI_API_KEY_HERE"
-    availability:
-      - RUNTIME # The API key is needed when the application is running
-
-  # OPTION 2: Using Google Cloud Secret Manager (Recommended for Production)
-  # 1. Create a secret in Secret Manager (e.g., named "customizer-gemini-api-key").
-  # 2. Grant your App Hosting service account permission to access this secret.
-  # 3. Uncomment the lines below and update "your-secret-name-in-secret-manager".
+  # OPTION 1: Direct Value (For quick testing, NOT RECOMMENDED for production secrets)
+  # If you used this, ensure this file is handled securely.
   # - variable: GEMINI_API_KEY
-  #   secret: your-secret-name-in-secret-manager
+  #   value: "YOUR_ACTUAL_GEMINI_API_KEY_HERE" # Replace with your key if using direct value
   #   availability:
   #     - RUNTIME
+
+  # OPTION 2: Using Google Cloud Secret Manager (Recommended for Production)
+  # 1. Ensure you have created a secret in Google Cloud Secret Manager.
+  # 2. Grant your App Hosting backend's service account permission to access this secret.
+  #    (Usually 'Secret Manager Secret Accessor' role on the secret).
+  # 3. Replace "your-secret-name-in-secret-manager" below with the actual name of your secret.
+  - variable: GEMINI_API_KEY
+    secret: your-secret-name-in-secret-manager # <-- REPLACE THIS WITH YOUR SECRET NAME
+    availability:
+      - RUNTIME # The API key is needed when the application is running
 
   # Example of another variable:
   # - variable: MESSAGE
