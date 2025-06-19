@@ -15,6 +15,7 @@ export async function POST(request: Request) {
 
     if (!db) {
       console.error("/api/product-customization-check: Firestore not initialized. Check firebase.ts");
+      // This is a server configuration issue, so return 500.
       return NextResponse.json({ error: 'Database service is not available on the server.' }, { status: 500 });
     }
 
@@ -39,20 +40,18 @@ export async function POST(request: Request) {
 
     } catch (firestoreError: any) {
       console.error(`Firestore error in /api/product-customization-check for configUser ${configUserId}, product ${productId}:`, firestoreError);
-      // Even if Firestore fails, we might want to default to allowing customization
-      // to prevent breaking product pages if there's a transient issue.
-      // Or, you could return a 500 error. For now, defaulting to true for resilience.
-      // If you prefer to fail closed:
-      // return NextResponse.json({ error: `Error fetching product options: ${firestoreError.message}` }, { status: 500 });
-      return NextResponse.json({ allowCustomization: true, warning: "Error fetching options, defaulted to allowing customization." });
+      // If Firestore read fails, the API itself should indicate a server error.
+      // The WordPress plugin will then use its "API fails -> show button" logic.
+      return NextResponse.json({ error: `Server error checking product customization: ${firestoreError.message}` }, { status: 500 });
     }
 
   } catch (error: any) {
     console.error('Error in /api/product-customization-check handler:', error);
-    if (error instanceof SyntaxError) {
+    if (error instanceof SyntaxError) { // For errors like malformed JSON request body
       return NextResponse.json({ error: 'Invalid JSON in request body' }, { status: 400 });
     }
-    return NextResponse.json({ error: 'An unexpected error occurred' }, { status: 500 });
+    // For other unexpected errors in the handler itself
+    return NextResponse.json({ error: 'An unexpected error occurred processing the request' }, { status: 500 });
   }
 }
 
