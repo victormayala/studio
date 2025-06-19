@@ -3,20 +3,11 @@
 
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
-import {
-  generateTextImageFlow,
-  type GenerateTextImageInput,
-} from '@/ai/flows/generate-text-image';
-import {
-  generateShapeImageFlow,
-  type GenerateShapeImageInput,
-} from '@/ai/flows/generate-shape-image';
-import {
-  compositeImagesFlow,
-  type CompositeImagesInput,
-  type OverlayImageInput,
-} from '@/ai/flows/composite-images';
+import { createCanvas, loadImage, registerFont } from 'canvas';
+import path from 'path';
+import { promises as fs } from 'fs';
 
+// Schema definitions (assuming they remain the same for input validation)
 const ElementSchema = z.object({
   id: z.string(),
   type: z.enum(['image', 'text', 'shape']),
@@ -29,8 +20,8 @@ const ElementSchema = z.object({
   color: z.string().optional(), // Also for shape fill
   fontWeight: z.string().optional(),
   fontStyle: z.string().optional(),
-  textDecoration: z.string().optional(),
-  textTransform: z.string().optional(),
+  textDecoration: z.string().optional(), // Note: basic canvas won't easily do underline
+  textTransform: z.string().optional(), // Note: canvas needs manual implementation
   lineHeight: z.number().optional(),
   letterSpacing: z.number().optional(),
   outlineEnabled: z.boolean().optional(),
@@ -41,11 +32,11 @@ const ElementSchema = z.object({
   shadowOffsetX: z.number().optional(),
   shadowOffsetY: z.number().optional(),
   shadowBlur: z.number().optional(),
-  archAmount: z.number().optional(),
+  archAmount: z.number().optional(), // Note: Arching is very complex for basic canvas
   // Shape specific
-  shapeType: z.string().optional(), // Using string for flexibility with ShapeType type
-  width: z.number().optional(), // Base width for shapes
-  height: z.number().optional(), // Base height for shapes
+  shapeType: z.string().optional(),
+  width: z.number().optional(), // Base width for shapes, also used for images if needed
+  height: z.number().optional(), // Base height for shapes, also used for images if needed
   // Common transform
   x: z.number(), // percentage
   y: z.number(), // percentage
@@ -58,10 +49,27 @@ type ElementData = z.infer<typeof ElementSchema>;
 const PreviewRequestSchema = z.object({
   baseImageDataUri: z.string().url().describe('Data URI of the base product image.'),
   elements: z.array(ElementSchema).describe('Array of customization elements to overlay.'),
-  widthPx: z.number().optional().describe('Optional: The width of the canvas in pixels where percentages for x,y were calculated. Defaults to 500 if not provided.'),
-  heightPx: z.number().optional().describe('Optional: The height of the canvas in pixels where percentages for x,y were calculated. Defaults to 500 if not provided.'),
+  widthPx: z.number().optional().describe('Canvas width in pixels. Defaults to 500.'),
+  heightPx: z.number().optional().describe('Canvas height in pixels. Defaults to 500.'),
 });
-type PreviewRequest = z.infer<typeof PreviewRequestSchema>;
+
+// Simple font mapping (extend this as needed)
+// Note: For production, you'd need robust font loading/availability on the server.
+const mapFontFamily = (fontFamily?: string): string => {
+  if (!fontFamily) return 'sans-serif';
+  const lowerFamily = fontFamily.toLowerCase();
+  if (lowerFamily.includes('arial')) return 'Arial';
+  if (lowerFamily.includes('helvetica')) return 'Helvetica';
+  if (lowerFamily.includes('times new roman')) return 'Times New Roman';
+  if (lowerFamily.includes('georgia')) return 'Georgia';
+  if (lowerFamily.includes('courier new')) return 'Courier New';
+  // Add more mappings or fallback to a generic one
+  return 'sans-serif'; // Default fallback
+};
+
+// TODO: Implement font registration if font files are available in the project
+// Example: registerFont(path.join(process.cwd(), 'public', 'fonts', 'Roboto-Regular.ttf'), { family: 'Roboto' });
+// For now, we'll rely on system fonts or simple mappings.
 
 export async function POST(request: Request) {
   try {
@@ -77,101 +85,139 @@ export async function POST(request: Request) {
     }
 
     const { baseImageDataUri, elements, widthPx = 500, heightPx = 500 } = validationResult.data;
-    const overlayImages: OverlayImageInput[] = [];
 
-    // Process elements: generate images for text and shapes
-    const elementProcessingPromises = elements.map(async (element) => {
-      let elementImageDataUri = '';
-      let elementName = `element-${element.id}`;
+    const canvas = createCanvas(widthPx, heightPx);
+    const ctx = canvas.getContext('2d');
+
+    // 1. Draw base image
+    try {
+      const baseImage = await loadImage(baseImageDataUri);
+      // Calculate aspect ratios to fit and center the base image
+      const canvasAspectRatio = widthPx / heightPx;
+      const imageAspectRatio = baseImage.width / baseImage.height;
+      let drawWidth, drawHeight, drawX, drawY;
+
+      if (canvasAspectRatio > imageAspectRatio) { // Canvas is wider than image
+        drawHeight = heightPx;
+        drawWidth = baseImage.width * (heightPx / baseImage.height);
+        drawX = (widthPx - drawWidth) / 2;
+        drawY = 0;
+      } else { // Canvas is taller or same aspect ratio
+        drawWidth = widthPx;
+        drawHeight = baseImage.height * (widthPx / baseImage.width);
+        drawX = 0;
+        drawY = (heightPx - drawHeight) / 2;
+      }
+      ctx.drawImage(baseImage, drawX, drawY, drawWidth, drawHeight);
+    } catch (e: any) {
+      console.error(`Failed to load base image: ${baseImageDataUri}`, e.message);
+      return NextResponse.json({ error: 'Failed to load base image.', details: e.message }, { status: 500 });
+    }
+
+    // 2. Sort elements by zIndex
+    const sortedElements = [...elements].sort((a, b) => (a.zIndex || 0) - (b.zIndex || 0));
+
+    // 3. Draw each element
+    for (const element of sortedElements) {
+      ctx.save(); // Save current state (transformations, styles)
+
+      // Calculate element center in pixels
+      const elCenterX = (element.x / 100) * widthPx;
+      const elCenterY = (element.y / 100) * heightPx;
+
+      // Apply transformations - translate to element center, rotate, scale, then translate back
+      ctx.translate(elCenterX, elCenterY);
+      ctx.rotate((element.rotation * Math.PI) / 180);
+      // Note: node-canvas scale is uniform. If separate X/Y scale needed, it's more complex.
+      // We'll use element.scale for uniform scaling.
 
       if (element.type === 'image' && element.imageDataUri) {
-        elementImageDataUri = element.imageDataUri;
-        elementName = `custom-image-${element.id}`;
-      } else if (element.type === 'text') {
-        const textInput: GenerateTextImageInput = {
-          content: element.content || 'Text',
-          fontFamily: element.fontFamily || 'Arial',
-          fontSize: element.fontSize || 24,
-          color: element.color || '#000000',
-          fontWeight: element.fontWeight || 'normal',
-          fontStyle: element.fontStyle || 'normal',
-          textDecoration: element.textDecoration || 'none',
-          textTransform: element.textTransform || 'none',
-          outlineEnabled: element.outlineEnabled || false,
-          outlineColor: element.outlineColor || '#FFFFFF',
-          outlineWidth: element.outlineWidth || 0,
-          shadowEnabled: element.shadowEnabled || false,
-          shadowColor: element.shadowColor || '#000000',
-          shadowOffsetX: element.shadowOffsetX || 0,
-          shadowOffsetY: element.shadowOffsetY || 0,
-          shadowBlur: element.shadowBlur || 0,
-          // archAmount: element.archAmount || 0, // Arch effect is very hard for current genAI models
-        };
         try {
-          const result = await generateTextImageFlow(textInput);
-          elementImageDataUri = result.imageDataUri;
-          elementName = `text-${element.id}`;
+          const img = await loadImage(element.imageDataUri);
+          const scaledWidth = (element.width || img.width) * element.scale;
+          const scaledHeight = (element.height || img.height) * element.scale;
+          ctx.drawImage(img, -scaledWidth / 2, -scaledHeight / 2, scaledWidth, scaledHeight);
         } catch (e: any) {
-          console.error(`Failed to generate image for text element ${element.id}: ${e.message}`);
-          // Skip this element or use a placeholder? For now, skip.
-          return null;
+          console.error(`Failed to load element image: ${element.imageDataUri}`, e.message);
+          // Optionally skip this element or draw a placeholder
         }
+      } else if (element.type === 'text' && element.content) {
+        const fontSize = (element.fontSize || 24) * element.scale; // Apply scale to font size
+        const fontFamily = mapFontFamily(element.fontFamily);
+        ctx.font = `${element.fontWeight || 'normal'} ${element.fontStyle || 'normal'} ${fontSize}px "${fontFamily}"`;
+        ctx.fillStyle = element.color || '#000000';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+
+        // Basic text transformation (uppercase/lowercase)
+        let contentToDraw = element.content;
+        if (element.textTransform === 'uppercase') {
+          contentToDraw = contentToDraw.toUpperCase();
+        } else if (element.textTransform === 'lowercase') {
+          contentToDraw = contentToDraw.toLowerCase();
+        }
+        
+        // Simple outline
+        if (element.outlineEnabled && element.outlineWidth && element.outlineWidth > 0 && element.outlineColor) {
+            ctx.strokeStyle = element.outlineColor;
+            ctx.lineWidth = element.outlineWidth * element.scale; // Scale outline width too
+            ctx.strokeText(contentToDraw, 0, 0);
+        }
+        // Simple shadow (note: canvas shadow affects subsequent drawing unless reset)
+        if (element.shadowEnabled && element.shadowColor) {
+            ctx.shadowColor = element.shadowColor;
+            ctx.shadowOffsetX = (element.shadowOffsetX || 0) * element.scale;
+            ctx.shadowOffsetY = (element.shadowOffsetY || 0) * element.scale;
+            ctx.shadowBlur = (element.shadowBlur || 0) * element.scale;
+        }
+        
+        ctx.fillText(contentToDraw, 0, 0);
+
+        // Reset shadow for next element
+        ctx.shadowColor = 'transparent';
+        ctx.shadowOffsetX = 0;
+        ctx.shadowOffsetY = 0;
+        ctx.shadowBlur = 0;
+
       } else if (element.type === 'shape' && element.shapeType) {
-        const shapeInput: GenerateShapeImageInput = {
-          shapeType: element.shapeType as 'rectangle' | 'circle', // Cast for now
-          color: element.color || '#CCCCCC',
-          strokeColor: element.outlineColor || '#000000',
-          strokeWidth: element.outlineWidth || 0,
-          width: element.width || 100, // provide base dimensions for shape generation
-          height: element.height || 100,
-        };
-         try {
-          const result = await generateShapeImageFlow(shapeInput);
-          elementImageDataUri = result.imageDataUri;
-          elementName = `shape-${element.id}`;
-        } catch (e: any) {
-          console.error(`Failed to generate image for shape element ${element.id}: ${e.message}`);
-          // Skip this element
-          return null;
+        const shapeWidth = (element.width || 100) * element.scale;
+        const shapeHeight = (element.height || 100) * element.scale;
+        
+        ctx.fillStyle = element.color || '#CCCCCC';
+        if (element.outlineEnabled && element.outlineWidth && element.outlineWidth > 0 && element.outlineColor) {
+          ctx.strokeStyle = element.outlineColor;
+          ctx.lineWidth = element.outlineWidth; // No separate scale for stroke width in this simple version
+        } else {
+            ctx.strokeStyle = 'transparent'; // ensure no stroke if not enabled
+            ctx.lineWidth = 0;
+        }
+
+        if (element.shapeType === 'rectangle') {
+          ctx.beginPath();
+          ctx.rect(-shapeWidth / 2, -shapeHeight / 2, shapeWidth, shapeHeight);
+          ctx.fill();
+          if (element.outlineEnabled && element.outlineWidth && element.outlineWidth > 0) ctx.stroke();
+        } else if (element.shapeType === 'circle') {
+          ctx.beginPath();
+          // For a circle, width and height are effectively the diameter
+          const radius = Math.min(shapeWidth, shapeHeight) / 2;
+          ctx.arc(0, 0, radius, 0, 2 * Math.PI);
+          ctx.fill();
+          if (element.outlineEnabled && element.outlineWidth && element.outlineWidth > 0) ctx.stroke();
         }
       }
+      ctx.restore(); // Restore to state before this element's transformations
+    }
 
-      if (elementImageDataUri) {
-        return {
-          imageDataUri: elementImageDataUri,
-          x: element.x,
-          y: element.y,
-          scale: element.scale,
-          rotation: element.rotation,
-          zIndex: element.zIndex,
-          name: elementName,
-        };
-      }
-      return null;
-    });
+    const previewImageUrl = canvas.toDataURL('image/png');
+    return NextResponse.json({ previewImageUrl });
 
-    const processedElements = (await Promise.all(elementProcessingPromises)).filter(
-      (el): el is OverlayImageInput => el !== null
-    );
-    
-    // Sort by zIndex before passing to composite flow
-    processedElements.sort((a, b) => (a.zIndex || 0) - (b.zIndex || 0));
-
-
-    const compositeInput: CompositeImagesInput = {
-      baseImageDataUri,
-      overlayImages: processedElements,
-      outputWidthPx: widthPx,
-      outputHeightPx: heightPx,
-    };
-
-    const compositeResult = await compositeImagesFlow(compositeInput);
-
-    return NextResponse.json({ previewImageUrl: compositeResult.compositeImageUrl });
   } catch (error: any) {
-    console.error('Error in /api/preview:', error);
+    console.error('Error in /api/preview (non-AI):', error);
+    // Ensure error.message is a string
+    const message = typeof error.message === 'string' ? error.message : String(error);
     return NextResponse.json(
-      { error: 'Failed to generate preview.', details: error.message || String(error) },
+      { error: 'Failed to generate non-AI preview.', details: message },
       { status: 500 }
     );
   }
