@@ -15,7 +15,7 @@ import { doc, getDoc } from 'firebase/firestore';
 import type { UserWooCommerceCredentials } from '@/app/actions/userCredentialsActions';
 import {
   Loader2, AlertTriangle, ShoppingCart, UploadCloud, Layers, Type, Shapes as ShapesIconLucide, Smile, Palette, Gem as GemIcon, Settings2 as SettingsIcon,
-  PanelLeftClose, PanelRightOpen, PanelRightClose, PanelLeftOpen, Sparkles, Ban
+  PanelLeftClose, PanelRightOpen, PanelRightClose, PanelLeftOpen, Sparkles, Ban, Camera
 } from 'lucide-react';
 import { Button, buttonVariants } from '@/components/ui/button';
 import {
@@ -33,6 +33,7 @@ import type { WCCustomProduct, WCVariation, WCVariationAttribute } from '@/types
 import { useToast } from '@/hooks/use-toast';
 import CustomizerIconNav, { type CustomizerTool } from '@/components/customizer/CustomizerIconNav';
 import { cn } from '@/lib/utils';
+import html2canvas from 'html2canvas';
 
 import UploadArea from '@/components/customizer/UploadArea';
 import LayersPanel from '@/components/customizer/LayersPanel';
@@ -613,7 +614,7 @@ function CustomizerLayoutAndLogic() {
     }
   };
 
-  const handleAddToCart = () => {
+  const handleAddToCart = async () => {
     if (productDetails && productDetails.allowCustomization === false) {
       toast({ title: "Customization Disabled", description: "This product is not available for customization at this time.", variant: "destructive" });
       return;
@@ -629,6 +630,36 @@ function CustomizerLayoutAndLogic() {
     if (!isEmbedded && !user && (canvasImages.length > 0 || canvasTexts.length > 0 || canvasShapes.length > 0)) {
        toast({ title: "Please Sign In", description: "Sign in to save your design and add to cart (if applicable).", variant: "default" });
       return;
+    }
+
+    const canvasElement = document.getElementById('design-canvas-render-area');
+    let screenshotDataUrl: string | null = null;
+
+    if (canvasElement) {
+      try {
+        const canvasOutput = await html2canvas(canvasElement, {
+          allowTaint: true,
+          useCORS: true,
+          backgroundColor: null, // Attempt to capture with transparency
+          logging: false, // Reduce console noise
+        });
+        screenshotDataUrl = canvasOutput.toDataURL('image/png');
+         toast({ title: "Screenshot Captured", description: "A preview of your design has been generated.", variant: "default" });
+      } catch (error) {
+        console.error("Error generating screenshot with html2canvas:", error);
+        toast({
+          title: "Screenshot Failed",
+          description: "Could not generate a preview image of the customization. Proceeding without it.",
+          variant: "destructive",
+        });
+      }
+    } else {
+      console.warn("Could not find canvas element with ID 'design-canvas-render-area' for screenshot.");
+       toast({
+          title: "Screenshot Skipped",
+          description: "Canvas element not found for screenshot. Proceeding without it.",
+          variant: "default",
+        });
     }
 
     const currentProductIdFromUrlResolved = productIdFromUrl;
@@ -656,6 +687,7 @@ function CustomizerLayoutAndLogic() {
         })).filter(view => view.images.length > 0 || view.texts.length > 0 || view.shapes.length > 0),
         selectedOptions: selectedVariationOptions, baseProductPrice: baseProductPrice, totalViewSurcharge: totalViewSurcharge,
         totalCustomizationPrice: totalCustomizationPrice, activeViewIdUsed: activeViewId,
+        screenshotDataUrl: screenshotDataUrl, // Added screenshot
       },
       userId: user?.uid || null, 
       configUserId: productDetails?.meta?.configUserIdUsed || null, 
@@ -810,4 +842,5 @@ export default function CustomizerPage() {
 
 
     
+
 

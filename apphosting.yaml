@@ -22,7 +22,7 @@ env:
   #    (Usually 'Secret Manager Secret Accessor' role on the secret).
   # 3. Replace "your-secret-name-in-secret-manager" below with the actual name of your secret.
   - variable: GEMINI_API_KEY
-    secret: your-secret-name-in-secret-manager # <-- REPLACE THIS WITH YOUR SECRET NAME
+    secret: Gemini-API-Key # <-- REPLACE THIS WITH YOUR SECRET NAME
     availability:
       - RUNTIME # The API key is needed when the application is running
 
