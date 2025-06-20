@@ -57,7 +57,7 @@ export default function PremiumDesignsPanel({ activeViewId }: PremiumDesignsPane
                     src={design.imageUrl}
                     alt={design.name}
                     fill
-                    sizes="(max-width: 768px) 30vw, (max-width: 1200px) 20vw, 15vw" 
+                    sizes="200px"
                     className="object-contain"
                     data-ai-hint={design.aiHint}
                   />

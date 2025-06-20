@@ -73,6 +73,7 @@ export default function MarketingHomePage() {
                       src="/top-hero.png"
                       alt="Interactive product customizer interface example from Customizer Studio"
                       fill
+                      sizes="(max-width: 1280px) 100vw, 1280px"
                       className="object-cover"
                       data-ai-hint="product customizer interface"
                       priority
@@ -95,6 +96,7 @@ export default function MarketingHomePage() {
                     src={`https://placehold.co/128x40.png`} 
                     alt={`Partner Company Logo ${i + 1}`}
                     fill
+                    sizes="128px"
                     className="object-contain"
                     data-ai-hint="company brand logo"
                   />
@@ -205,6 +207,7 @@ export default function MarketingHomePage() {
                     alt="A collage of customized products created with Customizer Studio"
                     width={1200} 
                     height={750} 
+                    sizes="(max-width: 1024px) 100vw, 50vw"
                     className="w-full h-auto object-contain block rounded-xl"
                     data-ai-hint="customized products collage"
                   />

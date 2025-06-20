@@ -335,7 +335,7 @@ export default function DesignCanvas({
           const boxMinXPercent_sq = targetBox.x;
           const boxMaxXPercent_sq = targetBox.x + targetBox.width;
           const boxMinYPercent_sq = targetBox.y;
-          const boxMaxYPercent_sq = targetBox.y + targetBox.height;
+          const boxMaxYPercent_sq = targetBox.y + targetBox.height; 
 
           const squareOffsetX = (parentW - squareSide) / 2;
           const squareOffsetY = (parentH - squareSide) / 2;
@@ -348,7 +348,7 @@ export default function DesignCanvas({
           const distToBoxLeftEdge_sq = itemCenterXpercent_sq - boxMinXPercent_sq;
           const distToBoxRightEdge_sq = boxMaxXPercent_sq - itemCenterXpercent_sq;
           const distToBoxTopEdge_sq = itemCenterYpercent_sq - boxMinYPercent_sq;
-          const distToBoxBottomEdge_sq = boxMaxYpercent_sq - itemCenterYpercent_sq;
+          const distToBoxBottomEdge_sq = boxMaxYPercent_sq - itemCenterYpercent_sq;
 
           const maxAllowedHalfWidthPercent_sq = Math.min(distToBoxLeftEdge_sq, distToBoxRightEdge_sq);
           const maxAllowedHalfHeightPercent_sq = Math.min(distToBoxTopEdge_sq, distToBoxBottomEdge_sq);
@@ -404,7 +404,7 @@ export default function DesignCanvas({
               const boxMinXpercent_canvas = (boxMinXpx_canvas / parentW) * 100;
               const boxMaxXpercent_canvas = (boxMaxXpx_canvas / parentW) * 100;
               const boxMinYpercent_canvas = (boxMinYpx_canvas / parentH) * 100;
-              const boxMaxYpercent_canvas = (boxMaxYpx_canvas / parentH) * 100;
+              const boxMaxYPercent_sq = (boxMaxYpx_canvas / parentH) * 100; 
 
               let clampedX_canvas = Math.max(
                   boxMinXpercent_canvas + itemHalfWidthPercent_canvas,
@@ -412,14 +412,14 @@ export default function DesignCanvas({
               );
               let clampedY_canvas = Math.max(
                   boxMinYpercent_canvas + itemHalfHeightPercent_canvas,
-                  Math.min(newY_canvas, boxMaxYpercent_canvas - itemHalfHeightPercent_canvas)
+                  Math.min(newY_canvas, boxMaxYPercent_sq - itemHalfHeightPercent_canvas) 
               );
 
               if (itemHalfWidthPercent_canvas * 2 > (boxMaxXpercent_canvas - boxMinXpercent_canvas)) { 
                   clampedX_canvas = boxMinXpercent_canvas + (boxMaxXpercent_canvas - boxMinXpercent_canvas) / 2; 
               }
-               if (itemHalfHeightPercent_canvas * 2 > (boxMaxYpercent_canvas - boxMinYpercent_canvas)) { 
-                  clampedY_canvas = boxMinYpercent_canvas + (boxMaxYpercent_canvas - boxMinYpercent_canvas) / 2; 
+               if (itemHalfHeightPercent_canvas * 2 > (boxMaxYPercent_sq - boxMinYpercent_canvas)) { 
+                  clampedY_canvas = boxMinYpercent_canvas + (boxMaxYPercent_sq - boxMinYpercent_canvas) / 2; 
               }
               newX_canvas = clampedX_canvas;
               newY_canvas = clampedY_canvas;
@@ -508,10 +508,11 @@ export default function DesignCanvas({
               alt={productToDisplay.imageAlt}
               key={productToDisplay.imageUrl} 
               fill 
+              sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 580px"
+              priority
               style={{ objectFit: 'contain' }} 
               className="rounded-md pointer-events-none select-none" 
               data-ai-hint={productToDisplay.aiHint}
-              priority
             />
 
             
@@ -591,14 +592,3 @@ export default function DesignCanvas({
     </div>
   );
 }
-    
-
-    
-
-    
-
-
-
-
-
-

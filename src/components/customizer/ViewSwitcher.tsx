@@ -47,7 +47,7 @@ export default function ViewSwitcher({ productViews, activeViewId, setActiveView
                   src={view.imageUrl || 'https://placehold.co/60x60.png'}
                   alt={`Thumbnail for ${view.name}`}
                   fill
-                  sizes="(max-width: 768px) 4rem, 3rem"
+                  sizes="70px"
                   className="object-contain"
                   data-ai-hint={view.aiHint || "product view thumbnail"}
                 />

@@ -13,6 +13,7 @@ export function Logo() {
         src={logoSrc}
         alt="Customizer Studio Logo"
         fill
+        sizes="180px"
         style={{ objectFit: 'contain' }}
         priority // Ensures the logo loads quickly, important for LCP
       />

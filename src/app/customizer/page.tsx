@@ -653,29 +653,38 @@ function CustomizerLayoutAndLogic() {
         const captureX = cropRect.left - targetRect.left;
         const captureY = cropRect.top - targetRect.top;
 
-        const fullCanvas = await html2canvas(captureTargetElement, {
-          allowTaint: true, useCORS: true, backgroundColor: null, logging: false,
-        });
-        
-        const croppedCanvas = document.createElement('canvas');
-        croppedCanvas.width = captureWidth;
-        croppedCanvas.height = captureHeight;
-        const ctx = croppedCanvas.getContext('2d');
-        
-        if (ctx) {
-            ctx.drawImage(
-                fullCanvas,
-                captureX, captureY, captureWidth, captureHeight,
-                0, 0, captureWidth, captureHeight
-            );
-            setPrimaryScreenshotForUpload(croppedCanvas.toDataURL('image/png'));
+        if (captureWidth <= 0 || captureHeight <= 0) {
+          console.error("Error generating primary screenshot: Crop dimensions are invalid.", { captureWidth, captureHeight, cropRect, targetRect });
+          toast({ title: "Screenshot Failed", description: "Could not generate initial preview due to invalid crop dimensions.", variant: "destructive" });
         } else {
-           throw new Error("Could not get 2D context for cropping canvas");
+          const fullCanvas = await html2canvas(captureTargetElement, {
+            allowTaint: true, useCORS: true, backgroundColor: null, logging: false,
+          });
+          
+          const croppedCanvas = document.createElement('canvas');
+          croppedCanvas.width = captureWidth;
+          croppedCanvas.height = captureHeight;
+          const ctx = croppedCanvas.getContext('2d');
+          
+          if (ctx) {
+              ctx.drawImage(
+                  fullCanvas,
+                  captureX, captureY, captureWidth, captureHeight,
+                  0, 0, captureWidth, captureHeight
+              );
+              setPrimaryScreenshotForUpload(croppedCanvas.toDataURL('image/png'));
+          } else {
+             console.error("Error generating primary screenshot: Could not get 2D context for cropping.");
+             toast({ title: "Screenshot Failed", description: "Could not get 2D context for cropping canvas.", variant: "destructive" });
+          }
         }
-      } catch (error) {
-        console.error("Error generating primary screenshot:", error);
-        toast({ title: "Screenshot Failed", description: "Could not generate initial preview.", variant: "destructive" });
+      } catch (error: any) {
+        console.error("Error generating primary screenshot:", error.message || error);
+        toast({ title: "Screenshot Failed", description: `Could not generate initial preview: ${error.message || 'Unknown error'}.`, variant: "destructive" });
       }
+    } else {
+       console.error("Error generating primary screenshot: Required elements not found or no active view.", {captureTargetElementExists: !!captureTargetElement, cropToElementExists: !!cropToElement, currentActiveView});
+       toast({ title: "Screenshot Setup Error", description: "Could not find necessary elements for screenshot.", variant: "destructive" });
     }
 
     const tempScreenshots: ViewScreenshot[] = [];
@@ -689,17 +698,26 @@ function CustomizerLayoutAndLogic() {
         setActiveViewId(view.id);
         await new Promise(resolve => requestAnimationFrame(() => setTimeout(resolve, 200))); 
         
-        if (captureTargetElement && cropToElement) {
+        const loopCaptureTargetElement = document.getElementById('product-image-canvas-area-capture-target');
+        const loopCropToElement = document.getElementById('design-canvas-square-area');
+
+        if (loopCaptureTargetElement && loopCropToElement) {
           try {
-            const cropRect = cropToElement.getBoundingClientRect();
-            const targetRect = captureTargetElement.getBoundingClientRect();
+            const cropRect = loopCropToElement.getBoundingClientRect();
+            const targetRect = loopCaptureTargetElement.getBoundingClientRect();
 
             const captureWidth = cropRect.width;
             const captureHeight = cropRect.height;
             const captureX = cropRect.left - targetRect.left;
             const captureY = cropRect.top - targetRect.top;
+            
+            if (captureWidth <= 0 || captureHeight <= 0) {
+              console.error(`Error generating screenshot for view ${view.name}: Crop dimensions are invalid.`, { captureWidth, captureHeight, cropRect, targetRect });
+              tempScreenshots.push({ viewId: view.id, viewName: view.name, imageDataUrl: 'error_crop_dimensions' });
+              continue;
+            }
 
-            const fullCanvas = await html2canvas(captureTargetElement, {
+            const fullCanvas = await html2canvas(loopCaptureTargetElement, {
                 allowTaint: true, useCORS: true, backgroundColor: null, logging: false,
             });
 
@@ -716,16 +734,20 @@ function CustomizerLayoutAndLogic() {
                   imageDataUrl: croppedCanvas.toDataURL('image/png'),
                 });
             } else {
-               throw new Error("Could not get 2D context for cropping modal preview canvas");
+               console.error(`Error generating screenshot for view ${view.name}: Could not get 2D context.`);
+               tempScreenshots.push({ viewId: view.id, viewName: view.name, imageDataUrl: 'error_no_context' });
             }
-          } catch (error) {
-            console.error(`Error generating screenshot for view ${view.name}:`, error);
+          } catch (error: any) {
+            console.error(`Error generating screenshot for view ${view.name}:`, error.message || error);
             tempScreenshots.push({
               viewId: view.id,
               viewName: view.name,
               imageDataUrl: 'error', 
             });
           }
+        } else {
+          console.error(`Error generating screenshot for view ${view.name}: Required elements not found.`, {loopCaptureTargetElementExists: !!loopCaptureTargetElement, loopCropToElementExists: !!loopCropToElement });
+          tempScreenshots.push({ viewId: view.id, viewName: view.name, imageDataUrl: 'error_elements_missing' });
         }
       }
     }
@@ -968,13 +990,14 @@ function CustomizerLayoutAndLogic() {
                             <div key={preview.viewId} className="border rounded-md p-2 bg-muted/20">
                                 <p className="text-sm font-medium text-center mb-1.5 text-foreground">{preview.viewName}</p>
                                 <div className="relative aspect-square w-full rounded overflow-hidden bg-background">
-                                    {preview.imageDataUrl === 'error' ? (
+                                    {preview.imageDataUrl === 'error' || preview.imageDataUrl === 'error_crop_dimensions' || preview.imageDataUrl === 'error_no_context' || preview.imageDataUrl === 'error_elements_missing' ? (
                                         <div className="absolute inset-0 flex flex-col items-center justify-center text-destructive bg-destructive/10">
                                             <AlertTriangle className="h-8 w-8 mb-1" />
                                             <span className="text-xs">Preview Error</span>
+                                            <span className="text-[10px] text-muted-foreground mt-0.5">{preview.imageDataUrl}</span>
                                         </div>
                                     ) : (
-                                        <NextImage src={preview.imageDataUrl} alt={`Preview of ${preview.viewName}`} fill className="object-contain" unoptimized={true} />
+                                        <NextImage src={preview.imageDataUrl} alt={`Preview of ${preview.viewName}`} fill sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw" className="object-contain" unoptimized={true} />
                                     )}
                                 </div>
                             </div>
@@ -1042,6 +1065,7 @@ export default function CustomizerPage() {
 
 
     
+
 
 
 

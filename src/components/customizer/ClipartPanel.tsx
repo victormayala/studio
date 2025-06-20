@@ -44,7 +44,7 @@ export default function ClipartPanel({ activeViewId }: ClipartPanelProps) {
                     src={clipart.imageUrl}
                     alt={clipart.name}
                     fill
-                    sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 25vw"
+                    sizes="64px"
                     className="object-contain"
                     data-ai-hint={clipart.aiHint}
                   />

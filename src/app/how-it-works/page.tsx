@@ -1,4 +1,3 @@
-
 "use client";
 
 import React from 'react';
@@ -131,10 +130,9 @@ const CardStep = ({ step, index }: CardStepProps) => {
           height={280} 
           className="rounded-xl object-cover border w-full aspect-[10/7]" 
           data-ai-hint={step.aiHint}
-          sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 58vw" // Added sizes prop
+          sizes="(max-width: 768px) 100vw, 50vw" 
         />
       </div>
     </div>
   );
 };
-    
