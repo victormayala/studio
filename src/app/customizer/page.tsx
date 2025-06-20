@@ -637,13 +637,12 @@ function CustomizerLayoutAndLogic() {
     setPrimaryScreenshotForUpload(null);
 
     const captureTargetElement = document.getElementById('product-image-canvas-area-capture-target');
-    const cropToElement = document.getElementById('design-canvas-square-area'); // This is the key element for cropping
+    const cropToElement = document.getElementById('design-canvas-square-area');
     const currentActiveView = activeViewId;
     originalActiveViewIdBeforePreviewRef.current = currentActiveView;
 
     if (captureTargetElement && cropToElement && currentActiveView) {
       try {
-        // Ensure the view is fully rendered before primary screenshot
         await new Promise(resolve => requestAnimationFrame(() => setTimeout(resolve, 50)));
 
         const cropRect = cropToElement.getBoundingClientRect();
@@ -654,29 +653,20 @@ function CustomizerLayoutAndLogic() {
         const captureX = cropRect.left - targetRect.left;
         const captureY = cropRect.top - targetRect.top;
 
-        // Capture the larger area
         const fullCanvas = await html2canvas(captureTargetElement, {
           allowTaint: true, useCORS: true, backgroundColor: null, logging: false,
         });
         
-        // Create a new canvas for the cropped image
         const croppedCanvas = document.createElement('canvas');
         croppedCanvas.width = captureWidth;
         croppedCanvas.height = captureHeight;
         const ctx = croppedCanvas.getContext('2d');
         
         if (ctx) {
-            // Draw the specific portion of the fullCanvas onto the croppedCanvas
             ctx.drawImage(
                 fullCanvas,
-                captureX, // source X
-                captureY, // source Y
-                captureWidth, // source Width
-                captureHeight, // source Height
-                0, // destination X
-                0, // destination Y
-                captureWidth, // destination Width
-                captureHeight // destination Height
+                captureX, captureY, captureWidth, captureHeight,
+                0, 0, captureWidth, captureHeight
             );
             setPrimaryScreenshotForUpload(croppedCanvas.toDataURL('image/png'));
         } else {
@@ -697,7 +687,6 @@ function CustomizerLayoutAndLogic() {
 
       if (hasCustomizations) {
         setActiveViewId(view.id);
-        // More robust wait for DOM to update with the new view
         await new Promise(resolve => requestAnimationFrame(() => setTimeout(resolve, 200))); 
         
         if (captureTargetElement && cropToElement) {
@@ -745,7 +734,6 @@ function CustomizerLayoutAndLogic() {
 
     if (currentActiveView && activeViewId !== currentActiveView) {
         setActiveViewId(currentActiveView);
-        // Wait for the original view to re-render if needed
         await new Promise(resolve => requestAnimationFrame(() => setTimeout(resolve, 50)));
     }
   };
@@ -929,7 +917,16 @@ function CustomizerLayoutAndLogic() {
             {error && productDetails?.id === defaultFallbackProduct.id && ( <div className="w-full max-w-4xl p-3 mb-4 border border-destructive bg-destructive/10 rounded-md text-destructive text-sm flex-shrink-0"> <AlertTriangle className="inline h-4 w-4 mr-1" /> {error} </div> )}
              {error && productDetails && productDetails.id !== defaultFallbackProduct.id && ( <div className="w-full max-w-4xl p-3 mb-4 border border-destructive bg-destructive/10 rounded-md text-destructive text-sm flex-shrink-0"> <AlertTriangle className="inline h-4 w-4 mr-1" /> {error} </div> )}
              <div className="w-full flex flex-col flex-1 min-h-0 pb-4">
-              <DesignCanvas productImageUrl={currentProductImage} productImageAlt={`${currentProductName} - ${currentProductAlt}`} productImageAiHint={currentProductAiHint} productDefinedBoundaryBoxes={currentBoundaryBoxes} activeViewId={activeViewId} showGrid={showGrid} showBoundaryBoxes={showBoundaryBoxes} />
+              <DesignCanvas
+                key={activeViewId} 
+                productImageUrl={currentProductImage}
+                productImageAlt={`${currentProductName} - ${currentProductAlt}`}
+                productImageAiHint={currentProductAiHint}
+                productDefinedBoundaryBoxes={currentBoundaryBoxes}
+                activeViewId={activeViewId}
+                showGrid={showGrid}
+                showBoundaryBoxes={showBoundaryBoxes}
+              />
             </div>
           </main>
 
@@ -1045,6 +1042,7 @@ export default function CustomizerPage() {
 
 
     
+
 
 
 
