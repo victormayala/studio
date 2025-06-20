@@ -16,7 +16,7 @@ import { doc, getDoc } from 'firebase/firestore';
 import type { UserWooCommerceCredentials } from '@/app/actions/userCredentialsActions';
 import {
   Loader2, AlertTriangle, ShoppingCart, UploadCloud, Layers, Type, Shapes as ShapesIconLucide, Smile, Palette, Gem as GemIcon, Settings2 as SettingsIcon,
-  PanelLeftClose, PanelRightOpen, PanelRightClose, PanelLeftOpen, Sparkles, Ban, Camera, Eye
+  PanelLeftClose, PanelRightOpen, PanelRightClose, PanelLeftOpen, Sparkles, Ban, Camera, Eye, ChevronLeft, ChevronRight
 } from 'lucide-react';
 import { Button, buttonVariants } from '@/components/ui/button';
 import {
@@ -98,7 +98,7 @@ export interface ConfigurableAttribute {
 interface ViewScreenshot {
   viewId: string;
   viewName: string;
-  imageDataUrl: string;
+  imageDataUrl: string; // Can be data URI or error string
 }
 
 const defaultFallbackProduct: ProductForCustomizer = {
@@ -201,13 +201,14 @@ function CustomizerLayoutAndLogic() {
   const lastLoadedProductIdRef = useRef<string | null | undefined>(undefined);
   const lastLoadedProxyUrlRef = useRef<string | null | undefined>(undefined);
   const lastLoadedConfigUserIdRef = useRef<string | null | undefined>(undefined);
-  const originalActiveViewIdBeforePreviewRef = useRef<string | null>(null);
-
+  
   const [isConfirmationModalOpen, setIsConfirmationModalOpen] = useState(false);
   const [isGeneratingPreviews, setIsGeneratingPreviews] = useState(false);
   const [viewScreenshots, setViewScreenshots] = useState<ViewScreenshot[]>([]);
   const [primaryScreenshotForUpload, setPrimaryScreenshotForUpload] = useState<string | null>(null);
   const [isCapturingScreenshot, setIsCapturingScreenshot] = useState(false);
+  const originalActiveViewIdBeforePreviewRef = useRef<string | null>(null);
+  const [currentPreviewIndex, setCurrentPreviewIndex] = useState(0);
 
 
   useEffect(() => {
@@ -548,7 +549,7 @@ function CustomizerLayoutAndLogic() {
         if (currentVariantViewImages && currentVariantViewImages[view.id]?.imageUrl) {
           finalImageUrl = currentVariantViewImages[view.id].imageUrl;
           finalAiHint = currentVariantViewImages[view.id].aiHint || baseAiHint;
-        } else if (primaryVariationImageSrc && view.id === activeViewId) {
+        } else if (primaryVariationImageSrc && view.id === activeViewId) { // Apply primary variation image only to the active view if specific variant view image is missing
           finalImageUrl = primaryVariationImageSrc;
           finalAiHint = primaryVariationImageAiHint || baseAiHint;
         } else {
@@ -636,22 +637,23 @@ function CustomizerLayoutAndLogic() {
     setIsConfirmationModalOpen(true);
     setViewScreenshots([]); 
     setPrimaryScreenshotForUpload(null);
+    setCurrentPreviewIndex(0);
     
     originalActiveViewIdBeforePreviewRef.current = activeViewId;
     
     // Capture primary screenshot first (of the currently active view)
     if (activeViewId) {
         setIsCapturingScreenshot(true);
-        await new Promise(resolve => setTimeout(() => requestAnimationFrame(resolve), 350)); // Increased delay
+        await new Promise(resolve => setTimeout(() => requestAnimationFrame(resolve), 350));
 
         const captureTargetElement = document.getElementById('product-image-canvas-area-capture-target');
-        const cropToElement = document.getElementById('design-canvas-square-area');
+        const primaryCropElement = document.getElementById('design-canvas-square-area');
         let primaryImageDataUrl: string | null = null;
 
-        if (captureTargetElement && cropToElement) {
+        if (captureTargetElement && primaryCropElement) {
             try {
                 const targetRect = captureTargetElement.getBoundingClientRect();
-                const cropRect = cropToElement.getBoundingClientRect();
+                const cropRect = primaryCropElement.getBoundingClientRect();
                 const captureWidth = cropRect.width;
                 const captureHeight = cropRect.height;
                 const captureX = cropRect.left - targetRect.left;
@@ -669,14 +671,22 @@ function CustomizerLayoutAndLogic() {
                         ctx.drawImage(fullCanvas, captureX, captureY, captureWidth, captureHeight, 0, 0, captureWidth, captureHeight);
                         primaryImageDataUrl = croppedCanvas.toDataURL('image/png');
                         setPrimaryScreenshotForUpload(primaryImageDataUrl);
-                    } else { console.error("Primary Screenshot: Could not get 2D context for cropping."); }
-                } else { console.error("Primary Screenshot: Invalid crop dimensions."); }
+                    } else { 
+                      console.error("Primary Screenshot: Could not get 2D context for cropping.");
+                      primaryImageDataUrl = 'error_no_context_primary';
+                    }
+                } else { 
+                  console.error("Primary Screenshot: Invalid crop dimensions.");
+                  primaryImageDataUrl = 'error_crop_dimensions_primary';
+                }
             } catch (error: any) {
                 console.error("Error generating primary screenshot:", error.message || error);
                 toast({ title: "Screenshot Failed", description: `Could not generate initial preview: ${error.message || 'Unknown error'}.`, variant: "destructive" });
+                primaryImageDataUrl = `error_capture_failed_primary: ${error.message || 'Unknown error'}`;
             }
         } else {
-             console.error("Primary Screenshot: Required elements not found.", {captureTargetElement, cropToElement, activeViewId});
+             console.error("Primary Screenshot: Required elements not found.", {captureTargetElement, primaryCropElement, activeViewId});
+             primaryImageDataUrl = 'error_elements_missing_primary';
         }
         setIsCapturingScreenshot(false);
     }
@@ -690,10 +700,9 @@ function CustomizerLayoutAndLogic() {
         canvasShapes.some(item => item.viewId === view.id);
 
       if (hasCustomizations) {
-        setActiveViewId(view.id); // Switch to the view
-        setIsCapturingScreenshot(true); // Set capturing mode
-        // Wait for React to re-render and DOM to stabilize
-        await new Promise(resolve => setTimeout(() => requestAnimationFrame(resolve), 350)); // Increased delay
+        setActiveViewId(view.id); 
+        setIsCapturingScreenshot(true); 
+        await new Promise(resolve => setTimeout(() => requestAnimationFrame(resolve), 350));
 
         const loopCaptureTarget = document.getElementById('product-image-canvas-area-capture-target');
         const loopCropElement = document.getElementById('design-canvas-square-area');
@@ -728,26 +737,25 @@ function CustomizerLayoutAndLogic() {
             }
           } catch (error: any) {
             console.error(`Error generating screenshot for view ${view.name}:`, error.message || error);
-            tempScreenshots.push({ viewId: view.id, viewName: view.name, imageDataUrl: 'error_capture_failed' });
+            tempScreenshots.push({ viewId: view.id, viewName: view.name, imageDataUrl: `error_capture_failed: ${error.message || 'Unknown error'}` });
           }
         } else {
           console.error(`Screenshot loop for ${view.name}: Required elements not found. LoopCaptureTarget: ${loopCaptureTarget}, LoopCropElement: ${loopCropElement}`);
           tempScreenshots.push({ viewId: view.id, viewName: view.name, imageDataUrl: 'error_elements_missing' });
         }
-        setIsCapturingScreenshot(false); // Reset capturing mode for this view
-        await new Promise(resolve => setTimeout(() => requestAnimationFrame(resolve), 50)); // Short pause before next iteration
+        setIsCapturingScreenshot(false); 
+        await new Promise(resolve => setTimeout(() => requestAnimationFrame(resolve), 50));
       }
     }
     setViewScreenshots(tempScreenshots);
     setIsGeneratingPreviews(false);
 
-    // Restore original active view after loop
     if (originalActiveViewIdBeforePreviewRef.current && activeViewId !== originalActiveViewIdBeforePreviewRef.current) {
         setActiveViewId(originalActiveViewIdBeforePreviewRef.current);
-        setIsCapturingScreenshot(false); // Ensure it's off
+        setIsCapturingScreenshot(false);
         await new Promise(resolve => setTimeout(() => requestAnimationFrame(resolve), 100)); 
     } else {
-        setIsCapturingScreenshot(false); // Ensure it's off if no restore was needed
+        setIsCapturingScreenshot(false);
     }
   };
 
@@ -755,7 +763,7 @@ function CustomizerLayoutAndLogic() {
     setIsConfirmationModalOpen(false);
     let screenshotStorageUrl: string | null = null;
 
-    if (primaryScreenshotForUpload && user && user.uid && productDetails && productDetails.id && firebaseStorage) {
+    if (primaryScreenshotForUpload && !primaryScreenshotForUpload.startsWith('error_') && user && user.uid && productDetails && productDetails.id && firebaseStorage) {
       toast({ title: "Processing Design...", description: "Uploading your customization preview.", duration: 2000 });
       try {
         const filePath = `user_customizations/${user.uid}/${productDetails.id}/${Date.now()}.png`;
@@ -767,6 +775,8 @@ function CustomizerLayoutAndLogic() {
         console.error("Error uploading screenshot to Firebase Storage:", uploadError);
         toast({ title: "Upload Failed", description: "Could not save customization preview.", variant: "destructive" });
       }
+    } else if (primaryScreenshotForUpload && primaryScreenshotForUpload.startsWith('error_')) {
+        toast({ title: "Primary Preview Error", description: `Primary preview generation failed: ${primaryScreenshotForUpload.split(': ')[1] || 'Unknown issue'}. Not uploaded.`, variant: "destructive", duration: 5000 });
     } else if (primaryScreenshotForUpload) {
         toast({ title: "Note", description: "Customization preview generated but not uploaded (user/product/storage issue).", variant: "default" });
     }
@@ -910,6 +920,7 @@ function CustomizerLayoutAndLogic() {
       </div>
     );
   }
+  const currentActiveScreenshot = viewScreenshots.length > 0 ? viewScreenshots[currentPreviewIndex] : null;
 
   return (
       <div className={cn("flex flex-col min-h-svh h-screen w-full", isEmbedded ? "bg-transparent" : "bg-muted/20")}>
@@ -931,6 +942,7 @@ function CustomizerLayoutAndLogic() {
              {error && productDetails && productDetails.id !== defaultFallbackProduct.id && ( <div className="w-full max-w-4xl p-3 mb-4 border border-destructive bg-destructive/10 rounded-md text-destructive text-sm flex-shrink-0"> <AlertTriangle className="inline h-4 w-4 mr-1" /> {error} </div> )}
              <div className="w-full flex flex-col flex-1 min-h-0 pb-4">
               <DesignCanvas
+                key={activeViewId} 
                 productImageUrl={currentProductImage}
                 productImageAlt={`${currentProductName} - ${currentProductAlt}`}
                 productImageAiHint={currentProductAiHint}
@@ -961,12 +973,13 @@ function CustomizerLayoutAndLogic() {
         </footer>
 
         <AlertDialog open={isConfirmationModalOpen} onOpenChange={setIsConfirmationModalOpen}>
-            <AlertDialogContent className="max-w-3xl">
+            <AlertDialogContent className="max-w-xl w-full">
                 <AlertDialogHeader>
                     <AlertDialogTitle className="font-headline text-xl">Confirm Your Customization</AlertDialogTitle>
                     <AlertDialogDescription>
-                        Please review the previews of your customized product views below.
+                        Review the preview of your customized product.
                         {isGeneratingPreviews && " Generating previews..."}
+                         {!isGeneratingPreviews && viewScreenshots.length > 1 && " Use arrows to see other views."}
                     </AlertDialogDescription>
                 </AlertDialogHeader>
 
@@ -975,30 +988,54 @@ function CustomizerLayoutAndLogic() {
                         <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
                         <p className="text-muted-foreground">Generating previews, please wait...</p>
                     </div>
-                ) : viewScreenshots.length > 0 ? (
-                    <div className="my-4 max-h-[60vh] overflow-y-auto grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 p-1">
-                        {viewScreenshots.map(preview => (
-                            <div key={preview.viewId} className="border rounded-md p-2 bg-muted/20">
-                                <p className="text-sm font-medium text-center mb-1.5 text-foreground">{preview.viewName}</p>
-                                <div className="relative aspect-square w-full rounded overflow-hidden bg-background">
-                                    {preview.imageDataUrl.startsWith('error_') ? (
-                                        <div className="absolute inset-0 flex flex-col items-center justify-center text-destructive bg-destructive/10">
-                                            <AlertTriangle className="h-8 w-8 mb-1" />
-                                            <span className="text-xs">Preview Error</span>
-                                            <span className="text-[10px] text-muted-foreground mt-0.5">{preview.imageDataUrl.replace('error_', '').replace(/_/g, ' ')}</span>
-                                        </div>
-                                    ) : (
-                                        <NextImage src={preview.imageDataUrl} alt={`Preview of ${preview.viewName}`} fill sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw" className="object-contain" unoptimized={true} />
-                                    )}
+                ) : currentActiveScreenshot ? (
+                    <div className="my-4 space-y-3">
+                        <div className="relative aspect-square w-full rounded-md overflow-hidden border bg-background shadow-inner">
+                            {currentActiveScreenshot.imageDataUrl.startsWith('error_') ? (
+                                <div className="absolute inset-0 flex flex-col items-center justify-center text-destructive bg-destructive/10 p-4">
+                                    <AlertTriangle className="h-10 w-10 mb-2" />
+                                    <span className="text-sm font-medium">Preview Error</span>
+                                    <span className="text-xs text-center text-muted-foreground mt-1">{currentActiveScreenshot.imageDataUrl.replace('error_', '').replace(/_/g, ' ')}</span>
                                 </div>
+                            ) : (
+                                <NextImage 
+                                    src={currentActiveScreenshot.imageDataUrl} 
+                                    alt={`Preview of ${currentActiveScreenshot.viewName}`} 
+                                    fill 
+                                    sizes="(max-width: 640px) 90vw, 576px" 
+                                    className="object-contain" 
+                                    unoptimized={true} 
+                                />
+                            )}
+                        </div>
+                        <div className="flex justify-between items-center">
+                            <Button 
+                                variant="outline" 
+                                size="icon" 
+                                onClick={() => setCurrentPreviewIndex(prev => Math.max(0, prev - 1))}
+                                disabled={currentPreviewIndex === 0 || viewScreenshots.length <= 1}
+                            >
+                                <ChevronLeft className="h-5 w-5" />
+                            </Button>
+                            <div className="text-sm text-muted-foreground">
+                                {currentActiveScreenshot.viewName} ({currentPreviewIndex + 1} of {viewScreenshots.length})
                             </div>
-                        ))}
+                            <Button 
+                                variant="outline" 
+                                size="icon" 
+                                onClick={() => setCurrentPreviewIndex(prev => Math.min(viewScreenshots.length - 1, prev + 1))}
+                                disabled={currentPreviewIndex === viewScreenshots.length - 1 || viewScreenshots.length <= 1}
+                            >
+                                <ChevronRight className="h-5 w-5" />
+                            </Button>
+                        </div>
                     </div>
                 ) : (
-                     <div className="my-4 text-center text-muted-foreground">
+                     <div className="my-4 text-center text-muted-foreground h-64 flex flex-col items-center justify-center">
                         <Eye className="h-12 w-12 mx-auto mb-2 text-muted-foreground/50" />
                         No customized views to preview.
-                        {primaryScreenshotForUpload && " The current view will be used for the order."}
+                        {primaryScreenshotForUpload && !primaryScreenshotForUpload.startsWith('error_') && " The current active view will be used for the order."}
+                        {primaryScreenshotForUpload && primaryScreenshotForUpload.startsWith('error_') && <p className="text-destructive text-sm mt-2">Primary preview generation failed.</p>}
                     </div>
                 )}
 
@@ -1017,7 +1054,10 @@ function CustomizerLayoutAndLogic() {
                     >
                         Cancel
                     </AlertDialogCancel>
-                    <AlertDialogAction onClick={handleConfirmAddToCart} disabled={isGeneratingPreviews || (!primaryScreenshotForUpload && viewScreenshots.length === 0)}>
+                    <AlertDialogAction 
+                        onClick={handleConfirmAddToCart} 
+                        disabled={isGeneratingPreviews || (!primaryScreenshotForUpload && viewScreenshots.every(s => s.imageDataUrl.startsWith('error_')))}
+                    >
                         {isGeneratingPreviews ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                         Confirm & Add to Cart
                     </AlertDialogAction>
