@@ -38,6 +38,7 @@ interface DesignCanvasProps {
   activeViewId: string | null;
   showGrid: boolean;
   showBoundaryBoxes: boolean;
+  isCapturingScreenshot?: boolean; 
 }
 
 export default function DesignCanvas({ 
@@ -47,7 +48,8 @@ export default function DesignCanvas({
   productDefinedBoundaryBoxes = [],
   activeViewId,
   showGrid,
-  showBoundaryBoxes
+  showBoundaryBoxes,
+  isCapturingScreenshot = false, 
 }: DesignCanvasProps) {
 
   const productToDisplay = {
@@ -399,12 +401,12 @@ export default function DesignCanvas({
               const boxMinXpx_canvas = squareOffsetX + (targetBox.x / 100 * squareSide);
               const boxMaxXpx_canvas = squareOffsetX + ((targetBox.x + targetBox.width) / 100 * squareSide);
               const boxMinYpx_canvas = squareOffsetY + (targetBox.y / 100 * squareSide);
-              const boxMaxYpx_canvas = squareOffsetY + ((targetBox.y + targetBox.height) / 100 * squareSide);
+              const boxMaxYpx_canvas = squareOffsetY + ((targetBox.y + targetBox.height) / 100 * squareSide); 
 
               const boxMinXpercent_canvas = (boxMinXpx_canvas / parentW) * 100;
               const boxMaxXpercent_canvas = (boxMaxXpx_canvas / parentW) * 100;
               const boxMinYpercent_canvas = (boxMinYpx_canvas / parentH) * 100;
-              const boxMaxYPercent_sq = (boxMaxYpx_canvas / parentH) * 100; 
+              const boxMaxYPercent_canvas = (boxMaxYpx_canvas / parentH) * 100; 
 
               let clampedX_canvas = Math.max(
                   boxMinXpercent_canvas + itemHalfWidthPercent_canvas,
@@ -412,14 +414,14 @@ export default function DesignCanvas({
               );
               let clampedY_canvas = Math.max(
                   boxMinYpercent_canvas + itemHalfHeightPercent_canvas,
-                  Math.min(newY_canvas, boxMaxYPercent_sq - itemHalfHeightPercent_canvas) 
+                  Math.min(newY_canvas, boxMaxYPercent_canvas - itemHalfHeightPercent_canvas) 
               );
 
               if (itemHalfWidthPercent_canvas * 2 > (boxMaxXpercent_canvas - boxMinXpercent_canvas)) { 
                   clampedX_canvas = boxMinXpercent_canvas + (boxMaxXpercent_canvas - boxMinXpercent_canvas) / 2; 
               }
-               if (itemHalfHeightPercent_canvas * 2 > (boxMaxYPercent_sq - boxMinYpercent_canvas)) { 
-                  clampedY_canvas = boxMinYpercent_canvas + (boxMaxYPercent_sq - boxMinYpercent_canvas) / 2; 
+               if (itemHalfHeightPercent_canvas * 2 > (boxMaxYPercent_canvas - boxMinYpercent_canvas)) { 
+                  clampedY_canvas = boxMinYpercent_canvas + (boxMaxYPercent_canvas - boxMinYpercent_canvas) / 2; 
               }
               newX_canvas = clampedX_canvas;
               newY_canvas = clampedY_canvas;
@@ -469,7 +471,7 @@ export default function DesignCanvas({
   const visibleTexts = canvasTexts.filter(txt => txt.viewId === activeViewId);
   const visibleShapes = canvasShapes.filter(shp => shp.viewId === activeViewId);
 
-  const gridOverlayStyle = (productDefinedBoundaryBoxes && productDefinedBoundaryBoxes.length > 0 && showBoundaryBoxes && showGrid) ? {
+  const gridOverlayStyle = (productDefinedBoundaryBoxes && productDefinedBoundaryBoxes.length > 0 && showBoundaryBoxes && showGrid && !isCapturingScreenshot) ? {
     position: 'absolute' as 'absolute',
     left: `${productDefinedBoundaryBoxes[0].x}%`,
     top: `${productDefinedBoundaryBoxes[0].y}%`,
@@ -516,14 +518,14 @@ export default function DesignCanvas({
             />
 
             
-            {productDefinedBoundaryBoxes && productDefinedBoundaryBoxes.length > 0 && showBoundaryBoxes && showGrid && (
+            {!isCapturingScreenshot && productDefinedBoundaryBoxes && productDefinedBoundaryBoxes.length > 0 && showBoundaryBoxes && showGrid && (
               <div
                 style={gridOverlayStyle}
                 className="grid-overlay"
               />
             )}
 
-            {productDefinedBoundaryBoxes && showBoundaryBoxes && productDefinedBoundaryBoxes.map(box => (
+            {!isCapturingScreenshot && productDefinedBoundaryBoxes && showBoundaryBoxes && productDefinedBoundaryBoxes.map(box => (
               <div
                 key={`defined-${box.id}`}
                 className="absolute border-2 border-dashed border-primary/30 pointer-events-none"
@@ -583,7 +585,7 @@ export default function DesignCanvas({
       </div>
       <div className="text-center pt-2 pb-1 flex-shrink-0">
         <p className="text-sm text-muted-foreground">
-          {productDefinedBoundaryBoxes.length > 0 && showBoundaryBoxes ? "Items will be kept within the dashed areas. " : ""}
+          {productDefinedBoundaryBoxes.length > 0 && showBoundaryBoxes && !isCapturingScreenshot ? "Items will be kept within the dashed areas. " : ""}
           {visibleImages.length > 0 || visibleTexts.length > 0 || visibleShapes.length > 0 ? 
             (selectedCanvasImageId || selectedCanvasTextId || selectedCanvasShapeId ? "Click & drag item or handles to transform. Click background to deselect." : "Click an item to select and transform it.") 
             : "Add images, text or shapes using the tools on the left."}
@@ -592,3 +594,4 @@ export default function DesignCanvas({
     </div>
   );
 }
+

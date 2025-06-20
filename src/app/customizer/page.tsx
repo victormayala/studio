@@ -207,6 +207,7 @@ function CustomizerLayoutAndLogic() {
   const [isGeneratingPreviews, setIsGeneratingPreviews] = useState(false);
   const [viewScreenshots, setViewScreenshots] = useState<ViewScreenshot[]>([]);
   const [primaryScreenshotForUpload, setPrimaryScreenshotForUpload] = useState<string | null>(null);
+  const [isCapturingScreenshot, setIsCapturingScreenshot] = useState(false);
 
 
   useEffect(() => {
@@ -635,19 +636,20 @@ function CustomizerLayoutAndLogic() {
     setIsConfirmationModalOpen(true);
     setViewScreenshots([]); 
     setPrimaryScreenshotForUpload(null);
+    setIsCapturingScreenshot(true); 
+    await new Promise(resolve => requestAnimationFrame(resolve)); 
 
-    const captureTargetElement = document.getElementById('product-image-canvas-area-capture-target');
-    const cropToElement = document.getElementById('design-canvas-square-area');
+
     const currentActiveView = activeViewId;
     originalActiveViewIdBeforePreviewRef.current = currentActiveView;
 
+    const captureTargetElement = document.getElementById('product-image-canvas-area-capture-target');
+    const cropToElement = document.getElementById('design-canvas-square-area');
+
     if (captureTargetElement && cropToElement && currentActiveView) {
       try {
-        await new Promise(resolve => requestAnimationFrame(() => setTimeout(resolve, 50)));
-
         const cropRect = cropToElement.getBoundingClientRect();
         const targetRect = captureTargetElement.getBoundingClientRect();
-
         const captureWidth = cropRect.width;
         const captureHeight = cropRect.height;
         const captureX = cropRect.left - targetRect.left;
@@ -705,7 +707,6 @@ function CustomizerLayoutAndLogic() {
           try {
             const cropRect = loopCropToElement.getBoundingClientRect();
             const targetRect = loopCaptureTargetElement.getBoundingClientRect();
-
             const captureWidth = cropRect.width;
             const captureHeight = cropRect.height;
             const captureX = cropRect.left - targetRect.left;
@@ -753,6 +754,7 @@ function CustomizerLayoutAndLogic() {
     }
     setViewScreenshots(tempScreenshots);
     setIsGeneratingPreviews(false);
+    setIsCapturingScreenshot(false); 
 
     if (currentActiveView && activeViewId !== currentActiveView) {
         setActiveViewId(currentActiveView);
@@ -948,6 +950,7 @@ function CustomizerLayoutAndLogic() {
                 activeViewId={activeViewId}
                 showGrid={showGrid}
                 showBoundaryBoxes={showBoundaryBoxes}
+                isCapturingScreenshot={isCapturingScreenshot}
               />
             </div>
           </main>
@@ -1065,6 +1068,7 @@ export default function CustomizerPage() {
 
 
     
+
 
 
 
