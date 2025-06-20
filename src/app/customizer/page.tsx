@@ -639,47 +639,46 @@ function CustomizerLayoutAndLogic() {
     
     originalActiveViewIdBeforePreviewRef.current = activeViewId;
     
-    const captureTargetElement = document.getElementById('product-image-canvas-area-capture-target');
-    const cropToElement = document.getElementById('design-canvas-square-area');
-
-    // Capture primary screenshot first
-    if (captureTargetElement && cropToElement && activeViewId) {
-      try {
+    // Capture primary screenshot first (of the currently active view)
+    if (activeViewId) {
         setIsCapturingScreenshot(true);
-        await new Promise(resolve => setTimeout(resolve, 50)); // Short delay for React to commit state
-        await new Promise(resolve => requestAnimationFrame(resolve)); // Wait for browser to be ready to paint
-        
-        const targetRect = captureTargetElement.getBoundingClientRect();
-        const cropRect = cropToElement.getBoundingClientRect();
+        await new Promise(resolve => setTimeout(() => requestAnimationFrame(resolve), 350)); // Increased delay
 
-        const captureWidth = cropRect.width;
-        const captureHeight = cropRect.height;
-        const captureX = cropRect.left - targetRect.left;
-        const captureY = cropRect.top - targetRect.top;
+        const captureTargetElement = document.getElementById('product-image-canvas-area-capture-target');
+        const cropToElement = document.getElementById('design-canvas-square-area');
+        let primaryImageDataUrl: string | null = null;
 
-        if (captureWidth > 0 && captureHeight > 0) {
-          const fullCanvas = await html2canvas(captureTargetElement, {
-            allowTaint: true, useCORS: true, backgroundColor: null, logging: false,
-            width: targetRect.width, height: targetRect.height, x: 0, y: 0, // Ensure full capture area is considered
-          });
-          
-          const croppedCanvas = document.createElement('canvas');
-          croppedCanvas.width = captureWidth;
-          croppedCanvas.height = captureHeight;
-          const ctx = croppedCanvas.getContext('2d');
-          if (ctx) {
-              ctx.drawImage(fullCanvas, captureX, captureY, captureWidth, captureHeight, 0, 0, captureWidth, captureHeight);
-              setPrimaryScreenshotForUpload(croppedCanvas.toDataURL('image/png'));
-          } else { console.error("Primary Screenshot: Could not get 2D context for cropping."); }
-        } else { console.error("Primary Screenshot: Invalid crop dimensions."); }
-      } catch (error: any) {
-        console.error("Error generating primary screenshot:", error.message || error);
-        toast({ title: "Screenshot Failed", description: `Could not generate initial preview: ${error.message || 'Unknown error'}.`, variant: "destructive" });
-      } finally {
+        if (captureTargetElement && cropToElement) {
+            try {
+                const targetRect = captureTargetElement.getBoundingClientRect();
+                const cropRect = cropToElement.getBoundingClientRect();
+                const captureWidth = cropRect.width;
+                const captureHeight = cropRect.height;
+                const captureX = cropRect.left - targetRect.left;
+                const captureY = cropRect.top - targetRect.top;
+
+                if (captureWidth > 0 && captureHeight > 0) {
+                    const fullCanvas = await html2canvas(captureTargetElement, {
+                        allowTaint: true, useCORS: true, backgroundColor: null, logging: false,
+                    });
+                    const croppedCanvas = document.createElement('canvas');
+                    croppedCanvas.width = captureWidth;
+                    croppedCanvas.height = captureHeight;
+                    const ctx = croppedCanvas.getContext('2d');
+                    if (ctx) {
+                        ctx.drawImage(fullCanvas, captureX, captureY, captureWidth, captureHeight, 0, 0, captureWidth, captureHeight);
+                        primaryImageDataUrl = croppedCanvas.toDataURL('image/png');
+                        setPrimaryScreenshotForUpload(primaryImageDataUrl);
+                    } else { console.error("Primary Screenshot: Could not get 2D context for cropping."); }
+                } else { console.error("Primary Screenshot: Invalid crop dimensions."); }
+            } catch (error: any) {
+                console.error("Error generating primary screenshot:", error.message || error);
+                toast({ title: "Screenshot Failed", description: `Could not generate initial preview: ${error.message || 'Unknown error'}.`, variant: "destructive" });
+            }
+        } else {
+             console.error("Primary Screenshot: Required elements not found.", {captureTargetElement, cropToElement, activeViewId});
+        }
         setIsCapturingScreenshot(false);
-      }
-    } else {
-       console.error("Primary Screenshot: Required elements not found or no active view.", {captureTargetElement, cropToElement, activeViewId});
     }
 
 
@@ -691,14 +690,14 @@ function CustomizerLayoutAndLogic() {
         canvasShapes.some(item => item.viewId === view.id);
 
       if (hasCustomizations) {
-        setActiveViewId(view.id);
-        setIsCapturingScreenshot(true);
-        await new Promise(resolve => setTimeout(resolve, 50));
-        await new Promise(resolve => requestAnimationFrame(resolve));
-        
+        setActiveViewId(view.id); // Switch to the view
+        setIsCapturingScreenshot(true); // Set capturing mode
+        // Wait for React to re-render and DOM to stabilize
+        await new Promise(resolve => setTimeout(() => requestAnimationFrame(resolve), 350)); // Increased delay
+
         const loopCaptureTarget = document.getElementById('product-image-canvas-area-capture-target');
         const loopCropElement = document.getElementById('design-canvas-square-area');
-
+        
         if (loopCaptureTarget && loopCropElement) {
           try {
             const targetRect = loopCaptureTarget.getBoundingClientRect();
@@ -711,7 +710,6 @@ function CustomizerLayoutAndLogic() {
             if (captureWidth > 0 && captureHeight > 0) {
               const fullCanvas = await html2canvas(loopCaptureTarget, {
                   allowTaint: true, useCORS: true, backgroundColor: null, logging: false,
-                  width: targetRect.width, height: targetRect.height, x: 0, y: 0,
               });
               const croppedCanvas = document.createElement('canvas');
               croppedCanvas.width = captureWidth;
@@ -733,18 +731,23 @@ function CustomizerLayoutAndLogic() {
             tempScreenshots.push({ viewId: view.id, viewName: view.name, imageDataUrl: 'error_capture_failed' });
           }
         } else {
-          console.error(`Screenshot loop for ${view.name}: Required elements not found.`);
+          console.error(`Screenshot loop for ${view.name}: Required elements not found. LoopCaptureTarget: ${loopCaptureTarget}, LoopCropElement: ${loopCropElement}`);
           tempScreenshots.push({ viewId: view.id, viewName: view.name, imageDataUrl: 'error_elements_missing' });
         }
-        setIsCapturingScreenshot(false);
+        setIsCapturingScreenshot(false); // Reset capturing mode for this view
+        await new Promise(resolve => setTimeout(() => requestAnimationFrame(resolve), 50)); // Short pause before next iteration
       }
     }
     setViewScreenshots(tempScreenshots);
     setIsGeneratingPreviews(false);
 
+    // Restore original active view after loop
     if (originalActiveViewIdBeforePreviewRef.current && activeViewId !== originalActiveViewIdBeforePreviewRef.current) {
         setActiveViewId(originalActiveViewIdBeforePreviewRef.current);
-        await new Promise(resolve => setTimeout(resolve, 50)); // Allow UI to settle back
+        setIsCapturingScreenshot(false); // Ensure it's off
+        await new Promise(resolve => setTimeout(() => requestAnimationFrame(resolve), 100)); 
+    } else {
+        setIsCapturingScreenshot(false); // Ensure it's off if no restore was needed
     }
   };
 
@@ -928,7 +931,6 @@ function CustomizerLayoutAndLogic() {
              {error && productDetails && productDetails.id !== defaultFallbackProduct.id && ( <div className="w-full max-w-4xl p-3 mb-4 border border-destructive bg-destructive/10 rounded-md text-destructive text-sm flex-shrink-0"> <AlertTriangle className="inline h-4 w-4 mr-1" /> {error} </div> )}
              <div className="w-full flex flex-col flex-1 min-h-0 pb-4">
               <DesignCanvas
-                key={activeViewId} 
                 productImageUrl={currentProductImage}
                 productImageAlt={`${currentProductName} - ${currentProductAlt}`}
                 productImageAiHint={currentProductAiHint}
@@ -1066,3 +1068,6 @@ export default function CustomizerPage() {
 
 
 
+
+
+    
