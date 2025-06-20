@@ -37,7 +37,7 @@ interface DesignCanvasProps {
   productDefinedBoundaryBoxes?: BoundaryBox[];
   activeViewId: string | null;
   showGrid: boolean;
-  showBoundaryBoxes: boolean; // New prop
+  showBoundaryBoxes: boolean;
 }
 
 export default function DesignCanvas({ 
@@ -47,7 +47,7 @@ export default function DesignCanvas({
   productDefinedBoundaryBoxes = [],
   activeViewId,
   showGrid,
-  showBoundaryBoxes // Destructure new prop
+  showBoundaryBoxes
 }: DesignCanvasProps) {
 
   const productToDisplay = {
@@ -77,8 +77,8 @@ export default function DesignCanvas({
     initialY?: number;
     itemCenterX?: number; 
     itemCenterY?: number;
-    itemInitialWidth: number; // Guaranteed to be > 0
-    itemInitialHeight: number; // Guaranteed to be > 0
+    itemInitialWidth: number; 
+    itemInitialHeight: number; 
   } | null>(null);
 
   const canvasRef = useRef<HTMLDivElement>(null); 
@@ -96,25 +96,21 @@ export default function DesignCanvas({
         const canvasRect = canvasRef.current?.getBoundingClientRect();
         if (!canvasRect || canvasRect.width === 0 || canvasRect.height === 0) return;
 
-        // Calculate position relative to the centered square container first
         const parentW = canvasRect.width;
         const parentH = canvasRect.height;
-        const squareSide = Math.min(parentW, parentH); // Assuming square is based on smaller dimension
+        const squareSide = Math.min(parentW, parentH); 
         const squareOffsetX = (parentW - squareSide) / 2;
         const squareOffsetY = (parentH - squareSide) / 2;
 
-        // Center of the boundary box in pixels, relative to the top-left of the square container
         const boxCenterXpx_sq = (firstBox.x + firstBox.width / 2) / 100 * squareSide;
         const boxCenterYpx_sq = (firstBox.y + firstBox.height / 2) / 100 * squareSide;
         
-        // Convert these square-relative pixel coordinates to canvas-relative percentages
         const newXpercent_canvas = ((squareOffsetX + boxCenterXpx_sq) / parentW) * 100;
         const newYpercent_canvas = ((squareOffsetY + boxCenterYpx_sq) / parentH) * 100;
         
         updateFunc(item.id, { x: newXpercent_canvas, y: newYpercent_canvas, movedFromDefault: true });
         setLastAddedItemId(null); 
       } else if (item.id === lastAddedItemId) {
-        // If it was already moved or not at default, just clear the flag
         setLastAddedItemId(null);
       }
     };
@@ -140,7 +136,6 @@ export default function DesignCanvas({
     if (itemToMove && updateFunction) {
       autoMoveItem(itemToMove, updateFunction);
     } else if (lastAddedItemId) {
-      // If item was removed before auto-move could happen
       setLastAddedItemId(null);
     }
 
@@ -148,10 +143,8 @@ export default function DesignCanvas({
 
 
   useEffect(() => {
-    // Logic to set lastAddedItemId for new images
     if (canvasImages.length > 0 && activeViewId) {
       const latestImage = canvasImages[canvasImages.length - 1];
-      // Check if this is a truly new item intended for auto-positioning
       if (lastAddedItemId === null && latestImage && latestImage.x === 50 && latestImage.y === 50 && !latestImage.movedFromDefault && latestImage.viewId === activeViewId) {
         setLastAddedItemId(latestImage.id);
       }
@@ -159,7 +152,6 @@ export default function DesignCanvas({
   }, [canvasImages, activeViewId, lastAddedItemId]);
 
   useEffect(() => {
-    // Logic to set lastAddedItemId for new texts
     if (canvasTexts.length > 0 && activeViewId) {
       const latestText = canvasTexts[canvasTexts.length - 1];
       if (lastAddedItemId === null && latestText && latestText.x === 50 && latestText.y === 50 && !latestText.movedFromDefault && latestText.viewId === activeViewId) {
@@ -169,7 +161,6 @@ export default function DesignCanvas({
   }, [canvasTexts, activeViewId, lastAddedItemId]);
 
   useEffect(() => {
-    // Logic to set lastAddedItemId for new shapes
     if (canvasShapes.length > 0 && activeViewId) {
       const latestShape = canvasShapes[canvasShapes.length - 1];
       if (lastAddedItemId === null && latestShape && latestShape.x === 50 && latestShape.y === 50 && !latestShape.movedFromDefault && latestShape.viewId === activeViewId) {
@@ -188,12 +179,12 @@ export default function DesignCanvas({
 
   const handleCanvasClick = (e: ReactMouseEvent<HTMLDivElement>) => {
     const target = e.target as HTMLElement;
-    // Check if the click is on the canvas itself or the direct product image container, not on an interactive item
     if (target === canvasRef.current || target.classList.contains('centered-square-container') ||
-        target === canvasRef.current?.parentElement || // product-canvas-wrapper
+        target === canvasRef.current?.parentElement ||
         target.classList.contains('product-image-outer-container') ||
         target.classList.contains('product-canvas-wrapper') ||
-        target.id === 'design-canvas-square-area' ) { // Check direct parent as well
+        target.id === 'design-canvas-square-area' || 
+        target.id === 'product-image-canvas-area-capture-target' ) { 
         selectCanvasImage(null);
         selectCanvasText(null);
         selectCanvasShape(null);
@@ -265,12 +256,11 @@ export default function DesignCanvas({
             itemInitialUnscaledHeight = BASE_TEXT_DIMENSION_APPROX_HEIGHT;
         }
     } else if (itemType === 'shape') {
-        const shapeItem = item as CanvasShape; // Already has unscaled width/height
+        const shapeItem = item as CanvasShape; 
         itemInitialUnscaledWidth = shapeItem.width;
         itemInitialUnscaledHeight = shapeItem.height;
     }
 
-    // Ensure these are always positive for calculations
     const finalItemInitialWidth = itemInitialUnscaledWidth > 0 ? itemInitialUnscaledWidth : (itemType === 'image' ? BASE_IMAGE_DIMENSION : (itemType === 'text' ? BASE_TEXT_DIMENSION_APPROX_WIDTH : BASE_SHAPE_DIMENSION));
     const finalItemInitialHeight = itemInitialUnscaledHeight > 0 ? itemInitialUnscaledHeight : (itemType === 'image' ? BASE_IMAGE_DIMENSION : (itemType === 'text' ? BASE_TEXT_DIMENSION_APPROX_HEIGHT : BASE_SHAPE_DIMENSION));
 
@@ -288,13 +278,11 @@ export default function DesignCanvas({
   };
 
   const handleDragging = useCallback((e: MouseEvent | TouchEvent) => {
-    if (!activeDrag || !canvasRef.current) return; // Initial check
+    if (!activeDrag || !canvasRef.current) return; 
 
     cancelAnimationFrame(dragUpdateRef.current);
     dragUpdateRef.current = requestAnimationFrame(() => {
-      // Re-check canvasRef.current inside requestAnimationFrame as it might have changed
       if (!canvasRef.current || !activeDrag) { 
-        console.warn("DesignCanvas: canvasRef.current or activeDrag is null inside requestAnimationFrame. Aborting drag update.");
         if (activeDrag) setActiveDrag(null); 
         endInteractiveOperation();
         return;
@@ -311,15 +299,14 @@ export default function DesignCanvas({
       const {
           type, itemId, itemType, startX, startY,
           initialRotation, initialScale, initialX, initialY,
-          itemCenterX, itemCenterY, itemInitialWidth, itemInitialHeight // These are now guaranteed > 0
+          itemCenterX, itemCenterY, itemInitialWidth, itemInitialHeight
       } = activeDrag;
 
       if (initialRotation === undefined || initialScale === undefined || initialX === undefined || initialY === undefined || itemCenterX === undefined || itemCenterY === undefined) {
-          console.warn("Dragging with undefined initial values", activeDrag);
           return;
       }
       
-      const canvasRect = canvasRef.current.getBoundingClientRect(); // Now safe to call
+      const canvasRect = canvasRef.current.getBoundingClientRect();
 
       if (type === 'rotate') {
         const angle = Math.atan2(coords.y - (canvasRect.top + itemCenterY) , coords.x - (canvasRect.left + itemCenterX)) * (180 / Math.PI);
@@ -332,7 +319,7 @@ export default function DesignCanvas({
         const distFromCenter = Math.sqrt(Math.pow(coords.x - (canvasRect.left + itemCenterX), 2) + Math.pow(coords.y - (canvasRect.top + itemCenterY), 2));
         const initialDistFromCenter = Math.sqrt(Math.pow(startX - (canvasRect.left + itemCenterX), 2) + Math.pow(startY - (canvasRect.top + itemCenterY), 2));
         
-        if (initialDistFromCenter === 0) return; // Guard against division by zero
+        if (initialDistFromCenter === 0) return; 
 
         const scaleRatio = distFromCenter / initialDistFromCenter;
         let newScale = initialScale * scaleRatio;
@@ -361,7 +348,7 @@ export default function DesignCanvas({
           const distToBoxLeftEdge_sq = itemCenterXpercent_sq - boxMinXPercent_sq;
           const distToBoxRightEdge_sq = boxMaxXPercent_sq - itemCenterXpercent_sq;
           const distToBoxTopEdge_sq = itemCenterYpercent_sq - boxMinYPercent_sq;
-          const distToBoxBottomEdge_sq = boxMaxYPercent_sq - itemCenterYpercent_sq;
+          const distToBoxBottomEdge_sq = boxMaxYpercent_sq - itemCenterYpercent_sq;
 
           const maxAllowedHalfWidthPercent_sq = Math.min(distToBoxLeftEdge_sq, distToBoxRightEdge_sq);
           const maxAllowedHalfHeightPercent_sq = Math.min(distToBoxTopEdge_sq, distToBoxBottomEdge_sq);
@@ -394,7 +381,6 @@ export default function DesignCanvas({
           let newY_canvas = initialY + dyPercent_canvas;
           
           const currentItemScaleFactor = activeItemData?.scale || initialScale;
-          // itemInitialWidth and itemInitialHeight are unscaled base dimensions.
           const scaledItemWidthPx = itemInitialWidth * currentItemScaleFactor;
           const scaledItemHeightPx = itemInitialHeight * currentItemScaleFactor;
 
@@ -429,7 +415,6 @@ export default function DesignCanvas({
                   Math.min(newY_canvas, boxMaxYpercent_canvas - itemHalfHeightPercent_canvas)
               );
 
-              // If item is wider/taller than the box, center it in the box
               if (itemHalfWidthPercent_canvas * 2 > (boxMaxXpercent_canvas - boxMinXpercent_canvas)) { 
                   clampedX_canvas = boxMinXpercent_canvas + (boxMaxXpercent_canvas - boxMinXpercent_canvas) / 2; 
               }
@@ -439,7 +424,6 @@ export default function DesignCanvas({
               newX_canvas = clampedX_canvas;
               newY_canvas = clampedY_canvas;
           } else {
-              // Default canvas boundary clamping if no specific boxes are defined
               newX_canvas = Math.max(itemHalfWidthPercent_canvas, Math.min(newX_canvas, 100 - itemHalfWidthPercent_canvas));
               newY_canvas = Math.max(itemHalfHeightPercent_canvas, Math.min(newY_canvas, 100 - itemHalfHeightPercent_canvas));
           }
@@ -485,6 +469,19 @@ export default function DesignCanvas({
   const visibleTexts = canvasTexts.filter(txt => txt.viewId === activeViewId);
   const visibleShapes = canvasShapes.filter(shp => shp.viewId === activeViewId);
 
+  const gridOverlayStyle = (productDefinedBoundaryBoxes && productDefinedBoundaryBoxes.length > 0 && showBoundaryBoxes && showGrid) ? {
+    position: 'absolute' as 'absolute',
+    left: `${productDefinedBoundaryBoxes[0].x}%`,
+    top: `${productDefinedBoundaryBoxes[0].y}%`,
+    width: `${productDefinedBoundaryBoxes[0].width}%`,
+    height: `${productDefinedBoundaryBoxes[0].height}%`,
+    pointerEvents: 'none' as 'none',
+    zIndex: 0,
+    overflow: 'hidden',
+    backgroundImage: `repeating-linear-gradient(to right, hsla(var(--primary) / 0.2) 0, hsla(var(--primary) / 0.2) 1px, transparent 1px, transparent 100%), repeating-linear-gradient(to bottom, hsla(var(--primary) / 0.2) 0, hsla(var(--primary) / 0.2) 1px, transparent 1px, transparent 100%)`,
+    backgroundSize: '10% 10%',
+  } : {};
+
   return (
     <div
       className="w-full h-full flex flex-col bg-card border border-dashed border-border rounded-lg shadow-inner relative overflow-hidden select-none product-image-outer-container"
@@ -492,13 +489,14 @@ export default function DesignCanvas({
       <div className="relative w-full flex-1 flex items-center justify-center product-canvas-wrapper min-h-0">
         <div
           ref={canvasRef} 
+          id="product-image-canvas-area-capture-target" 
           className="relative product-image-canvas-area bg-muted/10 w-full h-full flex items-center justify-center" 
           onClick={handleCanvasClick} 
           onTouchStart={handleCanvasClick as any} 
         >
           
           <div
-            id="design-canvas-square-area" // Added ID for html2canvas targeting
+            id="design-canvas-square-area" 
             className="relative centered-square-container" 
             style={{
               width: 'min(100%, calc(100svh - 10rem))', 
@@ -508,7 +506,7 @@ export default function DesignCanvas({
             <Image
               src={productToDisplay.imageUrl}
               alt={productToDisplay.imageAlt}
-              key={productToDisplay.imageUrl} // Added key to force re-render on src change
+              key={productToDisplay.imageUrl} 
               fill 
               style={{ objectFit: 'contain' }} 
               className="rounded-md pointer-events-none select-none" 
@@ -519,21 +517,7 @@ export default function DesignCanvas({
             
             {productDefinedBoundaryBoxes && productDefinedBoundaryBoxes.length > 0 && showBoundaryBoxes && showGrid && (
               <div
-                style={{
-                  position: 'absolute',
-                  left: `${productDefinedBoundaryBoxes[0].x}%`,
-                  top: `${productDefinedBoundaryBoxes[0].y}%`,
-                  width: `${productDefinedBoundaryBoxes[0].width}%`,
-                  height: `${productDefinedBoundaryBoxes[0].height}%`,
-                  pointerEvents: 'none',
-                  zIndex: 0, 
-                  overflow: 'hidden', 
-                  backgroundImage: `
-                    repeating-linear-gradient(to right, hsla(var(--primary) / 0.8) 0, hsla(var(--primary) / 0.8) 1px, transparent 1px, transparent 100%),
-                    repeating-linear-gradient(to bottom, hsla(var(--primary) / 0.8) 0, hsla(var(--primary) / 0.8) 1px, transparent 1px, transparent 100%)
-                  `,
-                  backgroundSize: '10% 10%', 
-                }}
+                style={gridOverlayStyle}
                 className="grid-overlay"
               />
             )}
@@ -612,6 +596,8 @@ export default function DesignCanvas({
     
 
     
+
+
 
 
 

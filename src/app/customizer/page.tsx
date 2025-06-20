@@ -10,8 +10,8 @@ import { UploadProvider, useUploads } from "@/contexts/UploadContext";
 import { fetchWooCommerceProductById, fetchWooCommerceProductVariations, type WooCommerceCredentials } from '@/app/actions/woocommerceActions';
 import type { ProductOptionsFirestoreData } from '@/app/dashboard/products/[productId]/options/page';
 import { useAuth } from '@/contexts/AuthContext';
-import { db, storage as firebaseStorage } from '@/lib/firebase'; // Import storage
-import { ref as storageRef, uploadString, getDownloadURL } from 'firebase/storage'; // Firebase storage functions
+import { db, storage as firebaseStorage } from '@/lib/firebase'; 
+import { ref as storageRef, uploadString, getDownloadURL } from 'firebase/storage'; 
 import { doc, getDoc } from 'firebase/firestore';
 import type { UserWooCommerceCredentials } from '@/app/actions/userCredentialsActions';
 import {
@@ -28,10 +28,9 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import Link from 'next/link';
-import NextImage from 'next/image'; // For modal previews
+import NextImage from 'next/image'; 
 import type { WCCustomProduct, WCVariation, WCVariationAttribute } from '@/types/woocommerce';
 import { useToast } from '@/hooks/use-toast';
 import CustomizerIconNav, { type CustomizerTool } from '@/components/customizer/CustomizerIconNav';
@@ -204,7 +203,6 @@ function CustomizerLayoutAndLogic() {
   const lastLoadedConfigUserIdRef = useRef<string | null | undefined>(undefined);
   const originalActiveViewIdBeforePreviewRef = useRef<string | null>(null);
 
-  // State for Add to Cart Confirmation Modal
   const [isConfirmationModalOpen, setIsConfirmationModalOpen] = useState(false);
   const [isGeneratingPreviews, setIsGeneratingPreviews] = useState(false);
   const [viewScreenshots, setViewScreenshots] = useState<ViewScreenshot[]>([]);
@@ -420,7 +418,7 @@ function CustomizerLayoutAndLogic() {
       tempLoadedGroupingAttributeName = null;
       if (userIdForFirestoreOptions && !firestoreOptions) {
         if ((!isEmbedded && user?.uid) || (isEmbedded && !configUserIdToUse && user?.uid)) {
-          toast({ title: "No Saved Settings", description: "No Customizer Studio settings found for this product. Displaying default view.", variant: "default" });
+          toast({ title: "No Saved Settings", description: `No Customizer Studio settings found for this product (ID: ${productIdToLoad}). Using default view.`, variant: "default" });
         } else if (isEmbedded && configUserIdToUse) {
            console.warn(`Customizer: No Firestore settings found for configUserId ${configUserIdToUse} and product ${productIdToLoad}. Using default view.`);
         }
@@ -635,18 +633,26 @@ function CustomizerLayoutAndLogic() {
 
     setIsGeneratingPreviews(true);
     setIsConfirmationModalOpen(true);
-    setViewScreenshots([]); // Clear previous screenshots
+    setViewScreenshots([]); 
     setPrimaryScreenshotForUpload(null);
 
-    const canvasElementToCapture = document.getElementById('design-canvas-square-area'); // Target the square area
+    const captureTargetElement = document.getElementById('product-image-canvas-area-capture-target');
+    const cropToElement = document.getElementById('design-canvas-square-area');
     const currentActiveView = activeViewId;
     originalActiveViewIdBeforePreviewRef.current = currentActiveView;
 
-    // Capture primary screenshot (current view) first
-    if (canvasElementToCapture && currentActiveView) {
+    if (captureTargetElement && cropToElement && currentActiveView) {
       try {
-        await new Promise(resolve => requestAnimationFrame(() => setTimeout(resolve, 50))); // Short delay for current view
-        const canvasOutput = await html2canvas(canvasElementToCapture, { allowTaint: true, useCORS: true, backgroundColor: null, logging: false });
+        await new Promise(resolve => requestAnimationFrame(() => setTimeout(resolve, 50)));
+        const captureWidth = cropToElement.offsetWidth;
+        const captureHeight = cropToElement.offsetHeight;
+        const captureX = cropToElement.offsetLeft - captureTargetElement.offsetLeft;
+        const captureY = cropToElement.offsetTop - captureTargetElement.offsetTop;
+
+        const canvasOutput = await html2canvas(captureTargetElement, {
+          allowTaint: true, useCORS: true, backgroundColor: null, logging: false,
+          width: captureWidth, height: captureHeight, x: captureX, y: captureY,
+        });
         setPrimaryScreenshotForUpload(canvasOutput.toDataURL('image/png'));
       } catch (error) {
         console.error("Error generating primary screenshot:", error);
@@ -663,12 +669,19 @@ function CustomizerLayoutAndLogic() {
 
       if (hasCustomizations) {
         setActiveViewId(view.id);
-        // Wait for DOM to update - combination of requestAnimationFrame and setTimeout
         await new Promise(resolve => requestAnimationFrame(() => setTimeout(resolve, 200))); 
         
-        if (canvasElementToCapture) {
+        if (captureTargetElement && cropToElement) {
           try {
-            const canvasOutput = await html2canvas(canvasElementToCapture, { allowTaint: true, useCORS: true, backgroundColor: null, logging: false });
+            const captureWidth = cropToElement.offsetWidth;
+            const captureHeight = cropToElement.offsetHeight;
+            const captureX = cropToElement.offsetLeft - captureTargetElement.offsetLeft;
+            const captureY = cropToElement.offsetTop - captureTargetElement.offsetTop;
+
+            const canvasOutput = await html2canvas(captureTargetElement, {
+              allowTaint: true, useCORS: true, backgroundColor: null, logging: false,
+              width: captureWidth, height: captureHeight, x: captureX, y: captureY,
+            });
             tempScreenshots.push({
               viewId: view.id,
               viewName: view.name,
@@ -679,7 +692,7 @@ function CustomizerLayoutAndLogic() {
             tempScreenshots.push({
               viewId: view.id,
               viewName: view.name,
-              imageDataUrl: 'error', // Placeholder for errored screenshots
+              imageDataUrl: 'error', 
             });
           }
         }
@@ -688,7 +701,6 @@ function CustomizerLayoutAndLogic() {
     setViewScreenshots(tempScreenshots);
     setIsGeneratingPreviews(false);
 
-    // Restore original active view if it changed
     if (currentActiveView && activeViewId !== currentActiveView) {
         setActiveViewId(currentActiveView);
         await new Promise(resolve => requestAnimationFrame(() => setTimeout(resolve, 50)));
@@ -745,7 +757,7 @@ function CustomizerLayoutAndLogic() {
         selectedOptions: selectedVariationOptions, baseProductPrice: baseProductPrice, totalViewSurcharge: totalViewSurcharge,
         totalCustomizationPrice: totalCustomizationPrice,
         activeViewIdUsed: activeViewIdForPricing,
-        screenshotStorageUrl: screenshotStorageUrl, // Updated field name
+        screenshotStorageUrl: screenshotStorageUrl, 
       },
       userId: user?.uid || null,
       configUserId: productDetails?.meta?.configUserIdUsed || null,
@@ -922,7 +934,7 @@ function CustomizerLayoutAndLogic() {
                                             <span className="text-xs">Preview Error</span>
                                         </div>
                                     ) : (
-                                        <NextImage src={preview.imageDataUrl} alt={`Preview of ${preview.viewName}`} fill className="object-contain" />
+                                        <NextImage src={preview.imageDataUrl} alt={`Preview of ${preview.viewName}`} fill className="object-contain" unoptimized={true} />
                                     )}
                                 </div>
                             </div>
@@ -990,6 +1002,8 @@ export default function CustomizerPage() {
 
 
     
+
+
 
 
 
