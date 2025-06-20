@@ -75,7 +75,7 @@ interface LoadedCustomizerOptions {
   defaultViews: ProductView[];
   optionsByColor: Record<string, ColorGroupOptionsForCustomizer>;
   groupingAttributeName: string | null;
-  allowCustomization?: boolean; 
+  allowCustomization?: boolean;
 }
 
 export interface ProductForCustomizer {
@@ -84,7 +84,7 @@ export interface ProductForCustomizer {
   basePrice: number;
   views: ProductView[];
   type?: 'simple' | 'variable' | 'grouped' | 'external';
-  allowCustomization?: boolean; 
+  allowCustomization?: boolean;
   meta?: {
     proxyUsed?: boolean;
     configUserIdUsed?: string | null;
@@ -135,7 +135,7 @@ const toolItems: CustomizerTool[] = [
 ];
 
 async function loadProductOptionsFromFirestore(
-  userIdForOptions: string, 
+  userIdForOptions: string,
   productId: string
 ): Promise<{ options?: ProductOptionsFirestoreData; error?: string }> {
   if (!userIdForOptions || !productId || !db) {
@@ -149,7 +149,7 @@ async function loadProductOptionsFromFirestore(
     if (docSnap.exists()) {
       return { options: docSnap.data() as ProductOptionsFirestoreData };
     }
-    return { options: undefined }; 
+    return { options: undefined };
   } catch (error: any) {
     let detailedError = `Failed to load options from cloud: ${error.message}`;
     if (error.code === 'permission-denied' || error.message?.includes('Missing or insufficient permissions')) {
@@ -299,8 +299,8 @@ function CustomizerLayoutAndLogic() {
       setIsLoading(false);
       return;
     }
-    
-    if (!productIdToLoad) { 
+
+    if (!productIdToLoad) {
         setError("Invalid state: Product ID became null unexpectedly. Displaying default.");
         setProductDetails({...defaultFallbackProduct, meta: metaForProduct});
         setActiveViewId(defaultFallbackProduct.views[0]?.id || null);
@@ -309,7 +309,7 @@ function CustomizerLayoutAndLogic() {
     }
 
     if (authLoading && !user?.uid && !wpApiBaseUrlToUse && !configUserIdToUse) {
-      setIsLoading(false); 
+      setIsLoading(false);
       return;
     }
 
@@ -321,12 +321,12 @@ function CustomizerLayoutAndLogic() {
 
     if (shouldLoadUserDirectCredentials) {
       try {
-        const credDocRef = doc(db, 'userWooCommerceCredentials', user.uid!); 
+        const credDocRef = doc(db, 'userWooCommerceCredentials', user.uid!);
         const credDocSnap = await getDoc(credDocRef);
         if (credDocSnap.exists()) {
           const credData = credDocSnap.data() as UserWooCommerceCredentials;
           userWCCredentialsToUse = { storeUrl: credData.storeUrl, consumerKey: credData.consumerKey, consumerSecret: credData.consumerSecret };
-        } else if (!isEmbedded) { 
+        } else if (!isEmbedded) {
           let message = "WooCommerce API credentials are not configured. Please connect your store in the 'Store Integration' section.";
            setError(message + " Using default product view.");
           const defaultViewsError = defaultFallbackProduct.views;
@@ -343,7 +343,7 @@ function CustomizerLayoutAndLogic() {
         if (!isEmbedded) toast({ title: "WooCommerce Connection Error", description: credError.message || "Could not load your WooCommerce store credentials.", variant: "destructive" });
       }
     }
-    
+
     ({ product: wcProduct, error: fetchError } = await fetchWooCommerceProductById(productIdToLoad, userWCCredentialsToUse, wpApiBaseUrlToUse || undefined));
 
     if (fetchError || !wcProduct) {
@@ -351,7 +351,7 @@ function CustomizerLayoutAndLogic() {
       if (isEmbedded && wpApiBaseUrlToUse && (fetchError?.includes("credentials are not configured") || fetchError?.includes("required."))) {
           displayError = `This product customizer (ID: ${productIdToLoad}) could not load data using the provided proxy. The embedding site might need to configure its connection or API proxy with Customizer Studio. Original error: ${fetchError}`;
       } else if (isEmbedded && wpApiBaseUrlToUse && fetchError) {
-          if (fetchError.includes("Status: 403") || fetchError.includes("Invalid Origin")) { 
+          if (fetchError.includes("Status: 403") || fetchError.includes("Invalid Origin")) {
             displayError = `Failed to load product (ID: ${productIdToLoad}) via WordPress proxy. Access was forbidden (403). This often indicates a CORS or plugin configuration issue on your WordPress site. Please ensure the Customizer Studio plugin is configured correctly (Allowed Origins, User ID), and check REST API security and server logs. Original error: ${fetchError}`;
           } else {
             displayError = `Failed to load product (ID: ${productIdToLoad}) via WordPress proxy. Please ensure the Customizer Studio plugin is configured correctly on your WordPress site. Original error: ${fetchError}`;
@@ -385,7 +385,7 @@ function CustomizerLayoutAndLogic() {
 
     const userIdForFirestoreOptions = configUserIdToUse || user?.uid;
 
-    if (userIdForFirestoreOptions) { 
+    if (userIdForFirestoreOptions) {
       const { options, error: firestoreLoadError } = await loadProductOptionsFromFirestore(userIdForFirestoreOptions, productIdToLoad);
       if (firestoreLoadError) {
         console.warn(`Customizer: Error loading options from Firestore for user/config ${userIdForFirestoreOptions}:`, firestoreLoadError);
@@ -409,15 +409,15 @@ function CustomizerLayoutAndLogic() {
         finalAllowCustomization = firestoreOptions.allowCustomization !== undefined ? firestoreOptions.allowCustomization : true;
     }
 
-    if (finalDefaultViews.length === 0) { 
+    if (finalDefaultViews.length === 0) {
       finalDefaultViews = [{
         id: `default_view_wc_${wcProduct.id}`, name: "Front View",
         imageUrl: wcProduct.images && wcProduct.images.length > 0 ? wcProduct.images[0].src : defaultFallbackProduct.views[0].imageUrl,
         aiHint: wcProduct.images && wcProduct.images.length > 0 && wcProduct.images[0].alt ? wcProduct.images[0].alt.split(" ").slice(0,2).join(" ") : defaultFallbackProduct.views[0].aiHint,
         boundaryBoxes: defaultFallbackProduct.views[0].boundaryBoxes, price: defaultFallbackProduct.views[0].price ?? 0,
       }];
-      tempLoadedOptionsByColor = {}; 
-      tempLoadedGroupingAttributeName = null; 
+      tempLoadedOptionsByColor = {};
+      tempLoadedGroupingAttributeName = null;
       if (userIdForFirestoreOptions && !firestoreOptions) {
         if ((!isEmbedded && user?.uid) || (isEmbedded && !configUserIdToUse && user?.uid)) {
           toast({ title: "No Saved Settings", description: "No Customizer Studio settings found for this product. Displaying default view.", variant: "default" });
@@ -426,19 +426,19 @@ function CustomizerLayoutAndLogic() {
         }
       }
     }
-    
+
     if (!finalAllowCustomization) {
         setError(`Customization for product "${wcProduct.name}" is currently disabled by the store owner.`);
         setProductDetails({
-            id: wcProduct.id.toString(), name: wcProduct.name || `Product ${productIdToLoad}`, 
+            id: wcProduct.id.toString(), name: wcProduct.name || `Product ${productIdToLoad}`,
             basePrice: parseFloat(wcProduct.price || wcProduct.regular_price || '0'),
             views: finalDefaultViews, type: wcProduct.type, allowCustomization: false, meta: metaForProduct,
         });
         setActiveViewId(finalDefaultViews[0]?.id || null);
         setIsLoading(false);
-        return; 
+        return;
     }
-    
+
     setLoadedOptionsByColor(tempLoadedOptionsByColor);
     setLoadedGroupingAttributeName(tempLoadedGroupingAttributeName);
 
@@ -484,20 +484,20 @@ function CustomizerLayoutAndLogic() {
     const targetConfigUserId = configUserIdFromUrl || null;
 
     if (authLoading && !user && !targetProxyUrl && !targetConfigUserId) {
-        if (lastLoadedProductIdRef.current === undefined) { 
+        if (lastLoadedProductIdRef.current === undefined) {
             loadCustomizerData(null, null, null);
-            lastLoadedProductIdRef.current = null; 
+            lastLoadedProductIdRef.current = null;
             lastLoadedProxyUrlRef.current = null;
             lastLoadedConfigUserIdRef.current = null;
         }
-        return; 
+        return;
     }
-    
+
     if (
         (lastLoadedProductIdRef.current !== targetProductId ||
         lastLoadedProxyUrlRef.current !== targetProxyUrl ||
         lastLoadedConfigUserIdRef.current !== targetConfigUserId) ||
-        !productDetails 
+        !productDetails
     ) {
         loadCustomizerData(targetProductId, targetProxyUrl, targetConfigUserId);
         lastLoadedProductIdRef.current = targetProductId;
@@ -506,12 +506,12 @@ function CustomizerLayoutAndLogic() {
     }
   }, [
       authLoading,
-      user, 
+      user,
       productIdFromUrl,
       wpApiBaseUrlFromUrl,
       configUserIdFromUrl,
       loadCustomizerData,
-      productDetails 
+      productDetails
   ]);
 
 
@@ -549,7 +549,7 @@ function CustomizerLayoutAndLogic() {
         if (currentVariantViewImages && currentVariantViewImages[view.id]?.imageUrl) {
           finalImageUrl = currentVariantViewImages[view.id].imageUrl;
           finalAiHint = currentVariantViewImages[view.id].aiHint || baseAiHint;
-        } else if (primaryVariationImageSrc && view.id === activeViewId) { 
+        } else if (primaryVariationImageSrc && view.id === activeViewId) {
           finalImageUrl = primaryVariationImageSrc;
           finalAiHint = primaryVariationImageAiHint || baseAiHint;
         } else {
@@ -566,7 +566,7 @@ function CustomizerLayoutAndLogic() {
       const basePriceChanged = prevProductDetails.basePrice !== (matchingVariation ? parseFloat(matchingVariation.price || '0') : prevProductDetails.basePrice);
 
       if (!viewsContentActuallyChanged && !basePriceChanged) {
-        return prevProductDetails; 
+        return prevProductDetails;
       }
       return { ...prevProductDetails, views: updatedViews, basePrice: matchingVariation ? parseFloat(matchingVariation.price || '0') : prevProductDetails.basePrice };
     });
@@ -581,7 +581,7 @@ function CustomizerLayoutAndLogic() {
     canvasTexts.forEach(item => { if (item.viewId) usedViewIdsWithElements.add(item.viewId); });
     canvasShapes.forEach(item => { if (item.viewId) usedViewIdsWithElements.add(item.viewId); });
     const viewsToPrice = new Set<string>(usedViewIdsWithElements);
-    if (activeViewId) viewsToPrice.add(activeViewId); 
+    if (activeViewId) viewsToPrice.add(activeViewId);
 
     let viewSurcharges = 0;
     if (productDetails?.views) {
@@ -630,17 +630,26 @@ function CustomizerLayoutAndLogic() {
   };
 
   const generatePreviewsAndOpenModal = async () => {
-    if (!productDetails || !activeViewId) return;
-    selectCanvasImage(null); selectCanvasText(null); selectCanvasShape(null); // Deselect items
+    if (!productDetails) return;
+    selectCanvasImage(null); selectCanvasText(null); selectCanvasShape(null);
 
     setIsGeneratingPreviews(true);
-    setIsConfirmationModalOpen(true); // Open modal to show loading state
+    setIsConfirmationModalOpen(true);
 
-    // 1. Capture screenshot of the initially active view for potential upload
     const canvasElement = document.getElementById('design-canvas-render-area');
     let initialActiveViewScreenshotDataUrl: string | null = null;
-    if (canvasElement) {
+    const currentActiveView = activeViewId; // Save user's current view
+    originalActiveViewIdBeforePreviewRef.current = currentActiveView; // Store it in ref
+
+    if (canvasElement && currentActiveView) {
       try {
+        // Ensure the initially active view is rendered if not already
+        if (activeViewId !== currentActiveView) {
+           setActiveViewId(currentActiveView);
+           await new Promise(resolve => requestAnimationFrame(() => setTimeout(resolve, 150)));
+        } else {
+           await new Promise(resolve => setTimeout(resolve, 50)); // Ensure settled
+        }
         const canvasOutput = await html2canvas(canvasElement, { allowTaint: true, useCORS: true, backgroundColor: null, logging: false });
         initialActiveViewScreenshotDataUrl = canvasOutput.toDataURL('image/png');
         setPrimaryScreenshotForUpload(initialActiveViewScreenshotDataUrl);
@@ -650,49 +659,55 @@ function CustomizerLayoutAndLogic() {
       }
     }
 
-    // 2. Generate previews for all customized views
-    const customizedViewsScreenshots: ViewScreenshot[] = [];
-    originalActiveViewIdBeforePreviewRef.current = activeViewId; 
+    const customizedViewsScreenshotsPromises: Promise<ViewScreenshot | null>[] = [];
 
     for (const view of productDetails.views) {
-      const hasCustomizations = 
+      const hasCustomizations =
         canvasImages.some(item => item.viewId === view.id) ||
         canvasTexts.some(item => item.viewId === view.id) ||
         canvasShapes.some(item => item.viewId === view.id);
 
       if (hasCustomizations) {
-        if (activeViewId !== view.id) {
-          setActiveViewId(view.id);
-          await new Promise(resolve => setTimeout(resolve, 250)); // DOM update delay
-        }
-        if (canvasElement) {
-          try {
-            const canvasOutput = await html2canvas(canvasElement, { allowTaint: true, useCORS: true, backgroundColor: null, logging: false });
-            customizedViewsScreenshots.push({
-              viewId: view.id,
-              viewName: view.name,
-              imageDataUrl: canvasOutput.toDataURL('image/png'),
-            });
-          } catch (error) {
-            console.error(`Error generating screenshot for view ${view.name}:`, error);
-            customizedViewsScreenshots.push({
-              viewId: view.id,
-              viewName: view.name,
-              imageDataUrl: 'error', // Placeholder for failed screenshots
-            });
-          }
-        }
+        customizedViewsScreenshotsPromises.push(
+          (async () => {
+            if (activeViewId !== view.id) {
+              setActiveViewId(view.id);
+              await new Promise(resolve => requestAnimationFrame(() => setTimeout(resolve, 150)));
+            } else {
+              await new Promise(resolve => setTimeout(resolve, 50)); // Ensure settled if already active
+            }
+
+            if (canvasElement) {
+              try {
+                const canvasOutput = await html2canvas(canvasElement, { allowTaint: true, useCORS: true, backgroundColor: null, logging: false });
+                return {
+                  viewId: view.id,
+                  viewName: view.name,
+                  imageDataUrl: canvasOutput.toDataURL('image/png'),
+                };
+              } catch (error) {
+                console.error(`Error generating screenshot for view ${view.name}:`, error);
+                return {
+                  viewId: view.id,
+                  viewName: view.name,
+                  imageDataUrl: 'error',
+                };
+              }
+            }
+            return null;
+          })()
+        );
       }
     }
-    setViewScreenshots(customizedViewsScreenshots);
+
+    const resolvedScreenshots = (await Promise.all(customizedViewsScreenshotsPromises)).filter(s => s !== null) as ViewScreenshot[];
+    setViewScreenshots(resolvedScreenshots);
     setIsGeneratingPreviews(false);
 
-    // Restore original active view after generating all previews
-    if (originalActiveViewIdBeforePreviewRef.current && activeViewId !== originalActiveViewIdBeforePreviewRef.current) {
-        setActiveViewId(originalActiveViewIdBeforePreviewRef.current);
-        await new Promise(resolve => setTimeout(resolve, 50)); // Small delay
+    if (currentActiveView && activeViewId !== currentActiveView) {
+        setActiveViewId(currentActiveView);
+        await new Promise(resolve => requestAnimationFrame(() => setTimeout(resolve, 50)));
     }
-    originalActiveViewIdBeforePreviewRef.current = null;
   };
 
   const handleConfirmAddToCart = async () => {
@@ -722,8 +737,8 @@ function CustomizerLayoutAndLogic() {
     canvasImages.forEach(item => { if(item.viewId) viewsUsedForSurcharge.add(item.viewId); });
     canvasTexts.forEach(item => { if(item.viewId) viewsUsedForSurcharge.add(item.viewId); });
     canvasShapes.forEach(item => { if(item.viewId) viewsUsedForSurcharge.add(item.viewId); });
-    
-    const activeViewIdForPricing = activeViewId || originalActiveViewIdBeforePreviewRef.current || productDetails?.views[0]?.id;
+
+    const activeViewIdForPricing = originalActiveViewIdBeforePreviewRef.current || productDetails?.views[0]?.id;
     if (activeViewIdForPricing && (viewsUsedForSurcharge.has(activeViewIdForPricing) || viewsUsedForSurcharge.size === 0)) {
         viewsUsedForSurcharge.add(activeViewIdForPricing);
     }
@@ -743,12 +758,12 @@ function CustomizerLayoutAndLogic() {
             shapes: canvasShapes.filter(item => item.viewId === view.id).map(shp => ({ type: shp.shapeType, color: shp.color, strokeColor: shp.strokeColor, strokeWidth: shp.strokeWidth, x: shp.x, y: shp.y, scale: shp.scale, rotation: shp.rotation, width: shp.width, height: shp.height })),
         })).filter(view => view.images.length > 0 || view.texts.length > 0 || view.shapes.length > 0),
         selectedOptions: selectedVariationOptions, baseProductPrice: baseProductPrice, totalViewSurcharge: totalViewSurcharge,
-        totalCustomizationPrice: totalCustomizationPrice, 
-        activeViewIdUsed: activeViewIdForPricing, // Use the resolved active view ID
-        screenshotStorageUrl: screenshotStorageUrl, // Use storage URL
+        totalCustomizationPrice: totalCustomizationPrice,
+        activeViewIdUsed: activeViewIdForPricing,
+        screenshotStorageUrl: screenshotStorageUrl,
       },
-      userId: user?.uid || null, 
-      configUserId: productDetails?.meta?.configUserIdUsed || null, 
+      userId: user?.uid || null,
+      configUserId: productDetails?.meta?.configUserIdUsed || null,
     };
 
     let targetOrigin = '*';
@@ -768,6 +783,7 @@ function CustomizerLayoutAndLogic() {
     }
     setViewScreenshots([]);
     setPrimaryScreenshotForUpload(null);
+    originalActiveViewIdBeforePreviewRef.current = null;
   };
 
   const handleAddToCartClick = () => {
@@ -834,7 +850,7 @@ function CustomizerLayoutAndLogic() {
   const currentBoundaryBoxes = activeViewData?.boundaryBoxes || defaultFallbackProduct.views[0].boundaryBoxes;
   const currentProductName = productDetails?.name || defaultFallbackProduct.name;
 
-  if (error && !productDetails) { 
+  if (error && !productDetails) {
     let finalErrorMessage = error;
      if (isEmbedded && wpApiBaseUrlFromUrl && error.includes("credentials are not configured")) {
         finalErrorMessage = `Failed to load product data. Please ensure the Customizer Studio plugin on your WordPress site is correctly configured and can access WooCommerce products. Original Error: ${error}`;
@@ -887,7 +903,7 @@ function CustomizerLayoutAndLogic() {
             <div className="text-md font-medium text-muted-foreground truncate max-w-xs sm:max-w-sm md:max-w-md" title={currentProductName}> {currentProductName} </div>
             <div className="flex items-center gap-3">
                 <div className="text-lg font-semibold text-foreground">Total: ${totalCustomizationPrice.toFixed(2)}</div>
-                <Button size="default" className="bg-primary text-primary-foreground hover:bg-primary/90" onClick={handleAddToCartClick} disabled={productDetails?.allowCustomization === false || isGeneratingPreviews}> 
+                <Button size="default" className="bg-primary text-primary-foreground hover:bg-primary/90" onClick={handleAddToCartClick} disabled={productDetails?.allowCustomization === false || isGeneratingPreviews}>
                     {isGeneratingPreviews ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : (productDetails?.allowCustomization === false ? <Ban className="mr-2 h-5 w-5" /> : <ShoppingCart className="mr-2 h-5 w-5" />) }
                     {isGeneratingPreviews ? "Processing..." : (productDetails?.allowCustomization === false ? "Not Customizable" : "Add to Cart")}
                 </Button>
@@ -903,7 +919,7 @@ function CustomizerLayoutAndLogic() {
                         {isGeneratingPreviews && " Generating previews..."}
                     </AlertDialogDescription>
                 </AlertDialogHeader>
-                
+
                 {isGeneratingPreviews ? (
                     <div className="flex flex-col items-center justify-center h-64">
                         <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
@@ -930,22 +946,22 @@ function CustomizerLayoutAndLogic() {
                 ) : (
                      <div className="my-4 text-center text-muted-foreground">
                         <Eye className="h-12 w-12 mx-auto mb-2 text-muted-foreground/50" />
-                        No customized views to preview. 
+                        No customized views to preview.
                         {primaryScreenshotForUpload && " The current view will be used for the order."}
                     </div>
                 )}
 
                 <AlertDialogFooter>
-                    <AlertDialogCancel 
+                    <AlertDialogCancel
                         onClick={() => {
-                            setIsConfirmationModalOpen(false); 
-                            setViewScreenshots([]); 
+                            setIsConfirmationModalOpen(false);
+                            setViewScreenshots([]);
                             setPrimaryScreenshotForUpload(null);
                             if (originalActiveViewIdBeforePreviewRef.current && activeViewId !== originalActiveViewIdBeforePreviewRef.current) {
                                 setActiveViewId(originalActiveViewIdBeforePreviewRef.current);
                             }
                             originalActiveViewIdBeforePreviewRef.current = null;
-                        }} 
+                        }}
                         disabled={isGeneratingPreviews}
                     >
                         Cancel
@@ -989,6 +1005,7 @@ export default function CustomizerPage() {
 
 
     
+
 
 
 
