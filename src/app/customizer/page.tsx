@@ -636,58 +636,52 @@ function CustomizerLayoutAndLogic() {
     setIsConfirmationModalOpen(true);
     setViewScreenshots([]); 
     setPrimaryScreenshotForUpload(null);
-    setIsCapturingScreenshot(true); 
-    await new Promise(resolve => requestAnimationFrame(resolve)); 
-
-
-    const currentActiveView = activeViewId;
-    originalActiveViewIdBeforePreviewRef.current = currentActiveView;
-
+    
+    originalActiveViewIdBeforePreviewRef.current = activeViewId;
+    
     const captureTargetElement = document.getElementById('product-image-canvas-area-capture-target');
     const cropToElement = document.getElementById('design-canvas-square-area');
 
-    if (captureTargetElement && cropToElement && currentActiveView) {
+    // Capture primary screenshot first
+    if (captureTargetElement && cropToElement && activeViewId) {
       try {
-        const cropRect = cropToElement.getBoundingClientRect();
+        setIsCapturingScreenshot(true);
+        await new Promise(resolve => setTimeout(resolve, 50)); // Short delay for React to commit state
+        await new Promise(resolve => requestAnimationFrame(resolve)); // Wait for browser to be ready to paint
+        
         const targetRect = captureTargetElement.getBoundingClientRect();
+        const cropRect = cropToElement.getBoundingClientRect();
+
         const captureWidth = cropRect.width;
         const captureHeight = cropRect.height;
         const captureX = cropRect.left - targetRect.left;
         const captureY = cropRect.top - targetRect.top;
 
-        if (captureWidth <= 0 || captureHeight <= 0) {
-          console.error("Error generating primary screenshot: Crop dimensions are invalid.", { captureWidth, captureHeight, cropRect, targetRect });
-          toast({ title: "Screenshot Failed", description: "Could not generate initial preview due to invalid crop dimensions.", variant: "destructive" });
-        } else {
+        if (captureWidth > 0 && captureHeight > 0) {
           const fullCanvas = await html2canvas(captureTargetElement, {
             allowTaint: true, useCORS: true, backgroundColor: null, logging: false,
+            width: targetRect.width, height: targetRect.height, x: 0, y: 0, // Ensure full capture area is considered
           });
           
           const croppedCanvas = document.createElement('canvas');
           croppedCanvas.width = captureWidth;
           croppedCanvas.height = captureHeight;
           const ctx = croppedCanvas.getContext('2d');
-          
           if (ctx) {
-              ctx.drawImage(
-                  fullCanvas,
-                  captureX, captureY, captureWidth, captureHeight,
-                  0, 0, captureWidth, captureHeight
-              );
+              ctx.drawImage(fullCanvas, captureX, captureY, captureWidth, captureHeight, 0, 0, captureWidth, captureHeight);
               setPrimaryScreenshotForUpload(croppedCanvas.toDataURL('image/png'));
-          } else {
-             console.error("Error generating primary screenshot: Could not get 2D context for cropping.");
-             toast({ title: "Screenshot Failed", description: "Could not get 2D context for cropping canvas.", variant: "destructive" });
-          }
-        }
+          } else { console.error("Primary Screenshot: Could not get 2D context for cropping."); }
+        } else { console.error("Primary Screenshot: Invalid crop dimensions."); }
       } catch (error: any) {
         console.error("Error generating primary screenshot:", error.message || error);
         toast({ title: "Screenshot Failed", description: `Could not generate initial preview: ${error.message || 'Unknown error'}.`, variant: "destructive" });
+      } finally {
+        setIsCapturingScreenshot(false);
       }
     } else {
-       console.error("Error generating primary screenshot: Required elements not found or no active view.", {captureTargetElementExists: !!captureTargetElement, cropToElementExists: !!cropToElement, currentActiveView});
-       toast({ title: "Screenshot Setup Error", description: "Could not find necessary elements for screenshot.", variant: "destructive" });
+       console.error("Primary Screenshot: Required elements not found or no active view.", {captureTargetElement, cropToElement, activeViewId});
     }
+
 
     const tempScreenshots: ViewScreenshot[] = [];
     for (const view of productDetails.views) {
@@ -698,67 +692,59 @@ function CustomizerLayoutAndLogic() {
 
       if (hasCustomizations) {
         setActiveViewId(view.id);
-        await new Promise(resolve => requestAnimationFrame(() => setTimeout(resolve, 200))); 
+        setIsCapturingScreenshot(true);
+        await new Promise(resolve => setTimeout(resolve, 50));
+        await new Promise(resolve => requestAnimationFrame(resolve));
         
-        const loopCaptureTargetElement = document.getElementById('product-image-canvas-area-capture-target');
-        const loopCropToElement = document.getElementById('design-canvas-square-area');
+        const loopCaptureTarget = document.getElementById('product-image-canvas-area-capture-target');
+        const loopCropElement = document.getElementById('design-canvas-square-area');
 
-        if (loopCaptureTargetElement && loopCropToElement) {
+        if (loopCaptureTarget && loopCropElement) {
           try {
-            const cropRect = loopCropToElement.getBoundingClientRect();
-            const targetRect = loopCaptureTargetElement.getBoundingClientRect();
+            const targetRect = loopCaptureTarget.getBoundingClientRect();
+            const cropRect = loopCropElement.getBoundingClientRect();
             const captureWidth = cropRect.width;
             const captureHeight = cropRect.height;
             const captureX = cropRect.left - targetRect.left;
             const captureY = cropRect.top - targetRect.top;
             
-            if (captureWidth <= 0 || captureHeight <= 0) {
-              console.error(`Error generating screenshot for view ${view.name}: Crop dimensions are invalid.`, { captureWidth, captureHeight, cropRect, targetRect });
+            if (captureWidth > 0 && captureHeight > 0) {
+              const fullCanvas = await html2canvas(loopCaptureTarget, {
+                  allowTaint: true, useCORS: true, backgroundColor: null, logging: false,
+                  width: targetRect.width, height: targetRect.height, x: 0, y: 0,
+              });
+              const croppedCanvas = document.createElement('canvas');
+              croppedCanvas.width = captureWidth;
+              croppedCanvas.height = captureHeight;
+              const ctx = croppedCanvas.getContext('2d');
+              if (ctx) {
+                  ctx.drawImage(fullCanvas, captureX, captureY, captureWidth, captureHeight, 0, 0, captureWidth, captureHeight);
+                  tempScreenshots.push({ viewId: view.id, viewName: view.name, imageDataUrl: croppedCanvas.toDataURL('image/png') });
+              } else { 
+                console.error(`Screenshot loop for ${view.name}: Could not get 2D context.`);
+                tempScreenshots.push({ viewId: view.id, viewName: view.name, imageDataUrl: 'error_no_context' });
+              }
+            } else { 
+              console.error(`Screenshot loop for ${view.name}: Invalid crop dimensions.`);
               tempScreenshots.push({ viewId: view.id, viewName: view.name, imageDataUrl: 'error_crop_dimensions' });
-              continue;
-            }
-
-            const fullCanvas = await html2canvas(loopCaptureTargetElement, {
-                allowTaint: true, useCORS: true, backgroundColor: null, logging: false,
-            });
-
-            const croppedCanvas = document.createElement('canvas');
-            croppedCanvas.width = captureWidth;
-            croppedCanvas.height = captureHeight;
-            const ctx = croppedCanvas.getContext('2d');
-
-            if (ctx) {
-                ctx.drawImage(fullCanvas, captureX, captureY, captureWidth, captureHeight, 0, 0, captureWidth, captureHeight);
-                tempScreenshots.push({
-                  viewId: view.id,
-                  viewName: view.name,
-                  imageDataUrl: croppedCanvas.toDataURL('image/png'),
-                });
-            } else {
-               console.error(`Error generating screenshot for view ${view.name}: Could not get 2D context.`);
-               tempScreenshots.push({ viewId: view.id, viewName: view.name, imageDataUrl: 'error_no_context' });
             }
           } catch (error: any) {
             console.error(`Error generating screenshot for view ${view.name}:`, error.message || error);
-            tempScreenshots.push({
-              viewId: view.id,
-              viewName: view.name,
-              imageDataUrl: 'error', 
-            });
+            tempScreenshots.push({ viewId: view.id, viewName: view.name, imageDataUrl: 'error_capture_failed' });
           }
         } else {
-          console.error(`Error generating screenshot for view ${view.name}: Required elements not found.`, {loopCaptureTargetElementExists: !!loopCaptureTargetElement, loopCropToElementExists: !!loopCropToElement });
+          console.error(`Screenshot loop for ${view.name}: Required elements not found.`);
           tempScreenshots.push({ viewId: view.id, viewName: view.name, imageDataUrl: 'error_elements_missing' });
         }
+        setIsCapturingScreenshot(false);
       }
     }
     setViewScreenshots(tempScreenshots);
     setIsGeneratingPreviews(false);
-    setIsCapturingScreenshot(false); 
 
-    if (currentActiveView && activeViewId !== currentActiveView) {
-        setActiveViewId(currentActiveView);
-        await new Promise(resolve => requestAnimationFrame(() => setTimeout(resolve, 50)));
+    if (originalActiveViewIdBeforePreviewRef.current && activeViewId !== originalActiveViewIdBeforePreviewRef.current) {
+        setActiveViewId(originalActiveViewIdBeforePreviewRef.current);
+        await new Promise(resolve => setTimeout(resolve, 50)); // Allow UI to settle back
     }
   };
 
@@ -993,11 +979,11 @@ function CustomizerLayoutAndLogic() {
                             <div key={preview.viewId} className="border rounded-md p-2 bg-muted/20">
                                 <p className="text-sm font-medium text-center mb-1.5 text-foreground">{preview.viewName}</p>
                                 <div className="relative aspect-square w-full rounded overflow-hidden bg-background">
-                                    {preview.imageDataUrl === 'error' || preview.imageDataUrl === 'error_crop_dimensions' || preview.imageDataUrl === 'error_no_context' || preview.imageDataUrl === 'error_elements_missing' ? (
+                                    {preview.imageDataUrl.startsWith('error_') ? (
                                         <div className="absolute inset-0 flex flex-col items-center justify-center text-destructive bg-destructive/10">
                                             <AlertTriangle className="h-8 w-8 mb-1" />
                                             <span className="text-xs">Preview Error</span>
-                                            <span className="text-[10px] text-muted-foreground mt-0.5">{preview.imageDataUrl}</span>
+                                            <span className="text-[10px] text-muted-foreground mt-0.5">{preview.imageDataUrl.replace('error_', '').replace(/_/g, ' ')}</span>
                                         </div>
                                     ) : (
                                         <NextImage src={preview.imageDataUrl} alt={`Preview of ${preview.viewName}`} fill sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw" className="object-contain" unoptimized={true} />
@@ -1068,6 +1054,7 @@ export default function CustomizerPage() {
 
 
     
+
 
 
 

@@ -510,7 +510,7 @@ export default function DesignCanvas({
               alt={productToDisplay.imageAlt}
               key={productToDisplay.imageUrl} 
               fill 
-              sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 580px"
+              sizes="min(100vw, (100svh - 10rem))"
               priority
               style={{ objectFit: 'contain' }} 
               className="rounded-md pointer-events-none select-none" 
@@ -594,4 +594,5 @@ export default function DesignCanvas({
     </div>
   );
 }
+
 
