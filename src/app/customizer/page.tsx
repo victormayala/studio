@@ -206,7 +206,7 @@ function CustomizerLayoutAndLogic() {
   const [isGeneratingPreviews, setIsGeneratingPreviews] = useState(false);
   const [viewScreenshots, setViewScreenshots] = useState<ViewScreenshot[]>([]);
   const [primaryScreenshotForUpload, setPrimaryScreenshotForUpload] = useState<string | null>(null);
-  const [isCapturingScreenshot, setIsCapturingScreenshot] = useState(false);
+  const [isCapturingScreenshot, setIsCapturingScreenshot] = useState(false); // For DesignCanvas to hide helpers
   const originalActiveViewIdBeforePreviewRef = useRef<string | null>(null);
   const [currentPreviewIndex, setCurrentPreviewIndex] = useState(0);
 
@@ -549,7 +549,7 @@ function CustomizerLayoutAndLogic() {
         if (currentVariantViewImages && currentVariantViewImages[view.id]?.imageUrl) {
           finalImageUrl = currentVariantViewImages[view.id].imageUrl;
           finalAiHint = currentVariantViewImages[view.id].aiHint || baseAiHint;
-        } else if (primaryVariationImageSrc && view.id === activeViewId) { // Apply primary variation image only to the active view if specific variant view image is missing
+        } else if (primaryVariationImageSrc && view.id === activeViewId) { 
           finalImageUrl = primaryVariationImageSrc;
           finalAiHint = primaryVariationImageAiHint || baseAiHint;
         } else {
@@ -641,28 +641,34 @@ function CustomizerLayoutAndLogic() {
     
     originalActiveViewIdBeforePreviewRef.current = activeViewId;
     
-    // Capture primary screenshot first (of the currently active view)
     if (activeViewId) {
+        await new Promise(resolve => setTimeout(() => requestAnimationFrame(resolve), 100)); // Brief pause after deselect
         setIsCapturingScreenshot(true);
         await new Promise(resolve => setTimeout(() => requestAnimationFrame(resolve), 350));
 
         const captureTargetElement = document.getElementById('product-image-canvas-area-capture-target');
-        const primaryCropElement = document.getElementById('design-canvas-square-area');
+        const cropToElement = document.getElementById('design-canvas-square-area');
         let primaryImageDataUrl: string | null = null;
 
-        if (captureTargetElement && primaryCropElement) {
+        if (captureTargetElement && cropToElement) {
             try {
                 const targetRect = captureTargetElement.getBoundingClientRect();
-                const cropRect = primaryCropElement.getBoundingClientRect();
-                const captureWidth = cropRect.width;
-                const captureHeight = cropRect.height;
+                const cropRect = cropToElement.getBoundingClientRect();
+
                 const captureX = cropRect.left - targetRect.left;
                 const captureY = cropRect.top - targetRect.top;
+                const captureWidth = cropRect.width;
+                const captureHeight = cropRect.height;
 
                 if (captureWidth > 0 && captureHeight > 0) {
                     const fullCanvas = await html2canvas(captureTargetElement, {
                         allowTaint: true, useCORS: true, backgroundColor: null, logging: false,
+                        width: captureTargetElement.scrollWidth,
+                        height: captureTargetElement.scrollHeight,
+                        windowWidth: captureTargetElement.scrollWidth,
+                        windowHeight: captureTargetElement.scrollHeight,
                     });
+
                     const croppedCanvas = document.createElement('canvas');
                     croppedCanvas.width = captureWidth;
                     croppedCanvas.height = captureHeight;
@@ -685,12 +691,11 @@ function CustomizerLayoutAndLogic() {
                 primaryImageDataUrl = `error_capture_failed_primary: ${error.message || 'Unknown error'}`;
             }
         } else {
-             console.error("Primary Screenshot: Required elements not found.", {captureTargetElement, primaryCropElement, activeViewId});
+             console.error("Primary Screenshot: Required elements not found.", {activeViewId, captureTargetFound: !!captureTargetElement, cropToElementFound: !!cropToElement});
              primaryImageDataUrl = 'error_elements_missing_primary';
         }
         setIsCapturingScreenshot(false);
     }
-
 
     const tempScreenshots: ViewScreenshot[] = [];
     for (const view of productDetails.views) {
@@ -702,37 +707,42 @@ function CustomizerLayoutAndLogic() {
       if (hasCustomizations) {
         setActiveViewId(view.id); 
         setIsCapturingScreenshot(true); 
-        await new Promise(resolve => setTimeout(() => requestAnimationFrame(resolve), 350));
+        await new Promise(resolve => setTimeout(() => requestAnimationFrame(resolve), 350)); // Increased delay for view switch
 
         const loopCaptureTarget = document.getElementById('product-image-canvas-area-capture-target');
         const loopCropElement = document.getElementById('design-canvas-square-area');
         
         if (loopCaptureTarget && loopCropElement) {
           try {
-            const targetRect = loopCaptureTarget.getBoundingClientRect();
-            const cropRect = loopCropElement.getBoundingClientRect();
-            const captureWidth = cropRect.width;
-            const captureHeight = cropRect.height;
-            const captureX = cropRect.left - targetRect.left;
-            const captureY = cropRect.top - targetRect.top;
+            const targetRectLoop = loopCaptureTarget.getBoundingClientRect();
+            const cropRectLoop = loopCropElement.getBoundingClientRect();
             
-            if (captureWidth > 0 && captureHeight > 0) {
-              const fullCanvas = await html2canvas(loopCaptureTarget, {
+            const captureXLoop = cropRectLoop.left - targetRectLoop.left;
+            const captureYLoop = cropRectLoop.top - targetRectLoop.top;
+            const captureWidthLoop = cropRectLoop.width;
+            const captureHeightLoop = cropRectLoop.height;
+            
+            if (captureWidthLoop > 0 && captureHeightLoop > 0) {
+              const fullCanvasLoop = await html2canvas(loopCaptureTarget, {
                   allowTaint: true, useCORS: true, backgroundColor: null, logging: false,
+                  width: loopCaptureTarget.scrollWidth,
+                  height: loopCaptureTarget.scrollHeight,
+                  windowWidth: loopCaptureTarget.scrollWidth,
+                  windowHeight: loopCaptureTarget.scrollHeight,
               });
-              const croppedCanvas = document.createElement('canvas');
-              croppedCanvas.width = captureWidth;
-              croppedCanvas.height = captureHeight;
-              const ctx = croppedCanvas.getContext('2d');
-              if (ctx) {
-                  ctx.drawImage(fullCanvas, captureX, captureY, captureWidth, captureHeight, 0, 0, captureWidth, captureHeight);
-                  tempScreenshots.push({ viewId: view.id, viewName: view.name, imageDataUrl: croppedCanvas.toDataURL('image/png') });
+              const croppedCanvasLoop = document.createElement('canvas');
+              croppedCanvasLoop.width = captureWidthLoop;
+              croppedCanvasLoop.height = captureHeightLoop;
+              const ctxLoop = croppedCanvasLoop.getContext('2d');
+              if (ctxLoop) {
+                  ctxLoop.drawImage(fullCanvasLoop, captureXLoop, captureYLoop, captureWidthLoop, captureHeightLoop, 0, 0, captureWidthLoop, captureHeightLoop);
+                  tempScreenshots.push({ viewId: view.id, viewName: view.name, imageDataUrl: croppedCanvasLoop.toDataURL('image/png') });
               } else { 
                 console.error(`Screenshot loop for ${view.name}: Could not get 2D context.`);
                 tempScreenshots.push({ viewId: view.id, viewName: view.name, imageDataUrl: 'error_no_context' });
               }
             } else { 
-              console.error(`Screenshot loop for ${view.name}: Invalid crop dimensions.`);
+              console.error(`Screenshot loop for ${view.name}: Invalid crop dimensions (${captureWidthLoop}x${captureHeightLoop}). CropRect Left: ${cropRectLoop.left}, Top: ${cropRectLoop.top}. TargetRect Left: ${targetRectLoop.left}, Top: ${targetRectLoop.top}`);
               tempScreenshots.push({ viewId: view.id, viewName: view.name, imageDataUrl: 'error_crop_dimensions' });
             }
           } catch (error: any) {
@@ -740,7 +750,7 @@ function CustomizerLayoutAndLogic() {
             tempScreenshots.push({ viewId: view.id, viewName: view.name, imageDataUrl: `error_capture_failed: ${error.message || 'Unknown error'}` });
           }
         } else {
-          console.error(`Screenshot loop for ${view.name}: Required elements not found. LoopCaptureTarget: ${loopCaptureTarget}, LoopCropElement: ${loopCropElement}`);
+          console.error(`Screenshot loop for ${view.name}: Required elements not found. CaptureTarget: ${!!loopCaptureTarget}, CropElement: ${!!loopCropElement}`);
           tempScreenshots.push({ viewId: view.id, viewName: view.name, imageDataUrl: 'error_elements_missing' });
         }
         setIsCapturingScreenshot(false); 
@@ -752,10 +762,7 @@ function CustomizerLayoutAndLogic() {
 
     if (originalActiveViewIdBeforePreviewRef.current && activeViewId !== originalActiveViewIdBeforePreviewRef.current) {
         setActiveViewId(originalActiveViewIdBeforePreviewRef.current);
-        setIsCapturingScreenshot(false);
         await new Promise(resolve => setTimeout(() => requestAnimationFrame(resolve), 100)); 
-    } else {
-        setIsCapturingScreenshot(false);
     }
   };
 
@@ -942,7 +949,7 @@ function CustomizerLayoutAndLogic() {
              {error && productDetails && productDetails.id !== defaultFallbackProduct.id && ( <div className="w-full max-w-4xl p-3 mb-4 border border-destructive bg-destructive/10 rounded-md text-destructive text-sm flex-shrink-0"> <AlertTriangle className="inline h-4 w-4 mr-1" /> {error} </div> )}
              <div className="w-full flex flex-col flex-1 min-h-0 pb-4">
               <DesignCanvas
-                key={activeViewId} 
+                key={activeViewId} // Force re-mount on view change for reliable screenshots
                 productImageUrl={currentProductImage}
                 productImageAlt={`${currentProductName} - ${currentProductAlt}`}
                 productImageAiHint={currentProductAiHint}
@@ -1004,7 +1011,7 @@ function CustomizerLayoutAndLogic() {
                                     fill 
                                     sizes="(max-width: 640px) 90vw, 576px" 
                                     className="object-contain" 
-                                    unoptimized={true} 
+                                    unoptimized={true} // Important for data URIs
                                 />
                             )}
                         </div>
@@ -1111,3 +1118,4 @@ export default function CustomizerPage() {
 
 
     
+
