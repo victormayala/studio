@@ -635,32 +635,26 @@ function CustomizerLayoutAndLogic() {
 
     setIsGeneratingPreviews(true);
     setIsConfirmationModalOpen(true);
+    setViewScreenshots([]); // Clear previous screenshots
+    setPrimaryScreenshotForUpload(null);
 
-    const canvasElement = document.getElementById('design-canvas-render-area');
-    let initialActiveViewScreenshotDataUrl: string | null = null;
-    const currentActiveView = activeViewId; // Save user's current view
-    originalActiveViewIdBeforePreviewRef.current = currentActiveView; // Store it in ref
+    const canvasElementToCapture = document.getElementById('design-canvas-square-area'); // Target the square area
+    const currentActiveView = activeViewId;
+    originalActiveViewIdBeforePreviewRef.current = currentActiveView;
 
-    if (canvasElement && currentActiveView) {
+    // Capture primary screenshot (current view) first
+    if (canvasElementToCapture && currentActiveView) {
       try {
-        // Ensure the initially active view is rendered if not already
-        if (activeViewId !== currentActiveView) {
-           setActiveViewId(currentActiveView);
-           await new Promise(resolve => requestAnimationFrame(() => setTimeout(resolve, 150)));
-        } else {
-           await new Promise(resolve => setTimeout(resolve, 50)); // Ensure settled
-        }
-        const canvasOutput = await html2canvas(canvasElement, { allowTaint: true, useCORS: true, backgroundColor: null, logging: false });
-        initialActiveViewScreenshotDataUrl = canvasOutput.toDataURL('image/png');
-        setPrimaryScreenshotForUpload(initialActiveViewScreenshotDataUrl);
+        await new Promise(resolve => requestAnimationFrame(() => setTimeout(resolve, 50))); // Short delay for current view
+        const canvasOutput = await html2canvas(canvasElementToCapture, { allowTaint: true, useCORS: true, backgroundColor: null, logging: false });
+        setPrimaryScreenshotForUpload(canvasOutput.toDataURL('image/png'));
       } catch (error) {
         console.error("Error generating primary screenshot:", error);
         toast({ title: "Screenshot Failed", description: "Could not generate initial preview.", variant: "destructive" });
       }
     }
 
-    const customizedViewsScreenshotsPromises: Promise<ViewScreenshot | null>[] = [];
-
+    const tempScreenshots: ViewScreenshot[] = [];
     for (const view of productDetails.views) {
       const hasCustomizations =
         canvasImages.some(item => item.viewId === view.id) ||
@@ -668,42 +662,33 @@ function CustomizerLayoutAndLogic() {
         canvasShapes.some(item => item.viewId === view.id);
 
       if (hasCustomizations) {
-        customizedViewsScreenshotsPromises.push(
-          (async () => {
-            if (activeViewId !== view.id) {
-              setActiveViewId(view.id);
-              await new Promise(resolve => requestAnimationFrame(() => setTimeout(resolve, 150)));
-            } else {
-              await new Promise(resolve => setTimeout(resolve, 50)); // Ensure settled if already active
-            }
-
-            if (canvasElement) {
-              try {
-                const canvasOutput = await html2canvas(canvasElement, { allowTaint: true, useCORS: true, backgroundColor: null, logging: false });
-                return {
-                  viewId: view.id,
-                  viewName: view.name,
-                  imageDataUrl: canvasOutput.toDataURL('image/png'),
-                };
-              } catch (error) {
-                console.error(`Error generating screenshot for view ${view.name}:`, error);
-                return {
-                  viewId: view.id,
-                  viewName: view.name,
-                  imageDataUrl: 'error',
-                };
-              }
-            }
-            return null;
-          })()
-        );
+        setActiveViewId(view.id);
+        // Wait for DOM to update - combination of requestAnimationFrame and setTimeout
+        await new Promise(resolve => requestAnimationFrame(() => setTimeout(resolve, 200))); 
+        
+        if (canvasElementToCapture) {
+          try {
+            const canvasOutput = await html2canvas(canvasElementToCapture, { allowTaint: true, useCORS: true, backgroundColor: null, logging: false });
+            tempScreenshots.push({
+              viewId: view.id,
+              viewName: view.name,
+              imageDataUrl: canvasOutput.toDataURL('image/png'),
+            });
+          } catch (error) {
+            console.error(`Error generating screenshot for view ${view.name}:`, error);
+            tempScreenshots.push({
+              viewId: view.id,
+              viewName: view.name,
+              imageDataUrl: 'error', // Placeholder for errored screenshots
+            });
+          }
+        }
       }
     }
-
-    const resolvedScreenshots = (await Promise.all(customizedViewsScreenshotsPromises)).filter(s => s !== null) as ViewScreenshot[];
-    setViewScreenshots(resolvedScreenshots);
+    setViewScreenshots(tempScreenshots);
     setIsGeneratingPreviews(false);
 
+    // Restore original active view if it changed
     if (currentActiveView && activeViewId !== currentActiveView) {
         setActiveViewId(currentActiveView);
         await new Promise(resolve => requestAnimationFrame(() => setTimeout(resolve, 50)));
@@ -760,7 +745,7 @@ function CustomizerLayoutAndLogic() {
         selectedOptions: selectedVariationOptions, baseProductPrice: baseProductPrice, totalViewSurcharge: totalViewSurcharge,
         totalCustomizationPrice: totalCustomizationPrice,
         activeViewIdUsed: activeViewIdForPricing,
-        screenshotStorageUrl: screenshotStorageUrl,
+        screenshotStorageUrl: screenshotStorageUrl, // Updated field name
       },
       userId: user?.uid || null,
       configUserId: productDetails?.meta?.configUserIdUsed || null,
@@ -1005,6 +990,7 @@ export default function CustomizerPage() {
 
 
     
+
 
 
 

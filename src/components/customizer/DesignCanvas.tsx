@@ -192,7 +192,8 @@ export default function DesignCanvas({
     if (target === canvasRef.current || target.classList.contains('centered-square-container') ||
         target === canvasRef.current?.parentElement || // product-canvas-wrapper
         target.classList.contains('product-image-outer-container') ||
-        target.classList.contains('product-canvas-wrapper')) { // Check direct parent as well
+        target.classList.contains('product-canvas-wrapper') ||
+        target.id === 'design-canvas-square-area' ) { // Check direct parent as well
         selectCanvasImage(null);
         selectCanvasText(null);
         selectCanvasShape(null);
@@ -491,13 +492,13 @@ export default function DesignCanvas({
       <div className="relative w-full flex-1 flex items-center justify-center product-canvas-wrapper min-h-0">
         <div
           ref={canvasRef} 
-          id="design-canvas-render-area" // Added ID for html2canvas
           className="relative product-image-canvas-area bg-muted/10 w-full h-full flex items-center justify-center" 
           onClick={handleCanvasClick} 
           onTouchStart={handleCanvasClick as any} 
         >
           
           <div
+            id="design-canvas-square-area" // Added ID for html2canvas targeting
             className="relative centered-square-container" 
             style={{
               width: 'min(100%, calc(100svh - 10rem))', 
@@ -611,6 +612,7 @@ export default function DesignCanvas({
     
 
     
+
 
 
 
