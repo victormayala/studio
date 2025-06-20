@@ -637,23 +637,51 @@ function CustomizerLayoutAndLogic() {
     setPrimaryScreenshotForUpload(null);
 
     const captureTargetElement = document.getElementById('product-image-canvas-area-capture-target');
-    const cropToElement = document.getElementById('design-canvas-square-area');
+    const cropToElement = document.getElementById('design-canvas-square-area'); // This is the key element for cropping
     const currentActiveView = activeViewId;
     originalActiveViewIdBeforePreviewRef.current = currentActiveView;
 
     if (captureTargetElement && cropToElement && currentActiveView) {
       try {
+        // Ensure the view is fully rendered before primary screenshot
         await new Promise(resolve => requestAnimationFrame(() => setTimeout(resolve, 50)));
-        const captureWidth = cropToElement.offsetWidth;
-        const captureHeight = cropToElement.offsetHeight;
-        const captureX = cropToElement.offsetLeft - captureTargetElement.offsetLeft;
-        const captureY = cropToElement.offsetTop - captureTargetElement.offsetTop;
 
-        const canvasOutput = await html2canvas(captureTargetElement, {
+        const cropRect = cropToElement.getBoundingClientRect();
+        const targetRect = captureTargetElement.getBoundingClientRect();
+
+        const captureWidth = cropRect.width;
+        const captureHeight = cropRect.height;
+        const captureX = cropRect.left - targetRect.left;
+        const captureY = cropRect.top - targetRect.top;
+
+        // Capture the larger area
+        const fullCanvas = await html2canvas(captureTargetElement, {
           allowTaint: true, useCORS: true, backgroundColor: null, logging: false,
-          width: captureWidth, height: captureHeight, x: captureX, y: captureY,
         });
-        setPrimaryScreenshotForUpload(canvasOutput.toDataURL('image/png'));
+        
+        // Create a new canvas for the cropped image
+        const croppedCanvas = document.createElement('canvas');
+        croppedCanvas.width = captureWidth;
+        croppedCanvas.height = captureHeight;
+        const ctx = croppedCanvas.getContext('2d');
+        
+        if (ctx) {
+            // Draw the specific portion of the fullCanvas onto the croppedCanvas
+            ctx.drawImage(
+                fullCanvas,
+                captureX, // source X
+                captureY, // source Y
+                captureWidth, // source Width
+                captureHeight, // source Height
+                0, // destination X
+                0, // destination Y
+                captureWidth, // destination Width
+                captureHeight // destination Height
+            );
+            setPrimaryScreenshotForUpload(croppedCanvas.toDataURL('image/png'));
+        } else {
+           throw new Error("Could not get 2D context for cropping canvas");
+        }
       } catch (error) {
         console.error("Error generating primary screenshot:", error);
         toast({ title: "Screenshot Failed", description: "Could not generate initial preview.", variant: "destructive" });
@@ -669,24 +697,38 @@ function CustomizerLayoutAndLogic() {
 
       if (hasCustomizations) {
         setActiveViewId(view.id);
+        // More robust wait for DOM to update with the new view
         await new Promise(resolve => requestAnimationFrame(() => setTimeout(resolve, 200))); 
         
         if (captureTargetElement && cropToElement) {
           try {
-            const captureWidth = cropToElement.offsetWidth;
-            const captureHeight = cropToElement.offsetHeight;
-            const captureX = cropToElement.offsetLeft - captureTargetElement.offsetLeft;
-            const captureY = cropToElement.offsetTop - captureTargetElement.offsetTop;
+            const cropRect = cropToElement.getBoundingClientRect();
+            const targetRect = captureTargetElement.getBoundingClientRect();
 
-            const canvasOutput = await html2canvas(captureTargetElement, {
-              allowTaint: true, useCORS: true, backgroundColor: null, logging: false,
-              width: captureWidth, height: captureHeight, x: captureX, y: captureY,
+            const captureWidth = cropRect.width;
+            const captureHeight = cropRect.height;
+            const captureX = cropRect.left - targetRect.left;
+            const captureY = cropRect.top - targetRect.top;
+
+            const fullCanvas = await html2canvas(captureTargetElement, {
+                allowTaint: true, useCORS: true, backgroundColor: null, logging: false,
             });
-            tempScreenshots.push({
-              viewId: view.id,
-              viewName: view.name,
-              imageDataUrl: canvasOutput.toDataURL('image/png'),
-            });
+
+            const croppedCanvas = document.createElement('canvas');
+            croppedCanvas.width = captureWidth;
+            croppedCanvas.height = captureHeight;
+            const ctx = croppedCanvas.getContext('2d');
+
+            if (ctx) {
+                ctx.drawImage(fullCanvas, captureX, captureY, captureWidth, captureHeight, 0, 0, captureWidth, captureHeight);
+                tempScreenshots.push({
+                  viewId: view.id,
+                  viewName: view.name,
+                  imageDataUrl: croppedCanvas.toDataURL('image/png'),
+                });
+            } else {
+               throw new Error("Could not get 2D context for cropping modal preview canvas");
+            }
           } catch (error) {
             console.error(`Error generating screenshot for view ${view.name}:`, error);
             tempScreenshots.push({
@@ -703,6 +745,7 @@ function CustomizerLayoutAndLogic() {
 
     if (currentActiveView && activeViewId !== currentActiveView) {
         setActiveViewId(currentActiveView);
+        // Wait for the original view to re-render if needed
         await new Promise(resolve => requestAnimationFrame(() => setTimeout(resolve, 50)));
     }
   };
@@ -1002,6 +1045,7 @@ export default function CustomizerPage() {
 
 
     
+
 
 
 
